@@ -1,0 +1,13 @@
+{
+  "name": "jsonpages-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w tenant-alpha",
+    "build": "npm run build -w tenant-alpha",
+    "build:all": "npm run build --workspaces --if-present"
+  }
+}

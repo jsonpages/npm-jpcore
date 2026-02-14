@@ -1,0 +1,36 @@
+{
+  "name": "@jsonpages/core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^6.29.0",
+    "zod": "^3.24.1",
+    "lucide-react": "^0.474.0",
+    "radix-ui": "^1.4.3",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
+    "tailwind-merge": "^3.0.1",
+    "clsx": "^2.1.1"
+  },
+  "devDependencies": {
+    "@types/file-saver": "^2.0.7",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.DS_Store
+*.log
+apps/tenant-alpha/dist/
+packages/core/dist/
+.vite/node_modules/ dist/ .env .DS_Store *.log apps/tenant-alpha/dist/ packages/core/dist/ .vite/

@@ -1,0 +1,77 @@
+{
+  "id": "usage-page",
+  "slug": "usage",
+  "meta": {
+    "title": "Usage | JsonPages",
+    "description": "How to use JsonPages to build your site."
+  },
+  "sections": [
+    {
+      "id": "usage-hero",
+      "type": "hero",
+      "data": {
+        "badge": "Getting Started",
+        "title": "Usage Guide",
+        "description": "Learn how to create pages, add sections, and customize your JsonPages site."
+      },
+      "settings": {
+        "align": "left",
+        "padding": "xl"
+      }
+    },
+    {
+      "id": "usage-steps",
+      "type": "feature-grid",
+      "data": {
+        "sectionTitle": "Quick Start",
+        "cards": [
+          {
+            "icon": "box",
+            "emoji": "1️⃣",
+            "title": "Define Your Page",
+            "description": "Create a JSON file in /data/pages/ with meta info and sections array."
+          },
+          {
+            "icon": "box",
+            "emoji": "2️⃣",
+            "title": "Register the Route",
+            "description": "Add the page slug to site.json pages array and menu.json for navigation."
+          },
+          {
+            "icon": "box",
+            "emoji": "3️⃣",
+            "title": "Add Sections",
+            "description": "Use registered section types: hero, feature-grid, code-block. Each with data and settings."
+          }
+        ]
+      },
+      "settings": {
+        "columns": 3,
+        "cardStyle": "bordered"
+      }
+    },
+    {
+      "id": "usage-code",
+      "type": "code-block",
+      "data": {
+        "label": "EXAMPLE SECTION",
+        "lines": [
+          { "content": "// In your [slug].json file:", "isComment": true },
+          { "content": "{" },
+          { "content": "  \"id\": \"my-hero\"," },
+          { "content": "  \"type\": \"hero\"," },
+          { "content": "  \"data\": { \"title\": \"Hello World\" }," },
+          { "content": "  \"settings\": { \"align\": \"center\" }" },
+          { "content": "}" }
+        ]
+      },
+      "settings": {
+        "showLineNumbers": true
+      }
+    }
+  ]
+}
+
+
+
+

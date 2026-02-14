@@ -1,0 +1,249 @@
+import React from 'react';
+import { z } from 'zod';
+import { InputWidgets, WidgetType } from './InputRegistry';
+import { Plus, Trash2, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from 'lucide-react';
+import { BaseWidgetProps } from '../lib/shared-types';
+
+/**
+ * 🛠️ HELPER: Generates a default value based on the Zod schema.
+ */
+const generateDefaultValue = (schema: z.ZodTypeAny): unknown => {
+  if (schema instanceof z.ZodOptional || schema instanceof z.ZodDefault) {
+    return generateDefaultValue(schema._def.innerType);
+  }
+  if (schema instanceof z.ZodObject) {
+    const obj: Record<string, unknown> = {};
+    for (const key in schema.shape) {
+      obj[key] = generateDefaultValue(schema.shape[key]);
+    }
+    return obj;
+  }
+  if (schema instanceof z.ZodArray) return [];
+  if (schema instanceof z.ZodString) return "";
+  if (schema instanceof z.ZodNumber) return 0;
+  if (schema instanceof z.ZodBoolean) return false;
+  if (schema instanceof z.ZodEnum) return schema._def.values[0];
+  return null;
+};
+
+/**
+ * 🛠️ HELPER: Extracts the real schema ignoring Zod wrappers.
+ */
+const getEffectiveSchema = (schema: z.ZodTypeAny): z.ZodTypeAny => {
+  if (schema instanceof z.ZodOptional || schema instanceof z.ZodDefault) {
+    return getEffectiveSchema(schema._def.innerType);
+  }
+  return schema;
+};
+
+interface FormFactoryProps {
+  schema: z.ZodObject<z.ZodRawShape>;
+  data: Record<string, unknown>;
+  onChange: (newData: Record<string, unknown>) => void;
+}
+
+/**
+ * 🏭 POLYMORPHIC FORM FACTORY (V2.7.0)
+ */
+export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange }) => {
+  const shape = schema.shape;
+
+  return (
+    <div className="space-y-4">
+      {Object.keys(shape).map((key) => {
+        const fieldSchema = shape[key];
+        if (!fieldSchema) return null;
+
+        const effectiveSchema = getEffectiveSchema(fieldSchema);
+        const uiHint = (fieldSchema.description as WidgetType) || 'ui:text';
+        const value = data[key];
+
+        // 1. OBJECT HANDLING
+        if (effectiveSchema instanceof z.ZodObject) {
+          const objectData = (value as Record<string, unknown>) || {};
+          return (
+            <div key={key} className="group/obj mb-6 p-4 border border-zinc-800 rounded-lg bg-zinc-900/20 hover:border-zinc-700 transition-colors">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1 h-3 bg-blue-500 rounded-full" />
+                <h4 className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">
+                  {key}
+                </h4>
+              </div>
+              <FormFactory 
+                schema={effectiveSchema} 
+                data={objectData} 
+                onChange={(val) => onChange({ ...data, [key]: val })} 
+              />
+            </div>
+          );
+        }
+
+        // 2. ARRAY HANDLING
+        if (effectiveSchema instanceof z.ZodArray) {
+          const items = (Array.isArray(value) ? value : []) as unknown[];
+          const itemSchema = getEffectiveSchema(effectiveSchema.element);
+
+          const moveItem = (from: number, to: number) => {
+            if (to < 0 || to >= items.length) return;
+            const newItems = [...items];
+            const [removed] = newItems.splice(from, 1);
+            newItems.splice(to, 0, removed);
+            onChange({ ...data, [key]: newItems });
+          };
+
+          return (
+            <div key={key} className="mb-8">
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">
+                  {key} ({items.length})
+                </label>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    const newItem = generateDefaultValue(itemSchema);
+                    onChange({ ...data, [key]: [...items, newItem] });
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 bg-blue-600/10 hover:bg-blue-600/20 text-blue-500 rounded text-[10px] font-bold transition-colors"
+                >
+                  <Plus size={12} /> Add Item
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {items.map((item, index) => {
+                  const itemRecord = item as Record<string, unknown>;
+                  const itemTitle = 
+                    (typeof itemRecord.title === 'string' ? itemRecord.title : null) || 
+                    (typeof itemRecord.label === 'string' ? itemRecord.label : null) || 
+                    (typeof itemRecord.name === 'string' ? itemRecord.name : null) || 
+                    (typeof itemRecord.content === 'string' ? itemRecord.content : null) || 
+                    (typeof itemRecord.text === 'string' ? itemRecord.text : null) || 
+                    `${key} #${index + 1}`;
+
+                  return (
+                    <ArrayItemWrapper 
+                      key={index} 
+                      index={index}
+                      isFirst={index === 0}
+                      isLast={index === items.length - 1}
+                      label={itemTitle}
+                      onRemove={() => {
+                        const newItems = items.filter((_, i) => i !== index);
+                        onChange({ ...data, [key]: newItems });
+                      }}
+                      onMoveUp={() => moveItem(index, index - 1)}
+                      onMoveDown={() => moveItem(index, index + 1)}
+                    >
+                      {itemSchema instanceof z.ZodObject ? (
+                        <FormFactory 
+                          schema={itemSchema} 
+                          data={itemRecord || {}} 
+                          onChange={(val) => {
+                            const newItems = [...items];
+                            newItems[index] = val;
+                            onChange({ ...data, [key]: newItems });
+                          }} 
+                        />
+                      ) : (
+                        <div className="text-[10px] text-red-400">Primitive arrays not supported.</div>
+                      )}
+                    </ArrayItemWrapper>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
+
+        // 3. ATOMIC WIDGET HANDLING
+        const Widget = (InputWidgets[uiHint] || InputWidgets['ui:text']) as React.ComponentType<BaseWidgetProps>;
+        const options = effectiveSchema instanceof z.ZodEnum ? (effectiveSchema._def.values as string[]) : undefined;
+
+        return (
+          <Widget 
+            key={key}
+            label={key}
+            value={value}
+            options={options}
+            onChange={(val) => onChange({ ...data, [key]: val })}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+interface ArrayItemWrapperProps {
+  index: number;
+  isFirst: boolean;
+  isLast: boolean;
+  label: string;
+  onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  children: React.ReactNode;
+}
+
+const ArrayItemWrapper: React.FC<ArrayItemWrapperProps> = ({ 
+  label, 
+  onRemove, 
+  onMoveUp, 
+  onMoveDown, 
+  isFirst, 
+  isLast, 
+  children 
+}) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  return (
+    <div className="border border-zinc-800 rounded-md bg-zinc-900/40 overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 bg-zinc-900/60">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <button 
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className="flex items-center gap-2 text-[10px] font-bold text-zinc-300 uppercase tracking-tight truncate"
+          >
+            {isOpen ? <ChevronUp size={12} className="shrink-0" /> : <ChevronDown size={12} className="shrink-0" />}
+            <span className="truncate">{label}</span>
+          </button>
+        </div>
+        
+        <div className="flex items-center gap-1 shrink-0 ml-2">
+          <button 
+            type="button"
+            disabled={isFirst}
+            onClick={onMoveUp}
+            className="text-zinc-500 hover:text-blue-400 disabled:opacity-20 p-1 transition-colors"
+          >
+            <ArrowUp size={12} />
+          </button>
+          <button 
+            type="button"
+            disabled={isLast}
+            onClick={onMoveDown}
+            className="text-zinc-500 hover:text-blue-400 disabled:opacity-20 p-1 transition-colors"
+          >
+            <ArrowDown size={12} />
+          </button>
+          <div className="w-px h-3 bg-zinc-800 mx-1" />
+          <button 
+            type="button"
+            onClick={onRemove}
+            className="text-zinc-600 hover:text-red-500 transition-colors p-1"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      </div>
+      {isOpen && (
+        <div className="p-4 border-t border-zinc-800 bg-black/20">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+

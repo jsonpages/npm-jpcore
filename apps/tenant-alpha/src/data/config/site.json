@@ -1,0 +1,49 @@
+{
+  "identity": {
+    "title": "JsonPages",
+    "logoUrl": "/logo.svg"
+  },
+  "pages": [
+    { "slug": "home", "label": "Home" },
+    { "slug": "architecture", "label": "Architecture" },
+    { "slug": "usage", "label": "Usage" }
+  ],
+  "header": {
+    "id": "global-header",
+    "type": "header",
+    "data": {
+      "logoText": "Json",
+      "logoHighlight": "Pages",
+      "logoIconText": "{ }",
+      "links": [
+        { "label": "Architecture", "href": "#architecture", "isCta": false },
+        { "label": "Products", "href": "#products", "isCta": false },
+        { "label": "PA Ready", "href": "#pa-ready", "isCta": false },
+        { "label": "Philosophy", "href": "#philosophy", "isCta": false }
+      ]
+    },
+    "settings": {
+      "sticky": true
+    }
+  },
+  "footer": {
+    "id": "global-footer",
+    "type": "footer",
+    "data": {
+      "brandText": "Json",
+      "brandHighlight": "Pages",
+      "copyright": "© 2026 JsonPages Ecosystem. Architected by Guido Filippo Serio.",
+      "links": [
+        { "label": "Documentation", "href": "#" },
+        { "label": "API Reference", "href": "#" },
+        { "label": "Changelog", "href": "#" },
+        { "label": "Privacy", "href": "#" }
+      ]
+    },
+    "settings": {
+      "showLogo": true
+    }
+  }
+}
+
+
