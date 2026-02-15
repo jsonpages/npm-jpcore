@@ -122,4 +122,53 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ==========================================================================
+   ICE ADMIN — Section highlight in preview iframe
+   The preview iframe only receives tenant CSS; core's overlay classes
+   (z-[50], absolute, etc.) are not in this build. Define them here so
+   the section highlight is always visible in /admin.
+   ========================================================================== */
+[data-jp-section-overlay] {
+  position: absolute;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  transition: border-color 0.2s, background-color 0.2s;
+  border: 2px solid transparent;
+}
+
+[data-section-id]:hover [data-jp-section-overlay] {
+  border-color: rgba(96, 165, 250, 0.5);
+  border-style: dashed;
+}
+
+[data-section-id][data-jp-selected] [data-jp-section-overlay] {
+  border-color: rgb(37, 99, 235);
+  border-style: solid;
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+[data-jp-section-overlay] > div {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.25rem 0.5rem;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: rgb(37, 99, 235);
+  color: white;
+  transition: opacity 0.2s;
+}
+
+[data-section-id]:hover [data-jp-section-overlay] > div,
+[data-section-id][data-jp-selected] [data-jp-section-overlay] > div {
+  opacity: 1;
+}
+
+[data-section-id] [data-jp-section-overlay] > div {
+  opacity: 0;
+}
+
 

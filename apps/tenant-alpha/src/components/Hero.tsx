@@ -19,13 +19,13 @@ export const Hero: React.FC<HeroProps> = ({ data }) => {
         '--local-cyan': 'var(--color-secondary, #22d3ee)',
         '--local-border': 'var(--border)',
       } as React.CSSProperties}
-      className="jp-hero relative z-0 min-h-screen flex items-center overflow-hidden pt-24 bg-[var(--local-bg)]"
+      className="jp-hero relative min-h-screen flex items-center overflow-hidden pt-24 bg-[var(--local-bg)]"
     >
       {/* Radial Gradient Overlays */}
       <div className="absolute -top-[40%] -right-[20%] w-[70vw] h-[70vw] rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.06)_0%,transparent_70%)] pointer-events-none" />
       <div className="absolute -bottom-[10%] -left-[10%] w-[50vw] h-[50vw] rounded-full bg-[radial-gradient(circle,rgba(34,211,238,0.03)_0%,transparent_60%)] pointer-events-none" />
 
-      <div className="relative z-[2] max-w-[1200px] mx-auto px-8 w-full">
+      <div className="relative max-w-[1200px] mx-auto px-8 w-full">
         <div className="max-w-[820px]">
           {/* Badge */}
           {data.badge && (

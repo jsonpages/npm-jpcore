@@ -61,6 +61,7 @@ const SovereignOverlay: React.FC<{
 }> = ({ type, scope, isSelected }) => {
   return (
     <div 
+      data-jp-section-overlay
       className={cn(
         "absolute inset-0 pointer-events-none transition-all duration-200 z-[50]",
         "border-2 border-transparent group-hover:border-blue-400/50 group-hover:border-dashed",
@@ -124,7 +125,8 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
   return (
     <div 
       id={anchorId || undefined}
-      data-section-id={isStudio ? section.id : undefined} 
+      data-section-id={isStudio ? section.id : undefined}
+      {...(isStudio && isSelected ? { 'data-jp-selected': true } : {})}
       onClick={isStudio ? handleSectionClick : undefined}
       className={cn(
         "relative w-full",
@@ -133,7 +135,7 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
         isSelected && "z-[70]" 
       )}
     >
-      <div className="relative z-10">
+      <div className="relative z-0">
         <SectionErrorBoundary type={section.type}>
           {renderInnerComponent()}
         </SectionErrorBoundary>
