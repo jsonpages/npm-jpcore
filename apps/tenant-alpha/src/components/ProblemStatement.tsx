@@ -1,13 +1,14 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import type { ProblemStatementData, BaseSectionSettings } from '@/types';
+import type { ProblemStatementData, ProblemStatementSettings } from '@/types';
+import type { SiloBlockVariant } from '@/lib/schemas';
 
 interface ProblemStatementProps {
   data: ProblemStatementData;
-  settings?: BaseSectionSettings;
+  settings?: ProblemStatementSettings;
 }
 
-const variantStyles: Record<string, string> = {
+const variantStyles: Record<SiloBlockVariant, string> = {
   red: 'bg-[rgba(239,68,68,0.08)] border-[rgba(239,68,68,0.3)] text-[#f87171]',
   amber: 'bg-[rgba(245,158,11,0.08)] border-[rgba(245,158,11,0.3)] text-[#fbbf24]',
   green: 'bg-[rgba(34,197,94,0.08)] border-[rgba(34,197,94,0.3)] text-[#4ade80]',
@@ -39,7 +40,7 @@ export const ProblemStatement: React.FC<ProblemStatementProps> = ({ data }) => {
                         key={bIdx}
                         className={cn(
                           'inline-block px-4 py-2 rounded-lg text-[0.8rem] font-semibold border',
-                          variantStyles[block.variant] || variantStyles.blue
+                          variantStyles[block.variant]
                         )}
                       >
                         {block.label}

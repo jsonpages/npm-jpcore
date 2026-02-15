@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { MenuItem } from '@jsonpages/core';
 import {
   BaseSectionSettingsSchema,
   HeroSchema,
@@ -53,6 +54,21 @@ export type PaSectionSettings = StandardSectionSettings;
 export type PhilosophySettings = StandardSectionSettings;
 export type CtaBannerSettings = StandardSectionSettings;
 
+// 3b. Section component props map — SSOT for ComponentRegistry (full type safety)
+export type SectionComponentPropsMap = {
+  'header': { data: HeaderData; settings?: HeaderSettings; menu: MenuItem[] };
+  'footer': { data: FooterData; settings?: FooterSettings };
+  'hero': { data: HeroData; settings?: HeroSettings };
+  'feature-grid': { data: FeatureGridData; settings?: FeatureGridSettings };
+  'code-block': { data: CodeBlockData; settings?: CodeBlockSettings };
+  'problem-statement': { data: ProblemStatementData; settings?: ProblemStatementSettings };
+  'pillars-grid': { data: PillarsGridData; settings?: PillarsGridSettings };
+  'arch-layers': { data: ArchLayersData; settings?: ArchLayersSettings };
+  'product-triad': { data: ProductTriadData; settings?: ProductTriadSettings };
+  'pa-section': { data: PaSectionData; settings?: PaSectionSettings };
+  'philosophy': { data: PhilosophyData; settings?: PhilosophySettings };
+  'cta-banner': { data: CtaBannerData; settings?: CtaBannerSettings };
+};
 
 // 4. 🔥 MTRP AUGMENTATION — augment core's registries so Section includes tenant section types
 declare module '@jsonpages/core' {

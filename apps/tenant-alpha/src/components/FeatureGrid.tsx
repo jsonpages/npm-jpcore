@@ -8,14 +8,17 @@ interface FeatureGridProps {
   settings?: FeatureGridSettings;
 }
 
-const columnsMap: Record<number, string> = {
+type FeatureGridColumns = 2 | 3 | 4;
+
+const columnsMap: Record<FeatureGridColumns, string> = {
   2: 'md:grid-cols-2',
   3: 'md:grid-cols-3',
   4: 'md:grid-cols-4',
 };
 
 export const FeatureGrid: React.FC<FeatureGridProps> = ({ data, settings }) => {
-  const cols = columnsMap[settings?.columns ?? 3];
+  const colKey = settings?.columns ?? 3;
+  const cols = (colKey === 2 || colKey === 3 || colKey === 4) ? columnsMap[colKey] : columnsMap[3];
   const isBordered = settings?.cardStyle === 'bordered';
 
   const localStyles = {

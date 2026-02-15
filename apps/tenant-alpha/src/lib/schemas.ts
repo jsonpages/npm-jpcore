@@ -80,9 +80,12 @@ export const CodeBlockSchema = BaseSectionData.extend({
 // =============================================================================
 // 6. PROBLEM STATEMENT
 // =============================================================================
+const SiloBlockVariantSchema = z.enum(['red', 'amber', 'green', 'blue']);
+export type SiloBlockVariant = z.infer<typeof SiloBlockVariantSchema>;
+
 const SiloBlockSchema = BaseArrayItem.extend({
   label: z.string().describe('ui:text'),
-  variant: z.enum(['red', 'amber', 'green', 'blue']).describe('ui:select'),
+  variant: SiloBlockVariantSchema.describe('ui:select'),
 });
 
 const SiloGroupSchema = z.object({
@@ -105,13 +108,18 @@ export const ProblemStatementSchema = BaseSectionData.extend({
 // =============================================================================
 // 7. PILLARS GRID
 // =============================================================================
+const PillarIconVariantSchema = z.enum(['split', 'registry', 'federation']);
+export type PillarIconVariant = z.infer<typeof PillarIconVariantSchema>;
+const PillarTagVariantSchema = z.enum(['core', 'pattern', 'enterprise']);
+export type PillarTagVariant = z.infer<typeof PillarTagVariantSchema>;
+
 const PillarCardSchema = BaseArrayItem.extend({
   icon: z.string().describe('ui:text'),
-  iconVariant: z.enum(['split', 'registry', 'federation']).describe('ui:select'),
+  iconVariant: PillarIconVariantSchema.describe('ui:select'),
   title: z.string().describe('ui:text'),
   description: z.string().describe('ui:textarea'),
   tag: z.string().describe('ui:text'),
-  tagVariant: z.enum(['core', 'pattern', 'enterprise']).describe('ui:select'),
+  tagVariant: PillarTagVariantSchema.describe('ui:select'),
 });
 
 export const PillarsGridSchema = BaseSectionData.extend({
@@ -124,16 +132,21 @@ export const PillarsGridSchema = BaseSectionData.extend({
 // =============================================================================
 // 8. ARCH LAYERS
 // =============================================================================
+const ArchLayerLevelSchema = z.enum(['l0', 'l1', 'l2']);
+export type ArchLayerLevel = z.infer<typeof ArchLayerLevelSchema>;
+const SyntaxTokenTypeSchema = z.enum(['plain', 'keyword', 'type', 'string', 'comment', 'operator']);
+export type SyntaxTokenType = z.infer<typeof SyntaxTokenTypeSchema>;
+
 const ArchLayerItemSchema = BaseArrayItem.extend({
   number: z.string().describe('ui:text'),
-  layerLevel: z.enum(['l0', 'l1', 'l2']).describe('ui:select'),
+  layerLevel: ArchLayerLevelSchema.describe('ui:select'),
   title: z.string().describe('ui:text'),
   description: z.string().describe('ui:textarea'),
 });
 
 const SyntaxLineSchema = z.object({
   content: z.string().describe('ui:text'),
-  tokenType: z.enum(['plain', 'keyword', 'type', 'string', 'comment', 'operator']).default('plain').describe('ui:select'),
+  tokenType: SyntaxTokenTypeSchema.default('plain').describe('ui:select'),
 });
 
 export const ArchLayersSchema = BaseSectionData.extend({

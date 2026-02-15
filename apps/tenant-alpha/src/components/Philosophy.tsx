@@ -1,9 +1,9 @@
 import React from 'react';
-import type { PhilosophyData, BaseSectionSettings } from '@/types';
+import type { PhilosophyData, PhilosophySettings } from '@/types';
 
 interface PhilosophyProps {
   data: PhilosophyData;
-  settings?: BaseSectionSettings;
+  settings?: PhilosophySettings;
 }
 
 export const Philosophy: React.FC<PhilosophyProps> = ({ data }) => {

@@ -1,10 +1,10 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import type { HeroData, BaseSectionSettings } from '@/types';
+import type { HeroData, HeroSettings } from '@/types';
 
 interface HeroProps {
   data: HeroData;
-  settings?: BaseSectionSettings;
+  settings?: HeroSettings;
 }
 
 export const Hero: React.FC<HeroProps> = ({ data }) => {

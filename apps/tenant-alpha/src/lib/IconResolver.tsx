@@ -11,7 +11,7 @@ import {
   type LucideIcon
 } from 'lucide-react';
 
-const iconMap: Record<string, LucideIcon> = {
+const iconMap = {
   'layers': Layers,
   'github': Github,
   'arrow-right': ArrowRight,
@@ -20,7 +20,13 @@ const iconMap: Record<string, LucideIcon> = {
   'chevron-right': ChevronRight,
   'menu': Menu,
   'x': X,
-};
+} as const satisfies Record<string, LucideIcon>;
+
+export type IconName = keyof typeof iconMap;
+
+function isIconName(s: string): s is IconName {
+  return s in iconMap;
+}
 
 interface IconProps {
   name: string;
@@ -29,7 +35,7 @@ interface IconProps {
 }
 
 export const Icon: React.FC<IconProps> = ({ name, size = 20, className }) => {
-  const IconComponent = iconMap[name];
+  const IconComponent = isIconName(name) ? iconMap[name] : undefined;
 
   if (!IconComponent) {
     if (import.meta.env.DEV) {
@@ -40,7 +46,5 @@ export const Icon: React.FC<IconProps> = ({ name, size = 20, className }) => {
 
   return <IconComponent size={size} className={className} />;
 };
-
-export type IconName = keyof typeof iconMap;
 
 

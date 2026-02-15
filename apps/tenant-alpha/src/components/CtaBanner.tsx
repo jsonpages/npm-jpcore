@@ -1,10 +1,10 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import type { CtaBannerData, BaseSectionSettings } from '@/types';
+import type { CtaBannerData, CtaBannerSettings } from '@/types';
 
 interface CtaBannerProps {
   data: CtaBannerData;
-  settings?: BaseSectionSettings;
+  settings?: CtaBannerSettings;
 }
 
 export const CtaBanner: React.FC<CtaBannerProps> = ({ data }) => {

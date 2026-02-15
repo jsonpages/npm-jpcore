@@ -1,10 +1,10 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import type { ProductTriadData, BaseSectionSettings } from '@/types';
+import type { ProductTriadData, ProductTriadSettings } from '@/types';
 
 interface ProductTriadProps {
   data: ProductTriadData;
-  settings?: BaseSectionSettings;
+  settings?: ProductTriadSettings;
 }
 
 export const ProductTriad: React.FC<ProductTriadProps> = ({ data }) => {

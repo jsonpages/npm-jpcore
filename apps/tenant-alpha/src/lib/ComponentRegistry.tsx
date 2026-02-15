@@ -12,11 +12,11 @@ import { PaSection } from '@/components/PaSection';
 import { Philosophy } from '@/components/Philosophy';
 import { CtaBanner } from '@/components/CtaBanner';
 import type { SectionType } from '@jsonpages/core';
+import type { SectionComponentPropsMap } from '@/types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyComponent = React.FC<any>;
-
-export const ComponentRegistry: Record<SectionType, AnyComponent> = {
+export const ComponentRegistry: {
+  [K in SectionType]: React.FC<SectionComponentPropsMap[K]>;
+} = {
   'header': Header,
   'footer': Footer,
   'hero': Hero,

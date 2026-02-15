@@ -1,19 +1,20 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import type { PillarsGridData, BaseSectionSettings } from '@/types';
+import type { PillarsGridData, PillarsGridSettings } from '@/types';
+import type { PillarIconVariant, PillarTagVariant } from '@/lib/schemas';
 
 interface PillarsGridProps {
   data: PillarsGridData;
-  settings?: BaseSectionSettings;
+  settings?: PillarsGridSettings;
 }
 
-const iconVariantStyles: Record<string, string> = {
+const iconVariantStyles: Record<PillarIconVariant, string> = {
   split: 'bg-[rgba(59,130,246,0.1)] text-[#60a5fa]',
   registry: 'bg-[rgba(34,211,238,0.1)] text-[#22d3ee]',
   federation: 'bg-[rgba(168,85,247,0.1)] text-[#c084fc]',
 };
 
-const tagVariantStyles: Record<string, string> = {
+const tagVariantStyles: Record<PillarTagVariant, string> = {
   core: 'bg-[rgba(59,130,246,0.1)] text-[#60a5fa]',
   pattern: 'bg-[rgba(34,211,238,0.1)] text-[#22d3ee]',
   enterprise: 'bg-[rgba(168,85,247,0.1)] text-[#c084fc]',
@@ -65,7 +66,7 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ data }) => {
               {/* Icon */}
               <div className={cn(
                 'w-12 h-12 rounded-xl flex items-center justify-center mb-6 text-xl font-bold',
-                iconVariantStyles[pillar.iconVariant] || iconVariantStyles.split
+                iconVariantStyles[pillar.iconVariant]
               )}>
                 {pillar.icon}
               </div>
@@ -83,7 +84,7 @@ export const PillarsGrid: React.FC<PillarsGridProps> = ({ data }) => {
               {/* Tag */}
               <span className={cn(
                 'inline-block text-[0.7rem] font-semibold uppercase tracking-wide px-3 py-1 rounded mt-4',
-                tagVariantStyles[pillar.tagVariant] || tagVariantStyles.core
+                tagVariantStyles[pillar.tagVariant]
               )}>
                 {pillar.tag}
               </span>

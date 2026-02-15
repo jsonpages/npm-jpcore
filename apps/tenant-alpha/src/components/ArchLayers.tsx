@@ -1,19 +1,20 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import type { ArchLayersData, BaseSectionSettings } from '@/types';
+import type { ArchLayersData, ArchLayersSettings } from '@/types';
+import type { ArchLayerLevel, SyntaxTokenType } from '@/lib/schemas';
 
 interface ArchLayersProps {
   data: ArchLayersData;
-  settings?: BaseSectionSettings;
+  settings?: ArchLayersSettings;
 }
 
-const layerBgStyles: Record<string, string> = {
+const layerBgStyles: Record<ArchLayerLevel, string> = {
   l0: 'bg-[#3b82f6]',
   l1: 'bg-[rgba(59,130,246,0.6)]',
   l2: 'bg-[rgba(59,130,246,0.35)]',
 };
 
-const tokenStyles: Record<string, string> = {
+const tokenStyles: Record<SyntaxTokenType, string> = {
   plain: 'text-[#cbd5e1]',
   keyword: 'text-[#60a5fa]',
   type: 'text-[#22d3ee]',
@@ -68,7 +69,7 @@ export const ArchLayers: React.FC<ArchLayersProps> = ({ data }) => {
             >
               <div className={cn(
                 'shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-mono text-[0.85rem] font-bold text-white',
-                layerBgStyles[layer.layerLevel] || layerBgStyles.l0
+                layerBgStyles[layer.layerLevel]
               )}>
                 {layer.number}
               </div>
@@ -103,7 +104,7 @@ export const ArchLayers: React.FC<ArchLayersProps> = ({ data }) => {
               <div className="p-6 font-mono text-[0.82rem] leading-[1.7] overflow-x-auto">
                 {data.codeLines.map((line, idx) => (
                   <div key={idx}>
-                    <span className={tokenStyles[line.tokenType] || tokenStyles.plain}>
+                    <span className={tokenStyles[line.tokenType]}>
                       {line.content}
                     </span>
                   </div>

@@ -1,9 +1,9 @@
 import React from 'react';
-import type { PaSectionData, BaseSectionSettings } from '@/types';
+import type { PaSectionData, PaSectionSettings } from '@/types';
 
 interface PaSectionProps {
   data: PaSectionData;
-  settings?: BaseSectionSettings;
+  settings?: PaSectionSettings;
 }
 
 export const PaSection: React.FC<PaSectionProps> = ({ data }) => {
