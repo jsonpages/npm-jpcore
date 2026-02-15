@@ -1,7 +1,8 @@
 /**
  * Sovereign Shell: routing, state, and Admin layout live in the Engine.
+ * Enterprise: error boundary, defensive config, and safe init to avoid black screen.
  */
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
 import { PageRenderer } from './PageRenderer';
 import { StudioProvider } from './StudioContext';
@@ -25,11 +26,76 @@ export interface JsonPagesEngineProps {
   config: JsonPagesConfig;
 }
 
+/** Fallback admin CSS when inline import is unavailable (e.g. SSR or bundler edge case). */
+const FALLBACK_ADMIN_CSS = `
+:root { --background: #0f172a; --foreground: #f1f5f9; }
+body { background-color: var(--background); color: var(--foreground); }
+`;
+
+/**
+ * Engine-level error boundary: prevents black screen on any render error and surfaces a visible error UI.
+ */
+class EngineErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('[JsonPages Engine]', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError && this.state.error) {
+      return (
+        <div
+          style={{
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            backgroundColor: '#0f172a',
+            color: '#e2e8f0',
+            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+          }}
+        >
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: 8 }}>
+            JsonPages Engine Error
+          </h1>
+          <pre
+            style={{
+              maxWidth: '100%',
+              overflow: 'auto',
+              padding: 16,
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              borderRadius: 8,
+              fontSize: 12,
+              marginTop: 8,
+            }}
+          >
+            {this.state.error.message}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
   const {
-    registry,
-    schemas,
-    pages: pageRegistry,
+    registry = {},
+    schemas = {},
+    pages: pageRegistry = {},
     siteConfig,
     themeConfig,
     menuConfig,
@@ -47,12 +113,22 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
     exportHTML: config.persistence?.exportHTML ?? exportBakedHTML,
   };
 
-  const tenantCss = themeCss.tenant;
-  const adminCss = themeCss.admin ?? defaultAdminCss;
+  const tenantCss =
+    typeof themeCss?.tenant === 'string' ? themeCss.tenant : '';
+  const adminCss =
+    typeof themeCss?.admin === 'string'
+      ? themeCss.admin
+      : typeof defaultAdminCss === 'string'
+        ? defaultAdminCss
+        : FALLBACK_ADMIN_CSS;
 
   const [isReady, setIsReady] = useState(false);
   useEffect(() => {
-    themeManager.setTheme(themeConfig);
+    try {
+      if (themeConfig?.tokens) themeManager.setTheme(themeConfig);
+    } catch (e) {
+      console.warn('[JsonPages] setTheme failed', e);
+    }
     setIsReady(true);
   }, [themeConfig]);
 
@@ -97,12 +173,21 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
     const [draft, setDraft] = useState<PageConfig | null>(null);
     const [hasChanges, setHasChanges] = useState(false);
     const [globalDraft, setGlobalDraft] = useState<SiteConfig>(() => {
-      const base = JSON.parse(JSON.stringify(siteConfig)) as SiteConfig;
-      const headerData = base.header?.data as { links?: MenuItem[] } | undefined;
-      if (headerData) {
-        headerData.links = JSON.parse(JSON.stringify(menuConfig.main)) as MenuItem[];
+      try {
+        const base = JSON.parse(JSON.stringify(siteConfig ?? {})) as SiteConfig;
+        if (!base.identity) base.identity = { title: 'Site' };
+        if (!base.pages) base.pages = [];
+        const headerData = base.header?.data as { links?: MenuItem[] } | undefined;
+        if (headerData && menuConfig?.main) {
+          headerData.links = JSON.parse(JSON.stringify(menuConfig.main)) as MenuItem[];
+        }
+        return base;
+      } catch {
+        return {
+          identity: { title: 'Site' },
+          pages: [],
+        } as SiteConfig;
       }
-      return base;
     });
     const [selected, setSelected] = useState<{ id: string; type: string; scope: string } | null>(null);
     const [addSectionLibraryOpen, setAddSectionLibraryOpen] = useState(false);
@@ -114,11 +199,31 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       setHasChanges(false);
     }, [slug, pageRegistry]);
 
+    const handleReorderSection = useCallback(
+      (sectionId: string, newIndex: number, currentDraft: PageConfig) => {
+        const sections = [...currentDraft.sections];
+        const currentIndex = sections.findIndex((s) => s.id === sectionId);
+        if (currentIndex === -1 || newIndex < 0 || newIndex >= sections.length) return;
+        const [removed] = sections.splice(currentIndex, 1);
+        const insertIndex = newIndex > currentIndex ? newIndex - 1 : newIndex;
+        sections.splice(Math.min(insertIndex, sections.length), 0, removed);
+        setDraft({ ...currentDraft, sections });
+        setHasChanges(true);
+      },
+      []
+    );
+
     const handleBakeResponse = useCallback(
       (event: MessageEvent) => {
         if (event.origin !== window.location.origin) return;
         if (event.data.type === STUDIO_EVENTS.SECTION_SELECT) {
           setSelected(event.data.section);
+        }
+        if (event.data.type === STUDIO_EVENTS.SECTION_REORDER && draft) {
+          const { sectionId, newIndex } = event.data as { sectionId?: string; newIndex?: number };
+          if (typeof sectionId === 'string' && typeof newIndex === 'number' && newIndex >= 0) {
+            handleReorderSection(sectionId, newIndex, draft);
+          }
         }
         if (event.data.type === STUDIO_EVENTS.SEND_CLEAN_HTML) {
           if (!draft) return;
@@ -133,7 +238,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
           setHasChanges(false);
         }
       },
-      [draft, globalDraft, slug, themeConfig]
+      [draft, globalDraft, slug, themeConfig, handleReorderSection]
     );
 
     useEffect(() => {
@@ -230,6 +335,11 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                 pageData={sidebarData}
                 onUpdate={handleUpdate}
                 onClose={() => setSelected(null)}
+                onReorderSection={
+                  draft && selected?.scope === 'local'
+                    ? (sectionId, newIndex) => handleReorderSection(sectionId, newIndex, draft)
+                    : undefined
+                }
               />
             </div>
             <AddSectionLibrary
@@ -251,20 +361,39 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
     </ThemeLoader>
   );
 
-  if (!isReady) return null;
+  if (!isReady) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#0f172a',
+          color: '#94a3b8',
+          fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+          fontSize: 14,
+        }}
+      >
+        Loading…
+      </div>
+    );
+  }
 
   return (
-    <ConfigProvider config={{ registry, schemas }}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<VisitorView />} />
-          <Route path="/:slug" element={<VisitorView />} />
-          <Route path="/admin" element={<StudioView />} />
-          <Route path="/admin/:slug" element={<StudioView />} />
-          <Route path="/admin/preview/:slug" element={<PreviewView />} />
-          <Route path="*" element={<NotFoundComponent />} />
-        </Routes>
-      </BrowserRouter>
-    </ConfigProvider>
+    <EngineErrorBoundary>
+      <ConfigProvider config={{ registry, schemas }}>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<VisitorView />} />
+            <Route path="/:slug" element={<VisitorView />} />
+            <Route path="/admin" element={<StudioView />} />
+            <Route path="/admin/:slug" element={<StudioView />} />
+            <Route path="/admin/preview/:slug" element={<PreviewView />} />
+            <Route path="*" element={<NotFoundComponent />} />
+          </Routes>
+        </BrowserRouter>
+      </ConfigProvider>
+    </EngineErrorBoundary>
   );
 }

@@ -9,7 +9,7 @@ import { useStudio } from './StudioContext';
 import { cn } from './utils';
 import { STUDIO_EVENTS } from './events';
 import type { Section, MenuItem } from './kernel';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react';
 
 /**
  * 🛡️ SECTION ERROR BOUNDARY
@@ -52,37 +52,90 @@ interface SectionRendererProps {
   section: Section;
   menu?: MenuItem[];
   selectedId?: string | null;
+  /** When true, show reorder (up/down) in overlay for local sections. */
+  reorderable?: boolean;
+  /** Section index in page (for reorder). Required when reorderable. */
+  sectionIndex?: number;
+  /** Total number of page sections (for disabling down at last). */
+  totalSections?: number;
+  /** Called when user triggers move up/down. newIndex is the target index for the engine. */
+  onReorder?: (sectionId: string, newIndex: number) => void;
 }
 
-const SovereignOverlay: React.FC<{ 
-  type: string; 
-  scope: string; 
-  isSelected: boolean; 
-}> = ({ type, scope, isSelected }) => {
+const SovereignOverlay: React.FC<{
+  type: string;
+  scope: string;
+  isSelected: boolean;
+  sectionId?: string;
+  sectionIndex?: number;
+  totalSections?: number;
+  onReorder?: (sectionId: string, newIndex: number) => void;
+}> = ({ type, scope, isSelected, sectionId, sectionIndex = 0, totalSections = 0, onReorder }) => {
+  const canMoveUp = typeof sectionIndex === 'number' && sectionIndex > 0 && onReorder;
+  const canMoveDown = typeof sectionIndex === 'number' && sectionIndex < totalSections - 1 && onReorder;
+
   return (
-    <div 
+    <div
       data-jp-section-overlay
       className={cn(
-        "absolute inset-0 pointer-events-none transition-all duration-200 z-[50]",
-        "border-2 border-transparent group-hover:border-blue-400/50 group-hover:border-dashed",
-        isSelected && "border-2 border-blue-600 border-solid bg-blue-500/5"
+        'absolute inset-0 pointer-events-none transition-all duration-200 z-[50]',
+        'border-2 border-transparent group-hover:border-blue-400/50 group-hover:border-dashed',
+        isSelected && 'border-2 border-blue-600 border-solid bg-blue-500/5'
       )}
     >
-      <div className={cn(
-        "absolute top-0 right-0 px-2 py-1 text-[9px] font-black uppercase tracking-widest transition-opacity",
-        "bg-blue-600 text-white",
-        isSelected || "group-hover:opacity-100 opacity-0"
-      )}>
-        {type} <span className="opacity-50">|</span> {scope}
+      <div
+        className={cn(
+          'absolute top-0 right-0 flex flex-nowrap items-center gap-1 pl-1 pr-2 py-1 text-[9px] font-black uppercase tracking-widest transition-opacity pointer-events-auto',
+          'bg-blue-600 text-white',
+          isSelected || 'group-hover:opacity-100 opacity-0'
+        )}
+      >
+        {onReorder && sectionId != null && (
+          <span className="shrink-0 flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (canMoveUp) onReorder(sectionId, sectionIndex - 1);
+              }}
+              disabled={!canMoveUp}
+              className="inline-flex items-center justify-center min-w-[18px] min-h-[18px] rounded bg-white/20 hover:bg-white/30 disabled:opacity-30 disabled:pointer-events-none"
+              title="Move section up"
+              aria-label="Move section up"
+            >
+              <ChevronUp size={12} strokeWidth={2.5} />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (canMoveDown) onReorder(sectionId, sectionIndex + 2);
+              }}
+              disabled={!canMoveDown}
+              className="inline-flex items-center justify-center min-w-[18px] min-h-[18px] rounded bg-white/20 hover:bg-white/30 disabled:opacity-30 disabled:pointer-events-none"
+              title="Move section down"
+              aria-label="Move section down"
+            >
+              <ChevronDown size={12} strokeWidth={2.5} />
+            </button>
+          </span>
+        )}
+        <span className="shrink-0">{type}</span>
+        <span className="opacity-50 shrink-0">|</span>
+        <span className="shrink-0">{scope}</span>
       </div>
     </div>
   );
 };
 
-export const SectionRenderer: React.FC<SectionRendererProps> = ({ 
-  section, 
+export const SectionRenderer: React.FC<SectionRendererProps> = ({
+  section,
   menu,
-  selectedId 
+  selectedId,
+  reorderable: reorderableProp,
+  sectionIndex,
+  totalSections,
+  onReorder,
 }) => {
   const { mode } = useStudio();
   const { registry } = useConfig();
@@ -142,10 +195,14 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
       </div>
 
       {isStudio && (
-        <SovereignOverlay 
-          type={section.type} 
-          scope={scope} 
-          isSelected={!!isSelected} 
+        <SovereignOverlay
+          type={section.type}
+          scope={scope}
+          isSelected={!!isSelected}
+          sectionId={reorderableProp && scope === 'local' ? section.id : undefined}
+          sectionIndex={reorderableProp && scope === 'local' ? sectionIndex : undefined}
+          totalSections={reorderableProp && scope === 'local' ? totalSections : undefined}
+          onReorder={reorderableProp && scope === 'local' ? onReorder : undefined}
         />
       )}
     </div>

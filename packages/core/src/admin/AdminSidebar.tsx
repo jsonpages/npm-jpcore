@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { useConfig } from '../lib/ConfigContext';
 import { FormFactory } from './FormFactory';
 import type { PageConfig, Section } from '../lib/kernel';
-import { MousePointerClick, SlidersHorizontal, Save, Layers } from 'lucide-react';
+import { MousePointerClick, SlidersHorizontal, Save, Layers, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 
 /**
  * 🧩 SelectedSectionInfo
@@ -22,6 +22,8 @@ interface AdminSidebarProps {
   pageData: PageConfig | { sections: Section[] };
   onUpdate: (newData: Record<string, unknown>) => void;
   onClose: () => void;
+  /** When set (for local sections), enables reorder up/down in the Inspector header. */
+  onReorderSection?: (sectionId: string, newIndex: number) => void;
 }
 
 /**
@@ -84,13 +86,17 @@ const ZeroStateContent: React.FC = () => (
 
 /**
  * 🛠️ AdminSidebar (Inspector)
+ * Hooks must run unconditionally (before any early return) to satisfy Rules of Hooks.
  */
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ 
   selectedSection, 
   pageData, 
   onUpdate,
-  onClose 
+  onClose,
+  onReorderSection,
 }) => {
+  const { schemas } = useConfig();
+
   if (!selectedSection) {
     return (
       <aside className="relative w-80 h-screen bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0">
@@ -108,21 +114,55 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   }
 
   const section = pageData.sections.find((s: Section) => s.id === selectedSection.id);
-  const { schemas } = useConfig();
   const schema = schemas[selectedSection.type] as z.ZodObject<z.ZodRawShape> | undefined;
+  const sections = pageData.sections;
+  const currentIndex = sections.findIndex((s: Section) => s.id === selectedSection.id);
+  const canReorderUp = selectedSection.scope === 'local' && onReorderSection && currentIndex > 0;
+  const canReorderDown = selectedSection.scope === 'local' && onReorderSection && currentIndex >= 0 && currentIndex < sections.length - 1;
 
   return (
     <aside className="relative w-80 h-screen bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 animate-in slide-in-from-right duration-300">
       <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
-        <div>
-          <h3 className="text-sm font-bold text-white">Inspector</h3>
-          <p className="text-[10px] font-mono text-blue-400 uppercase tracking-wider">
-            {selectedSection.type} <span className="text-zinc-600">|</span> {selectedSection.scope}
-          </p>
+        <div className="flex items-center gap-2 min-w-0">
+          <div>
+            <h3 className="text-sm font-bold text-white">Inspector</h3>
+            <p className="text-[10px] font-mono text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+              {onReorderSection && selectedSection.scope === 'local' && (
+                <span className="text-zinc-500 shrink-0" title="Reorder section on page">
+                  <GripVertical size={12} strokeWidth={2} />
+                </span>
+              )}
+              {selectedSection.type} <span className="text-zinc-600">|</span> {selectedSection.scope}
+            </p>
+          </div>
+          {selectedSection.scope === 'local' && onReorderSection && (
+            <div className="flex flex-col gap-0 shrink-0" role="group" aria-label="Reorder section">
+              <button
+                type="button"
+                onClick={() => onReorderSection(selectedSection.id, currentIndex - 1)}
+                disabled={!canReorderUp}
+                className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-30 disabled:pointer-events-none"
+                title="Move section up"
+                aria-label="Move section up"
+              >
+                <ChevronUp size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => onReorderSection(selectedSection.id, currentIndex + 2)}
+                disabled={!canReorderDown}
+                className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-30 disabled:pointer-events-none"
+                title="Move section down"
+                aria-label="Move section down"
+              >
+                <ChevronDown size={16} />
+              </button>
+            </div>
+          )}
         </div>
         <button 
           onClick={onClose} 
-          className="text-zinc-500 hover:text-white transition-colors p-1 hover:bg-zinc-800 rounded"
+          className="text-zinc-500 hover:text-white transition-colors p-1 hover:bg-zinc-800 rounded shrink-0"
         >
           ✕
         </button>
