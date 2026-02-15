@@ -4,9 +4,18 @@
     "logoUrl": "/logo.svg"
   },
   "pages": [
-    { "slug": "home", "label": "Home" },
-    { "slug": "architecture", "label": "Architecture" },
-    { "slug": "usage", "label": "Usage" }
+    {
+      "slug": "home",
+      "label": "Home"
+    },
+    {
+      "slug": "architecture",
+      "label": "Architecture"
+    },
+    {
+      "slug": "usage",
+      "label": "Usage"
+    }
   ],
   "header": {
     "id": "global-header",
@@ -16,10 +25,22 @@
       "logoHighlight": "Pages",
       "logoIconText": "{ }",
       "links": [
-        { "label": "Architecture", "href": "#architecture", "isCta": false },
-        { "label": "Products", "href": "#products", "isCta": false },
-        { "label": "PA Ready", "href": "#pa-ready", "isCta": false },
-        { "label": "Philosophy", "href": "#philosophy", "isCta": false }
+        {
+          "label": "Architecture",
+          "href": "#architecture"
+        },
+        {
+          "label": "Products",
+          "href": "#products"
+        },
+        {
+          "label": "PA Ready",
+          "href": "#pa-ready"
+        },
+        {
+          "label": "Philosophy",
+          "href": "#philosophy"
+        }
       ]
     },
     "settings": {
@@ -34,10 +55,22 @@
       "brandHighlight": "Pages",
       "copyright": "© 2026 JsonPages Ecosystem. Architected by Guido Filippo Serio.",
       "links": [
-        { "label": "Documentation", "href": "#" },
-        { "label": "API Reference", "href": "#" },
-        { "label": "Changelog", "href": "#" },
-        { "label": "Privacy", "href": "#" }
+        {
+          "label": "Documentation",
+          "href": "#"
+        },
+        {
+          "label": "API Reference",
+          "href": "#"
+        },
+        {
+          "label": "Changelog",
+          "href": "#"
+        },
+        {
+          "label": "Privacy",
+          "href": "#"
+        }
       ]
     },
     "settings": {
@@ -45,5 +78,3 @@
     }
   }
 }
-
-

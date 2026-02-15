@@ -11,17 +11,34 @@
       "type": "hero",
       "data": {
         "badge": "Composable UI Engine · SaaS v1.4",
-        "title": "Global Authoring.",
+        "title": "Local Authoring.",
         "titleHighlight": "Global Governance.",
         "description": "JsonPages is a high-fidelity Site Factory that solves the scalability bottleneck of traditional CMS systems. Distribute, govern, and render UI components across hundreds of independent sites — without technical drift.",
         "ctas": [
-          { "label": "Explore Products →", "href": "#products", "variant": "primary" },
-          { "label": "Read the Spec", "href": "#architecture", "variant": "secondary" }
+          {
+            "label": "Explore Products →",
+            "href": "#products",
+            "variant": "primary"
+          },
+          {
+            "label": "Read the Spec",
+            "href": "#architecture",
+            "variant": "secondary"
+          }
         ],
         "metrics": [
-          { "val": "100+", "label": "Pages per tenant" },
-          { "val": "0ms", "label": "Runtime overhead" },
-          { "val": "∞", "label": "Scalable blocks" }
+          {
+            "val": "100+",
+            "label": "Pages per tenant"
+          },
+          {
+            "val": "0ms",
+            "label": "Runtime overhead"
+          },
+          {
+            "val": "∞",
+            "label": "Scalable blocks"
+          }
         ]
       },
       "settings": {}
@@ -33,25 +50,52 @@
         "siloGroups": [
           {
             "blocks": [
-              { "label": "Agency A Stack", "variant": "red" },
-              { "label": "Custom CMS", "variant": "red" },
-              { "label": "PHP Backend", "variant": "red" }
+              {
+                "label": "Agency A Stack",
+                "variant": "red"
+              },
+              {
+                "label": "Custom CMS",
+                "variant": "red"
+              },
+              {
+                "label": "PHP Backend",
+                "variant": "red"
+              }
             ],
             "label": "Silo #1"
           },
           {
             "blocks": [
-              { "label": "Agency B Tools", "variant": "amber" },
-              { "label": "WordPress", "variant": "amber" },
-              { "label": "LAMP Stack", "variant": "amber" }
+              {
+                "label": "Agency B Tools",
+                "variant": "amber"
+              },
+              {
+                "label": "WordPress",
+                "variant": "amber"
+              },
+              {
+                "label": "LAMP Stack",
+                "variant": "amber"
+              }
             ],
             "label": "Silo #2"
           },
           {
             "blocks": [
-              { "label": "Agency C Kit", "variant": "green" },
-              { "label": "React App", "variant": "green" },
-              { "label": "Node.js", "variant": "green" }
+              {
+                "label": "Agency C Kit",
+                "variant": "green"
+              },
+              {
+                "label": "React App",
+                "variant": "green"
+              },
+              {
+                "label": "Node.js",
+                "variant": "green"
+              }
             ],
             "label": "Silo #3"
           }
@@ -66,7 +110,8 @@
             "text": "JsonPages eliminates this by providing a centralized protocol to distribute, govern, and render UI components — ensuring every site, regardless of who builds it, conforms to a single typed ontology.",
             "isBold": true
           }
-        ]
+        ],
+        "anchorId": "aa"
       },
       "settings": {}
     },
@@ -137,23 +182,74 @@
         ],
         "codeFilename": "libs/shared-data/src/lib/core.ts",
         "codeLines": [
-          { "content": "// 🛡️ KERNEL — Single Source of Truth", "tokenType": "comment" },
-          { "content": "", "tokenType": "plain" },
-          { "content": "export interface SectionDataRegistry {", "tokenType": "keyword" },
-          { "content": "  // Open Registry: modules inject here", "tokenType": "comment" },
-          { "content": "}", "tokenType": "plain" },
-          { "content": "", "tokenType": "plain" },
-          { "content": "export interface BaseSection<K extends keyof SectionDataRegistry> {", "tokenType": "keyword" },
-          { "content": "  id: string;", "tokenType": "type" },
-          { "content": "  type: K;", "tokenType": "type" },
-          { "content": "  data: SectionDataRegistry[K];", "tokenType": "type" },
-          { "content": "  settings?: SectionSettings;", "tokenType": "type" },
-          { "content": "}", "tokenType": "plain" },
-          { "content": "", "tokenType": "plain" },
-          { "content": "// Computed Union — built automatically from registry", "tokenType": "comment" },
-          { "content": "export type Section =", "tokenType": "keyword" },
-          { "content": "  { [K in keyof SectionDataRegistry]: BaseSection<K> }", "tokenType": "type" },
-          { "content": "  [keyof SectionDataRegistry];", "tokenType": "operator" }
+          {
+            "content": "// 🛡️ KERNEL — Single Source of Truth",
+            "tokenType": "comment"
+          },
+          {
+            "content": "",
+            "tokenType": "plain"
+          },
+          {
+            "content": "export interface SectionDataRegistry {",
+            "tokenType": "keyword"
+          },
+          {
+            "content": "  // Open Registry: modules inject here",
+            "tokenType": "comment"
+          },
+          {
+            "content": "}",
+            "tokenType": "plain"
+          },
+          {
+            "content": "",
+            "tokenType": "plain"
+          },
+          {
+            "content": "export interface BaseSection<K extends keyof SectionDataRegistry> {",
+            "tokenType": "keyword"
+          },
+          {
+            "content": "  id: string;",
+            "tokenType": "type"
+          },
+          {
+            "content": "  type: K;",
+            "tokenType": "type"
+          },
+          {
+            "content": "  data: SectionDataRegistry[K];",
+            "tokenType": "type"
+          },
+          {
+            "content": "  settings?: SectionSettings;",
+            "tokenType": "type"
+          },
+          {
+            "content": "}",
+            "tokenType": "plain"
+          },
+          {
+            "content": "",
+            "tokenType": "plain"
+          },
+          {
+            "content": "// Computed Union — built automatically from registry",
+            "tokenType": "comment"
+          },
+          {
+            "content": "export type Section =",
+            "tokenType": "keyword"
+          },
+          {
+            "content": "  { [K in keyof SectionDataRegistry]: BaseSection<K> }",
+            "tokenType": "type"
+          },
+          {
+            "content": "  [keyof SectionDataRegistry];",
+            "tokenType": "operator"
+          }
         ]
       },
       "settings": {}
@@ -174,11 +270,21 @@
             "priceSuffix": "Local Install",
             "delivery": "Static Export · Zero Runtime",
             "features": [
-              { "text": "Local Authoring SDK" },
-              { "text": "Zero-Runtime HTML Bake" },
-              { "text": "Pure HTML/CSS Export" },
-              { "text": "CDN-Ready Delivery" },
-              { "text": "Full Code Ownership" }
+              {
+                "text": "Local Authoring SDK"
+              },
+              {
+                "text": "Zero-Runtime HTML Bake"
+              },
+              {
+                "text": "Pure HTML/CSS Export"
+              },
+              {
+                "text": "CDN-Ready Delivery"
+              },
+              {
+                "text": "Full Code Ownership"
+              }
             ],
             "featured": false
           },
@@ -189,12 +295,24 @@
             "priceSuffix": "/month",
             "delivery": "Managed Cloud · Multi-Tenant",
             "features": [
-              { "text": "Multi-Tenant Hosting" },
-              { "text": "Premium Block Library" },
-              { "text": "SchemaUI Components" },
-              { "text": "In-Context Editing" },
-              { "text": "AI-Native Protocol" },
-              { "text": "Tailwind v4 & BI Engine" }
+              {
+                "text": "Multi-Tenant Hosting"
+              },
+              {
+                "text": "Premium Block Library"
+              },
+              {
+                "text": "SchemaUI Components"
+              },
+              {
+                "text": "In-Context Editing"
+              },
+              {
+                "text": "AI-Native Protocol"
+              },
+              {
+                "text": "Tailwind v4 & BI Engine"
+              }
             ],
             "featured": false
           },
@@ -204,12 +322,24 @@
             "price": "Custom",
             "delivery": "Private Cloud · Enterprise Governance",
             "features": [
-              { "text": "Private Federated Registry" },
-              { "text": "Module Federation" },
-              { "text": "Runtime Component Injection" },
-              { "text": "Custom Brand Guidelines" },
-              { "text": "Dedicated SLA & Support" },
-              { "text": "SSO & RBAC" }
+              {
+                "text": "Private Federated Registry"
+              },
+              {
+                "text": "Module Federation"
+              },
+              {
+                "text": "Runtime Component Injection"
+              },
+              {
+                "text": "Custom Brand Guidelines"
+              },
+              {
+                "text": "Dedicated SLA & Support"
+              },
+              {
+                "text": "SSO & RBAC"
+              }
             ],
             "featured": false
           }
@@ -234,13 +364,25 @@
           }
         ],
         "badges": [
-          { "label": "PNRR Ready" },
-          { "label": "WCAG 2.1 AA" },
-          { "label": "AgID Compliant" }
+          {
+            "label": "PNRR Ready"
+          },
+          {
+            "label": "WCAG 2.1 AA"
+          },
+          {
+            "label": "AgID Compliant"
+          }
         ],
         "engines": [
-          { "label": "Tailwind v4", "variant": "tailwind" },
-          { "label": "Bootstrap Italia", "variant": "bootstrap" }
+          {
+            "label": "Tailwind v4",
+            "variant": "tailwind"
+          },
+          {
+            "label": "Bootstrap Italia",
+            "variant": "bootstrap"
+          }
         ],
         "codeSnippet": "{\n  \"type\": \"hero\",\n  \"data\": { \"title\": \"...\" },\n  \"settings\": { \"engine\": \"auto\" }\n}"
       },
@@ -272,5 +414,3 @@
     }
   ]
 }
-
-

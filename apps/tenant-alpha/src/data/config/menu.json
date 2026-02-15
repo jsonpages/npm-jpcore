@@ -1,10 +1,20 @@
 {
   "main": [
-    { "label": "Architecture", "href": "#architecture" },
-    { "label": "Products", "href": "#products" },
-    { "label": "PA Ready", "href": "#pa-ready" },
-    { "label": "Philosophy", "href": "#philosophy" }
+    {
+      "label": "Architecture",
+      "href": "#architecture"
+    },
+    {
+      "label": "Products",
+      "href": "#products"
+    },
+    {
+      "label": "PA Ready",
+      "href": "#pa-ready"
+    },
+    {
+      "label": "Philosophy",
+      "href": "#philosophy"
+    }
   ]
 }
-
-
