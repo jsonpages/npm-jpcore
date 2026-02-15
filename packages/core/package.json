@@ -11,8 +11,7 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/jsonpages-core.js",
       "require": "./dist/jsonpages-core.umd.cjs"
-    },
-    "./style.css": "./dist/style.css"
+    }
   },
   "files": [
     "dist"
@@ -27,21 +26,20 @@
     "zod": "^3.24.1"
   },
   "dependencies": {
-    "clsx": "^2.1.1",
-    "file-saver": "^2.0.5",
-    "jszip": "^3.10.1",
     "lucide-react": "^0.474.0",
     "radix-ui": "^1.4.3",
-    "tailwind-merge": "^3.0.1"
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
+    "tailwind-merge": "^3.0.1",
+    "clsx": "^2.1.1"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/node": "^25.2.3",
+    "vite": "^6.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "vite-plugin-dts": "^4.0.0",
+    "typescript": "^5.7.3",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.0.0",
-    "typescript": "^5.7.3",
-    "vite": "^6.0.0",
-    "vite-plugin-dts": "^4.0.0"
+    "@tailwindcss/vite": "^4.0.0"
   }
 }
