@@ -26,5 +26,6 @@ export { AdminSidebar } from './admin/AdminSidebar';
 export { ControlBar } from './admin/ControlBar';
 export { StudioStage } from './admin/StudioStage';
 export { PreviewEntry } from './admin/PreviewEntry';
+export { AddSectionLibrary } from './admin/AddSectionLibrary';
 export { FormFactory } from './admin/FormFactory';
 export { InputWidgets, type WidgetType } from './admin/InputRegistry';

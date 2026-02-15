@@ -1,17 +1,20 @@
 import React from 'react';
-import { FileJson, FileCode } from 'lucide-react';
+import { FileJson, FileCode, PlusSquare } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface ControlBarProps {
   hasChanges: boolean;
   onExportJSON: () => void;
   onExportHTML: () => void;
+  /** Optional: opens the Add section library. When provided, an "Add section" icon is shown. */
+  onAddSection?: () => void;
 }
 
-export const ControlBar: React.FC<ControlBarProps> = ({ 
-  hasChanges, 
-  onExportJSON, 
-  onExportHTML 
+export const ControlBar: React.FC<ControlBarProps> = ({
+  hasChanges,
+  onExportJSON,
+  onExportHTML,
+  onAddSection,
 }) => {
   return (
     <div className="h-14 border-b border-zinc-800 bg-zinc-950 flex items-center justify-between px-6 shrink-0 z-50 relative">
@@ -28,6 +31,18 @@ export const ControlBar: React.FC<ControlBarProps> = ({
             {hasChanges ? "Unsaved Changes" : "All Changes Saved"}
           </span>
         </div>
+        {onAddSection != null && (
+          <button
+            type="button"
+            onClick={onAddSection}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 transition-colors"
+            title="Add section"
+            aria-label="Add section"
+          >
+            <PlusSquare size={14} />
+            <span>Add section</span>
+          </button>
+        )}
       </div>
 
       <div className="absolute left-1/2 -translate-x-1/2 opacity-20 pointer-events-none">

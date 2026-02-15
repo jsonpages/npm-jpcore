@@ -16,6 +16,19 @@ export interface ThemeCssConfig {
   admin?: string;
 }
 
+/**
+ * Optional config for the "Add section" library (tenant-agnostic).
+ * Section types are derived from registry/schemas; tenant can customize labels and defaults.
+ */
+export interface AddSectionConfig {
+  /** Section types that can be added to a page (order preserved). If omitted, derived from schemas excluding header/footer. */
+  addableSectionTypes?: string[];
+  /** Display label per section type. If omitted, type id is humanized (e.g. "feature-grid" → "Feature grid"). */
+  sectionTypeLabels?: Record<string, string>;
+  /** Default data for a new section of the given type. Required for add-section to produce valid sections. */
+  getDefaultSectionData?: (sectionType: string) => Record<string, unknown>;
+}
+
 /** Single entry point configuration for the JsonPages Engine. */
 export interface JsonPagesConfig {
   /** Unique identifier for the tenant (used for asset resolution) */
@@ -35,4 +48,6 @@ export interface JsonPagesConfig {
   themeCss: ThemeCssConfig;
   /** Optional 404 component. */
   NotFoundComponent?: React.ComponentType;
+  /** Optional "Add section" library config (labels, addable types, default data). */
+  addSection?: AddSectionConfig;
 }

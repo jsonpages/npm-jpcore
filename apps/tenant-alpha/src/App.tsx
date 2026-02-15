@@ -4,6 +4,7 @@
 import { JsonPagesEngine } from '@jsonpages/core';
 import { ComponentRegistry } from '@/lib/ComponentRegistry';
 import { SECTION_SCHEMAS } from '@/lib/schemas';
+import { addSectionConfig } from '@/lib/addSectionConfig';
 import type { JsonPagesConfig } from '@jsonpages/core';
 import type { PageConfig, SiteConfig, ThemeConfig, MenuConfig } from '@/types';
 
@@ -33,6 +34,7 @@ const config: JsonPagesConfig = {
   themeConfig,
   menuConfig,
   themeCss: { tenant: tenantCss },
+  addSection: addSectionConfig,
 };
 
 function App() {

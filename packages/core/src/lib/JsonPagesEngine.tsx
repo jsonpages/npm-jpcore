@@ -11,6 +11,7 @@ import { AdminSidebar } from '../admin/AdminSidebar';
 import { ControlBar } from '../admin/ControlBar';
 import { StudioStage } from '../admin/StudioStage';
 import { PreviewEntry } from '../admin/PreviewEntry';
+import { AddSectionLibrary } from '../admin/AddSectionLibrary';
 import { DefaultNotFound } from './DefaultNotFound';
 import { themeManager } from '../utils/theme-manager';
 import { STUDIO_EVENTS } from './events';
@@ -33,8 +34,13 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
     themeConfig,
     menuConfig,
     themeCss,
+    addSection: addSectionConfig,
     NotFoundComponent = DefaultNotFound,
   } = config;
+
+  const addableSectionTypes: string[] =
+    addSectionConfig?.addableSectionTypes ??
+    (Object.keys(schemas).filter((t) => t !== 'header' && t !== 'footer') as string[]);
 
   const persistence = {
     exportJSON: config.persistence?.exportJSON ?? exportProjectJSON,
@@ -99,6 +105,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       return base;
     });
     const [selected, setSelected] = useState<{ id: string; type: string; scope: string } | null>(null);
+    const [addSectionLibraryOpen, setAddSectionLibraryOpen] = useState(false);
 
     useEffect(() => {
       const data = pageRegistry[slug];
@@ -169,6 +176,24 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       setHasChanges(false);
     };
 
+    const handleAddSection = (sectionType: string) => {
+      if (!draft) return;
+      const defaultData =
+        addSectionConfig?.getDefaultSectionData?.(sectionType) ?? {};
+      const newSection = {
+        id: crypto.randomUUID(),
+        type: sectionType,
+        data: defaultData,
+        settings: undefined,
+      } as Section;
+      setDraft({
+        ...draft,
+        sections: [...draft.sections, newSection],
+      });
+      setHasChanges(true);
+      setSelected({ id: newSection.id, type: sectionType, scope: 'local' });
+    };
+
     if (!draft) return <div>Loading Studio...</div>;
 
     const sidebarData =
@@ -184,6 +209,11 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
               hasChanges={hasChanges}
               onExportJSON={handleExportJSON}
               onExportHTML={triggerBake}
+              onAddSection={
+                addableSectionTypes.length > 0
+                  ? () => setAddSectionLibraryOpen(true)
+                  : undefined
+              }
             />
             <div className="flex flex-1 overflow-hidden">
               <main className="flex-1 relative bg-zinc-900/50 overflow-hidden">
@@ -202,6 +232,13 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                 onClose={() => setSelected(null)}
               />
             </div>
+            <AddSectionLibrary
+              open={addSectionLibraryOpen}
+              onClose={() => setAddSectionLibraryOpen(false)}
+              sectionTypes={addableSectionTypes}
+              sectionTypeLabels={addSectionConfig?.sectionTypeLabels}
+              onSelect={handleAddSection}
+            />
           </div>
         </StudioProvider>
       </ThemeLoader>
