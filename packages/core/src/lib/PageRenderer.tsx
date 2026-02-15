@@ -5,7 +5,11 @@ import type { PageRendererProps } from './kernel';
 
 const REORDER_DATA_KEY = 'application/json';
 
-export const PageRenderer: React.FC<PageRendererProps> = ({
+type Props = PageRendererProps & {
+  onReorder?: (sectionId: string, newIndex: number) => void;
+};
+
+export const PageRenderer: React.FC<Props> = ({
   pageConfig,
   siteConfig,
   menuConfig,

@@ -219,7 +219,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
         if (event.data.type === STUDIO_EVENTS.SECTION_SELECT) {
           setSelected(event.data.section);
         }
-        if (event.data.type === STUDIO_EVENTS.SECTION_REORDER && draft) {
+        if (event.data.type === 'jsonpages:section-reorder' && draft) {
           const { sectionId, newIndex } = event.data as { sectionId?: string; newIndex?: number };
           if (typeof sectionId === 'string' && typeof newIndex === 'number' && newIndex >= 0) {
             handleReorderSection(sectionId, newIndex, draft);
