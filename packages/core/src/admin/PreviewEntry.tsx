@@ -53,7 +53,7 @@ export const PreviewEntry: React.FC = () => {
     );
   }
 
-  const headerData = globalDraft.header.data as { links?: MenuItem[] };
+  const headerData = globalDraft.header?.data as { links?: MenuItem[] } | undefined;
   const currentMenuConfig: MenuConfig = {
     main: headerData?.links ?? []
   };

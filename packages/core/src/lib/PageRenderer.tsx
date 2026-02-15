@@ -13,26 +13,30 @@ export const PageRenderer: React.FC<PageRendererProps> = ({
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-background)]">
-      <SectionRenderer 
-        section={siteConfig.header} 
-        menu={menuConfig.main} 
-        selectedId={selectedId}
-      />
+      {siteConfig.header != null && (
+        <SectionRenderer
+          section={siteConfig.header}
+          menu={menuConfig.main}
+          selectedId={selectedId}
+        />
+      )}
 
       <main className="flex-1">
         {pageConfig.sections.map((section) => (
-          <SectionRenderer 
-            key={section.id} 
-            section={section} 
+          <SectionRenderer
+            key={section.id}
+            section={section}
             selectedId={selectedId}
           />
         ))}
       </main>
 
-      <SectionRenderer 
-        section={siteConfig.footer} 
-        selectedId={selectedId}
-      />
+      {siteConfig.footer != null && (
+        <SectionRenderer
+          section={siteConfig.footer}
+          selectedId={selectedId}
+        />
+      )}
     </div>
   );
 };

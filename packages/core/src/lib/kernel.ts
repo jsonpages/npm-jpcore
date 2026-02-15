@@ -75,8 +75,8 @@ export interface SitePageEntry {
 
 export interface SiteConfig {
   identity: SiteIdentity;
-  header: Section;
-  footer: Section;
+  header?: Section;
+  footer?: Section;
   pages: SitePageEntry[];
 }
 

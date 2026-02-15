@@ -138,10 +138,10 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       if (!selected || !draft) return;
       setHasChanges(true);
       if (selected.scope === 'global') {
-        if (selected.type === 'header') {
-          setGlobalDraft({ ...globalDraft, header: { ...globalDraft.header!, data: newData } as Section });
-        } else if (selected.type === 'footer') {
-          setGlobalDraft({ ...globalDraft, footer: { ...globalDraft.footer!, data: newData } as Section });
+        if (selected.type === 'header' && globalDraft.header != null) {
+          setGlobalDraft({ ...globalDraft, header: { ...globalDraft.header, data: newData } as Section });
+        } else if (selected.type === 'footer' && globalDraft.footer != null) {
+          setGlobalDraft({ ...globalDraft, footer: { ...globalDraft.footer, data: newData } as Section });
         }
       } else {
         const updatedSections = draft.sections.map((s) =>
@@ -173,7 +173,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
 
     const sidebarData =
       selected?.scope === 'global'
-        ? { sections: [globalDraft.header!, globalDraft.footer!] }
+        ? { sections: [globalDraft.header, globalDraft.footer].filter((s): s is Section => s != null) }
         : draft;
 
     return (
