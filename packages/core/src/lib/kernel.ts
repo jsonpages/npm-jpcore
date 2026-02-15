@@ -1,6 +1,6 @@
 /**
  * 🛡️ KERNEL: The Base Contract (MTRP)
- * Core is self-contained; structural types live here. Section is the computed union from the registry.
+ * Core is self-contained; structural types live here.
  */
 export interface BaseSectionSettings {
   [key: string]: unknown;
@@ -18,7 +18,7 @@ export interface BaseSection<K extends keyof SectionDataRegistry> {
     : BaseSectionSettings;
 }
 
-/** Structural shape used when no tenant has augmented the registries (core builds in isolation). */
+/** Structural shape used when no tenant has augmented the registries. */
 export interface FallbackSection {
   id: string;
   type: string;
@@ -26,7 +26,7 @@ export interface FallbackSection {
   settings?: Record<string, unknown>;
 }
 
-/** Computed union of all registered section types (augmented by Tenant via declare module). */
+/** Computed union of all registered section types. */
 export type Section =
   keyof SectionDataRegistry extends never
     ? FallbackSection
@@ -35,7 +35,7 @@ export type Section =
 export type SectionType = keyof SectionDataRegistry extends never ? string : keyof SectionDataRegistry;
 
 // =============================================================================
-// STRUCTURAL TYPES (Base; no dependency on @/types)
+// STRUCTURAL TYPES
 // =============================================================================
 
 export interface MenuItem {
@@ -117,11 +117,20 @@ export interface ThemeConfig {
   tokens: ThemeTokens;
 }
 
+/**
+ * 📦 PROJECT STATE (The Universal Data Bundle)
+ * Moved to Kernel to serve as SSOT for Engine and Persistence.
+ */
+export interface ProjectState {
+  page: PageConfig;
+  site: SiteConfig;
+  menu: MenuConfig;
+  theme: ThemeConfig;
+}
+
 export interface PageRendererProps {
   pageConfig: PageConfig;
   siteConfig: SiteConfig;
   menuConfig: MenuConfig;
   selectedId?: string | null;
 }
-
-

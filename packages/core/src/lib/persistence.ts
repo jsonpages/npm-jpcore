@@ -1,10 +1,13 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import type { PageConfig, SiteConfig, MenuConfig, ThemeConfig } from './kernel';
+import type { PageConfig, SiteConfig, MenuConfig, ThemeConfig, ProjectState } from './kernel';
 
-interface ProjectState {
+/**
+ * 🍞 BAKED STATE (Optimized subset for the static HTML artifact)
+ */
+export interface BakedState {
   page: PageConfig;
-  site: SiteConfig;
+  site: Omit<SiteConfig, 'pages'>; 
   menu: MenuConfig;
   theme: ThemeConfig;
 }
@@ -28,21 +31,25 @@ export const exportProjectJSON = async (state: ProjectState, slug: string) => {
 
 /**
  * 🍞 BAKE HTML (The Single File Artifact)
- * Now accepts the cleanHtml string captured from the Iframe.
  */
 export const exportBakedHTML = (state: ProjectState, slug: string, cleanHtml: string) => {
-  // 1. Create the State Payload for hydration
-  const payload = JSON.stringify(state);
+  const { pages, ...siteWithoutSitemap } = state.site;
+  
+  const bakedState: BakedState = {
+    page: state.page,
+    site: siteWithoutSitemap,
+    menu: state.menu,
+    theme: state.theme,
+  };
+
+  const payload = JSON.stringify(bakedState);
   const injectionScript = `<script id="jp-baked-state" type="application/json">${payload}</script>`;
 
-  // 2. Inject the payload into the captured <head>
   const bakedHtml = cleanHtml.replace(
     '</head>', 
     `${injectionScript}</head>`
   );
 
-  // 3. Create Blob & Download
   const blob = new Blob([`<!DOCTYPE html>${bakedHtml}`], { type: "text/html;charset=utf-8" });
   saveAs(blob, `${slug}.html`);
 };
-

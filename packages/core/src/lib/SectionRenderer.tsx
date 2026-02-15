@@ -1,19 +1,54 @@
-
 /**
  * FILE: SectionRenderer.tsx
- * STATUS: Build-Safe & Anchor-Enabled
+ * STATUS: Build-Safe, Anchor-Enabled & Error-Resilient
  */
 
-import React from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { useConfig } from './ConfigContext';
 import { useStudio } from './StudioContext';
 import { cn } from './utils';
 import { STUDIO_EVENTS } from './events';
 import type { Section, MenuItem } from './kernel';
+import { AlertTriangle } from 'lucide-react';
+
+/**
+ * 🛡️ SECTION ERROR BOUNDARY
+ * Prevents a single faulty component from crashing the entire site or Studio.
+ */
+class SectionErrorBoundary extends Component<{ children: ReactNode; type: string }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; type: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error(`[JsonPages] Component Crash [${this.props.type}]:`, error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 m-4 bg-amber-500/5 border-2 border-dashed border-amber-500/20 rounded-xl flex flex-col items-center text-center gap-3">
+          <AlertTriangle className="text-amber-500" size={32} />
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-amber-200 uppercase tracking-tight">Component Error</h4>
+            <p className="text-xs text-amber-500/70 font-mono">Type: {this.props.type}</p>
+          </div>
+          <p className="text-xs text-zinc-400 max-w-[280px] leading-relaxed">
+            This section failed to render. Check the console for details or verify the JSON data structure.
+          </p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface SectionRendererProps {
-  // 🛡️ FIX: Use the Discriminated Union 'Section' instead of the loose 'BaseSection<SectionType>'
-  // This ensures strict correlation between section.type and section.data
   section: Section;
   menu?: MenuItem[];
   selectedId?: string | null;
@@ -53,12 +88,9 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
   const isStudio = mode === 'studio';
   const isSelected = isStudio && selectedId === section.id;
 
-  // 1. Component Lookup (from config; no direct import of ComponentRegistry)
   const Component = registry[section.type];
   const scope = (section.type === 'header' || section.type === 'footer') ? 'global' : 'local';
   
-  // 🛡️ Safe Access: We cast to any for the settings check because TypeScript 
-  // cannot easily verify that 'sticky' exists on ALL section settings types.
   const isStickyHeader = section.type === 'header' && (section.settings as any)?.sticky;
 
   if (!Component) {
@@ -80,19 +112,13 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
   };
 
   const renderInnerComponent = () => {
-    // 2. Runtime Dispatch
-    // We cast to 'any' because React Props cannot dynamically map over a Discriminated Union 
-    // without complex overload signatures. The 'Section' type guard at the prop level 
-    // guarantees we have valid data.
     const DynamicComponent = Component as any;
-
     if (section.type === 'header' && menu) {
       return <DynamicComponent data={section.data} settings={section.settings} menu={menu} />;
     }
     return <DynamicComponent data={section.data} settings={section.settings} />;
   };
 
-  // 3. Anchor ID Management
   const anchorId = (section.data as any)?.anchorId;
 
   return (
@@ -108,7 +134,9 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
       )}
     >
       <div className="relative z-10">
-        {renderInnerComponent()}
+        <SectionErrorBoundary type={section.type}>
+          {renderInnerComponent()}
+        </SectionErrorBoundary>
       </div>
 
       {isStudio && (
@@ -121,4 +149,3 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
     </div>
   );
 };
-

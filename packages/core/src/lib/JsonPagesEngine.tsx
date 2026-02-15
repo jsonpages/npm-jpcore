@@ -1,6 +1,5 @@
 /**
  * Sovereign Shell: routing, state, and Admin layout live in the Engine.
- * The Core does not import from src/components or src/data; it receives everything via config.
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
@@ -16,8 +15,8 @@ import { DefaultNotFound } from './DefaultNotFound';
 import { themeManager } from '../utils/theme-manager';
 import { STUDIO_EVENTS } from './events';
 import { exportProjectJSON, exportBakedHTML } from './persistence';
-import type { JsonPagesConfig, ProjectState } from './types-engine';
-import type { PageConfig, SiteConfig, Section, MenuItem } from './kernel';
+import type { JsonPagesConfig } from './types-engine';
+import type { PageConfig, SiteConfig, Section, MenuItem, ProjectState } from './kernel';
 
 import defaultAdminCss from '../admin/admin-skin.css?inline';
 
