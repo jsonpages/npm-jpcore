@@ -1,6 +1,19 @@
 import { z } from 'zod';
 
 // =============================================================================
+// 0. BASE SCHEMAS (Governance)
+// =============================================================================
+// Ogni sezione deve poter avere un anchorId per la navigazione
+const BaseSectionData = z.object({
+  anchorId: z.string().optional().describe('ui:text'),
+});
+
+// Ogni oggetto dentro un array deve avere un ID per la stabilità di React
+const BaseArrayItem = z.object({
+  id: z.string().optional(), 
+});
+
+// =============================================================================
 // 1. SETTINGS SCHEMAS (CIP v1.2) — 🔴 IMMUTABLE
 // =============================================================================
 export const BaseSectionSettingsSchema = z.object({
@@ -27,8 +40,7 @@ const HeroMetricSchema = z.object({
   label: z.string().describe('ui:text'),
 });
 
-export const HeroSchema = z.object({
-  anchorId: z.string().optional().describe('ui:text'),
+export const HeroSchema = BaseSectionData.extend({
   badge: z.string().optional().describe('ui:text'),
   title: z.string().describe('ui:text'),
   titleHighlight: z.string().optional().describe('ui:text'),
@@ -38,31 +50,29 @@ export const HeroSchema = z.object({
 });
 
 // =============================================================================
-// 4. FEATURE GRID (Legacy)
+// 4. FEATURE GRID
 // =============================================================================
-export const FeatureCardSchema = z.object({
+export const FeatureCardSchema = BaseArrayItem.extend({
   icon: z.string().optional().describe('ui:icon-picker'),
   emoji: z.string().optional().describe('ui:text'),
   title: z.string().describe('ui:text'),
   description: z.string().describe('ui:textarea'),
 });
 
-export const FeatureGridSchema = z.object({
-  anchorId: z.string().optional().describe('ui:text'),
+export const FeatureGridSchema = BaseSectionData.extend({
   sectionTitle: z.string().describe('ui:text'),
   cards: z.array(FeatureCardSchema).describe('ui:list'),
 });
 
 // =============================================================================
-// 5. CODE BLOCK (Legacy)
+// 5. CODE BLOCK
 // =============================================================================
 export const LegacyCodeLineSchema = z.object({
   content: z.string().describe('ui:text'),
   isComment: z.boolean().default(false).describe('ui:checkbox'),
 });
 
-export const CodeBlockSchema = z.object({
-  anchorId: z.string().optional().describe('ui:text'),
+export const CodeBlockSchema = BaseSectionData.extend({
   label: z.string().optional().describe('ui:text'),
   lines: z.array(LegacyCodeLineSchema).describe('ui:list'),
 });
@@ -70,7 +80,7 @@ export const CodeBlockSchema = z.object({
 // =============================================================================
 // 6. PROBLEM STATEMENT
 // =============================================================================
-const SiloBlockSchema = z.object({
+const SiloBlockSchema = BaseArrayItem.extend({
   label: z.string().describe('ui:text'),
   variant: z.enum(['red', 'amber', 'green', 'blue']).describe('ui:select'),
 });
@@ -85,8 +95,7 @@ const ProblemParagraphSchema = z.object({
   isBold: z.boolean().default(false).describe('ui:checkbox'),
 });
 
-export const ProblemStatementSchema = z.object({
-  anchorId: z.string().optional().describe('ui:text'),
+export const ProblemStatementSchema = BaseSectionData.extend({
   siloGroups: z.array(SiloGroupSchema).describe('ui:list'),
   title: z.string().describe('ui:text'),
   paragraphs: z.array(ProblemParagraphSchema).describe('ui:list'),
@@ -96,7 +105,7 @@ export const ProblemStatementSchema = z.object({
 // =============================================================================
 // 7. PILLARS GRID
 // =============================================================================
-const PillarCardSchema = z.object({
+const PillarCardSchema = BaseArrayItem.extend({
   icon: z.string().describe('ui:text'),
   iconVariant: z.enum(['split', 'registry', 'federation']).describe('ui:select'),
   title: z.string().describe('ui:text'),
@@ -105,8 +114,7 @@ const PillarCardSchema = z.object({
   tagVariant: z.enum(['core', 'pattern', 'enterprise']).describe('ui:select'),
 });
 
-export const PillarsGridSchema = z.object({
-  anchorId: z.string().optional().describe('ui:text'),
+export const PillarsGridSchema = BaseSectionData.extend({
   label: z.string().optional().describe('ui:text'),
   title: z.string().describe('ui:text'),
   description: z.string().optional().describe('ui:textarea'),
@@ -116,7 +124,7 @@ export const PillarsGridSchema = z.object({
 // =============================================================================
 // 8. ARCH LAYERS
 // =============================================================================
-const ArchLayerItemSchema = z.object({
+const ArchLayerItemSchema = BaseArrayItem.extend({
   number: z.string().describe('ui:text'),
   layerLevel: z.enum(['l0', 'l1', 'l2']).describe('ui:select'),
   title: z.string().describe('ui:text'),
@@ -128,8 +136,7 @@ const SyntaxLineSchema = z.object({
   tokenType: z.enum(['plain', 'keyword', 'type', 'string', 'comment', 'operator']).default('plain').describe('ui:select'),
 });
 
-export const ArchLayersSchema = z.object({
-  anchorId: z.string().optional().describe('ui:text'),
+export const ArchLayersSchema = BaseSectionData.extend({
   label: z.string().optional().describe('ui:text'),
   title: z.string().describe('ui:text'),
   description: z.string().optional().describe('ui:textarea'),
@@ -145,7 +152,7 @@ const ProductFeatureSchema = z.object({
   text: z.string().describe('ui:text'),
 });
 
-const ProductCardSchema = z.object({
+const ProductCardSchema = BaseArrayItem.extend({
   tier: z.string().describe('ui:text'),
   name: z.string().describe('ui:text'),
   price: z.string().describe('ui:text'),
@@ -158,8 +165,7 @@ const ProductCardSchema = z.object({
   ctaVariant: z.enum(['primary', 'secondary']).default('secondary').describe('ui:select'),
 });
 
-export const ProductTriadSchema = z.object({
-  anchorId: z.string().optional().describe('ui:text'),
+export const ProductTriadSchema = BaseSectionData.extend({
   label: z.string().optional().describe('ui:text'),
   title: z.string().describe('ui:text'),
   description: z.string().optional().describe('ui:textarea'),
@@ -178,8 +184,7 @@ const PaEngineSchema = z.object({
   variant: z.enum(['tailwind', 'bootstrap']).describe('ui:select'),
 });
 
-export const PaSectionSchema = z.object({
-  anchorId: z.string().optional().describe('ui:text'),
+export const PaSectionSchema = BaseSectionData.extend({
   label: z.string().optional().describe('ui:text'),
   title: z.string().describe('ui:text'),
   subtitle: z.string().describe('ui:text'),
@@ -192,8 +197,7 @@ export const PaSectionSchema = z.object({
 // =============================================================================
 // 11. PHILOSOPHY
 // =============================================================================
-export const PhilosophySchema = z.object({
-  anchorId: z.string().optional().describe('ui:text'),
+export const PhilosophySchema = BaseSectionData.extend({
   label: z.string().optional().describe('ui:text'),
   title: z.string().describe('ui:text'),
   quote: z.string().describe('ui:textarea'),
@@ -204,8 +208,7 @@ export const PhilosophySchema = z.object({
 // =============================================================================
 // 12. CTA BANNER
 // =============================================================================
-export const CtaBannerSchema = z.object({
-  anchorId: z.string().optional().describe('ui:text'),
+export const CtaBannerSchema = BaseSectionData.extend({
   label: z.string().optional().describe('ui:text'),
   title: z.string().describe('ui:text'),
   description: z.string().optional().describe('ui:textarea'),
@@ -248,5 +251,3 @@ export const SECTION_SCHEMAS = {
 } as const;
 
 export type SectionType = keyof typeof SECTION_SCHEMAS;
-
-

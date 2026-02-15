@@ -6,18 +6,28 @@ import { BaseWidgetProps } from '../lib/shared-types';
 
 /**
  * 🛠️ HELPER: Generates a default value based on the Zod schema.
+ * 🛡️ FIX: Now injects a deterministic UUID for every object created.
  */
 const generateDefaultValue = (schema: z.ZodTypeAny): unknown => {
   if (schema instanceof z.ZodOptional || schema instanceof z.ZodDefault) {
     return generateDefaultValue(schema._def.innerType);
   }
+  
   if (schema instanceof z.ZodObject) {
-    const obj: Record<string, unknown> = {};
+    // Inizializziamo l'oggetto con un ID univoco per la stabilità di React
+    const obj: Record<string, unknown> = {
+      id: crypto.randomUUID() 
+    };
+    
     for (const key in schema.shape) {
+      // Se lo schema ha già un campo ID, non lo sovrascriviamo qui, 
+      // lasciamo che venga processato normalmente se ha un default.
+      if (key === 'id') continue;
       obj[key] = generateDefaultValue(schema.shape[key]);
     }
     return obj;
   }
+  
   if (schema instanceof z.ZodArray) return [];
   if (schema instanceof z.ZodString) return "";
   if (schema instanceof z.ZodNumber) return 0;
@@ -43,7 +53,8 @@ interface FormFactoryProps {
 }
 
 /**
- * 🏭 POLYMORPHIC FORM FACTORY (V2.7.0)
+ * 🏭 POLYMORPHIC FORM FACTORY (V2.8.0)
+ * Governance through deterministic IDs.
  */
 export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange }) => {
   const shape = schema.shape;
@@ -112,6 +123,12 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
               <div className="space-y-2">
                 {items.map((item, index) => {
                   const itemRecord = item as Record<string, unknown>;
+                  
+                  // 🛡️ STABLE KEY STRATEGY:
+                  // Prioritizziamo l'ID dell'oggetto. Se manca (dati legacy), 
+                  // usiamo l'indice ma con un prefisso per evitare collisioni.
+                  const stableKey = (itemRecord.id as string) || `legacy-${index}`;
+
                   const itemTitle = 
                     (typeof itemRecord.title === 'string' ? itemRecord.title : null) || 
                     (typeof itemRecord.label === 'string' ? itemRecord.label : null) || 
@@ -122,7 +139,7 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
 
                   return (
                     <ArrayItemWrapper 
-                      key={index} 
+                      key={stableKey} 
                       index={index}
                       isFirst={index === 0}
                       isLast={index === items.length - 1}
@@ -244,6 +261,3 @@ const ArrayItemWrapper: React.FC<ArrayItemWrapperProps> = ({
     </div>
   );
 };
-
-
-
