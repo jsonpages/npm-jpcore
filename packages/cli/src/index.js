@@ -121,6 +121,47 @@ export default defineConfig({
 }`;
   await fs.writeFile(path.join(targetDir, 'tsconfig.json'), tsConfig.trim());
 
+  // --- 2b. TSCONFIG.NODE (green build: composite + emitDeclarationOnly, no noEmit) ---
+  const tsConfigNode = `{
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "emitDeclarationOnly": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["vite.config.ts"]
+}
+`;
+  await fs.writeFile(path.join(targetDir, 'tsconfig.node.json'), tsConfigNode.trim());
+
+  // --- 2c. VITE-ENV.D.TS (Vite client types + *.css?inline for App.tsx) ---
+  const viteEnvDts = `/// <reference types="vite/client" />
+
+declare module '*.css?inline' {
+  const src: string;
+  export default src;
+}
+`;
+  await fs.writeFile(path.join(srcDir, 'vite-env.d.ts'), viteEnvDts.trim());
+
   // --- 3. INDEX.CSS ---
   const cssContent = `
 @import "tailwindcss";
