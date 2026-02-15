@@ -1,6 +1,5 @@
 /**
  * @jsonpages/core — Public API
- * Export everything from lib and admin so the tenant can use them.
  */
 
 // Lib: kernel, types, engine, renderers, context, persistence, events, utils, shared-types
@@ -17,6 +16,10 @@ export { StudioProvider, useStudio } from './lib/StudioContext';
 export { ConfigProvider, useConfig } from './lib/ConfigContext';
 export { ThemeLoader } from './lib/ThemeLoader';
 export { DefaultNotFound } from './lib/DefaultNotFound';
+
+// Utils
+export { themeManager } from './utils/theme-manager';
+export { resolveAssetUrl } from './utils/asset-resolver';
 
 // Admin
 export { AdminSidebar } from './admin/AdminSidebar';
