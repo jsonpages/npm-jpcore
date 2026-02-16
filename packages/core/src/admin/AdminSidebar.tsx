@@ -140,7 +140,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   if (!selectedSection) {
     return (
-      <aside className="relative w-80 h-screen bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0">
+      <aside className="relative w-full h-screen bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 min-w-0">
         <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
           <div>
             <h3 className="text-sm font-bold text-white">Inspector</h3>
@@ -162,7 +162,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const canReorderDown = selectedSection.scope === 'local' && onReorderSection && currentIndex >= 0 && currentIndex < sections.length - 1;
 
   return (
-    <aside className="relative w-80 h-screen bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 animate-in slide-in-from-right duration-300">
+    <aside className="relative w-full h-screen bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 min-w-0 animate-in slide-in-from-right duration-300">
       <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
         <div className="flex items-center gap-2 min-w-0">
           <div>

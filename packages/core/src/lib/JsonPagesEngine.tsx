@@ -2,7 +2,7 @@
  * Sovereign Shell: routing, state, and Admin layout live in the Engine.
  * Enterprise: error boundary, defensive config, and safe init to avoid black screen.
  */
-import React, { useEffect, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useEffect, useState, useCallback, useRef, Component, ErrorInfo, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
 import { PageRenderer } from './PageRenderer';
 import { StudioProvider } from './StudioContext';
@@ -193,6 +193,35 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
     const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
     const [scrollToSectionId, setScrollToSectionId] = useState<string | null>(null);
     const [addSectionLibraryOpen, setAddSectionLibraryOpen] = useState(false);
+    const [sidebarWidth, setSidebarWidth] = useState(320);
+    const sidebarMin = 240;
+    const sidebarMax = 720;
+
+    const handleResizeStart = useCallback((e: React.PointerEvent) => {
+      e.preventDefault();
+      const handleEl = e.currentTarget as HTMLElement;
+      handleEl.setPointerCapture(e.pointerId);
+      const startX = e.clientX;
+      const startWidth = sidebarWidth;
+      const onPointerMove = (moveEvent: PointerEvent) => {
+        const delta = startX - moveEvent.clientX;
+        const next = Math.min(sidebarMax, Math.max(sidebarMin, startWidth + delta));
+        setSidebarWidth(next);
+      };
+      const onPointerUp = () => {
+        handleEl.releasePointerCapture(e.pointerId);
+        handleEl.removeEventListener('pointermove', onPointerMove);
+        handleEl.removeEventListener('pointerup', onPointerUp);
+        handleEl.removeEventListener('pointercancel', onPointerUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      handleEl.addEventListener('pointermove', onPointerMove);
+      handleEl.addEventListener('pointerup', onPointerUp);
+      handleEl.addEventListener('pointercancel', onPointerUp);
+    }, [sidebarWidth]);
 
     const allLayers: LayerItem[] = draft
       ? [
@@ -361,7 +390,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
               }
             />
             <div className="flex flex-1 overflow-hidden">
-              <main className="flex-1 relative bg-zinc-900/50 overflow-hidden">
+              <main className="flex-1 min-w-0 relative bg-zinc-900/50 overflow-hidden">
                 <StudioStage
                   draft={draft}
                   globalDraft={globalDraft}
@@ -372,21 +401,33 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   onScrollRequested={handleScrollRequested}
                 />
               </main>
-              <AdminSidebar
-                selectedSection={selected}
-                pageData={sidebarData}
-                onUpdate={handleUpdate}
-                onClose={() => setSelected(null)}
-                onReorderSection={
-                  draft && selected?.scope === 'local'
-                    ? (sectionId, newIndex) => handleReorderSection(sectionId, newIndex, draft)
-                    : undefined
-                }
-                allLayers={allLayers}
-                activeSectionId={activeSectionId}
+              <div
+                className="flex shrink-0 relative h-full z-10"
+                style={{ width: sidebarWidth, minWidth: sidebarMin, maxWidth: sidebarMax }}
+              >
+                <div
+                  role="separator"
+                  aria-label="Resize inspector"
+                  className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/40 active:bg-primary/60 transition-colors shrink-0"
+                  style={{ zIndex: 9999 }}
+                  onPointerDown={handleResizeStart}
+                />
+                <AdminSidebar
+                  selectedSection={selected}
+                  pageData={sidebarData}
+                  onUpdate={handleUpdate}
+                  onClose={() => setSelected(null)}
+                  onReorderSection={
+                    draft && selected?.scope === 'local'
+                      ? (sectionId, newIndex) => handleReorderSection(sectionId, newIndex, draft)
+                      : undefined
+                  }
+                  allLayers={allLayers}
+                  activeSectionId={activeSectionId}
                 onRequestScrollToSection={handleRequestScrollToSection}
                 onDeleteSection={draft ? handleDeleteSection : undefined}
               />
+              </div>
             </div>
             <AddSectionLibrary
               open={addSectionLibraryOpen}
