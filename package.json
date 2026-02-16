@@ -11,6 +11,7 @@
     "build:all": "npm run build --workspaces --if-present"
   },
   "devDependencies": {
+    "@types/file-saver": "^2.0.7",
     "typescript": "^5.7.3"
   }
 }

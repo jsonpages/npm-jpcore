@@ -2,7 +2,7 @@
  * Sovereign Shell: routing, state, and Admin layout live in the Engine.
  * Enterprise: error boundary, defensive config, and safe init to avoid black screen.
  */
-import React, { useEffect, useState, useCallback, useRef, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useEffect, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
 import { PageRenderer } from './PageRenderer';
 import { StudioProvider } from './StudioContext';
