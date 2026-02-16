@@ -141,10 +141,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   if (!selectedSection) {
     return (
       <aside className="relative w-full h-screen bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 min-w-0">
-        <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
+        <div className="py-2 px-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
           <div>
-            <h3 className="text-sm font-bold text-white">Inspector</h3>
-            <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+            <h3 className="text-sm font-bold text-white leading-tight">Inspector</h3>
+            <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider leading-tight mt-0.5">
               Waiting for Selection...
             </p>
           </div>
@@ -156,18 +156,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   const section = pageData.sections.find((s: Section) => s.id === selectedSection.id);
   const schema = schemas[selectedSection.type] as z.ZodObject<z.ZodRawShape> | undefined;
-  const sections = pageData.sections;
-  const currentIndex = sections.findIndex((s: Section) => s.id === selectedSection.id);
-  const canReorderUp = selectedSection.scope === 'local' && onReorderSection && currentIndex > 0;
-  const canReorderDown = selectedSection.scope === 'local' && onReorderSection && currentIndex >= 0 && currentIndex < sections.length - 1;
 
   return (
     <aside className="relative w-full h-screen bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 min-w-0 animate-in slide-in-from-right duration-300">
-      <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
+      <div className="py-2 px-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
         <div className="flex items-center gap-2 min-w-0">
           <div>
-            <h3 className="text-sm font-bold text-white">Inspector</h3>
-            <p className="text-[10px] font-mono text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+            <h3 className="text-sm font-bold text-white leading-tight">Inspector</h3>
+            <p className="text-[10px] font-mono text-blue-400 uppercase tracking-wider flex items-center gap-1.5 leading-tight mt-0.5">
               {onReorderSection && selectedSection.scope === 'local' && (
                 <span className="text-zinc-500 shrink-0" title="Reorder section on page">
                   <GripVertical size={12} strokeWidth={2} />
@@ -176,30 +172,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               {selectedSection.type} <span className="text-zinc-600">|</span> {selectedSection.scope}
             </p>
           </div>
-          {selectedSection.scope === 'local' && onReorderSection && (
-            <div className="flex flex-col gap-0 shrink-0" role="group" aria-label="Reorder section">
-              <button
-                type="button"
-                onClick={() => onReorderSection(selectedSection.id, currentIndex - 1)}
-                disabled={!canReorderUp}
-                className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-30 disabled:pointer-events-none"
-                title="Move section up"
-                aria-label="Move section up"
-              >
-                <ChevronUp size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={() => onReorderSection(selectedSection.id, currentIndex + 2)}
-                disabled={!canReorderDown}
-                className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-30 disabled:pointer-events-none"
-                title="Move section down"
-                aria-label="Move section down"
-              >
-                <ChevronDown size={16} />
-              </button>
-            </div>
-          )}
         </div>
         <button
           type="button"
