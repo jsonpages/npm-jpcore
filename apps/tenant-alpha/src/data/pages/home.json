@@ -10,7 +10,7 @@
       "id": "hero-main",
       "type": "hero",
       "data": {
-        "badge": "Composable UI Engine · SaaS v1.4",
+        "badge": "Composable UI Engine ·  v1.0",
         "title": "Local Authoring.",
         "titleHighlight": "Global Governance.",
         "description": "JsonPages is a high-fidelity Site Factory that solves the scalability bottleneck of traditional CMS systems. Distribute, govern, and render UI components across hundreds of independent sites — without technical drift.",
