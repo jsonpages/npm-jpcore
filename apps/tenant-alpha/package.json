@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "dist": "bash ./src2Code.sh src index.html && sed -i 's/\\r$//' ../../packages/cli/src/index.js && npm link --force",
     "preview": "vite preview"
   },
   "dependencies": {

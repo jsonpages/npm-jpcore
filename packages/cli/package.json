@@ -1,25 +1,24 @@
 {
-    "name": "@jsonpages/cli",
-    "version": "1.0.0",
-    "description": "JsonPages CLI - Scaffold new tenants with ease",
-    "type": "module",
-    "bin": {
-      "jsonpages": "./src/index.js"
-    },
-    "scripts": {
-      "build": "tsc"
-    },
-    "dependencies": {
-      "chalk": "^5.3.0",
-      "commander": "^12.0.0",
-      "execa": "^9.0.0",
-      "fs-extra": "^11.2.0",
-      "inquirer": "^9.2.15",
-      "ora": "^8.0.1"
-    },
-    "devDependencies": {
-      "@types/fs-extra": "^11.0.4",
-      "@types/node": "^20.11.0",
-      "typescript": "^5.7.3"
-    }
+  "name": "@jsonpages/cli",
+  "version": "2.0.0",
+  "description": "JsonPages CLI - Sovereign Projection Engine",
+  "type": "module",
+  "bin": {
+    "jsonpages": "./src/index.js"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "execa": "^9.0.2",
+    "fs-extra": "^11.2.0",
+    "ora": "^8.0.1"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.13.1",
+    "typescript": "^5.7.3"
   }
+}

@@ -5,83 +5,151 @@ import fs from 'fs-extra';
 import path from 'path';
 import { execa } from 'execa';
 import ora from 'ora';
+import { fileURLToPath } from 'url';
+
+// 🛡️ Risoluzione path per rendere la CLI shippable
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const program = new Command();
 
 program
   .name('jsonpages')
-  .description('CLI to manage JsonPages Ecosystem')
-  .version('1.0.0');
+  .description('JsonPages CLI - Sovereign Projection Engine')
+  .version('2.2.0');
 
 program
   .command('new')
   .argument('<type>', 'Type of artifact (tenant)')
   .argument('<name>', 'Name of the new tenant')
-  .action(async (type, name) => {
+  .option('--script <path>', 'Override default deterministic script path')
+  .action(async (type, name, options) => {
     if (type !== 'tenant') {
-      console.log(chalk.red('Error: Only "tenant" type is supported for now.'));
+      console.log(chalk.red('❌ Error: Only "tenant" type is supported.'));
       return;
     }
 
     const targetDir = path.join(process.cwd(), name);
-    const spinner = ora(`Creating Golden Master Tenant: ${name}...`).start();
+    
+    // 🔍 Logica Asset Interno: 
+    // Se l'utente non fornisce uno script, usa quello dentro packages/cli/assets/
+    const defaultScriptPath = path.resolve(__dirname, '../assets/src_tenant_alpha.sh');
+    const scriptPath = options.script ? path.resolve(process.cwd(), options.script) : defaultScriptPath;
+
+    if (!fs.existsSync(scriptPath)) {
+      console.log(chalk.red(`❌ Error: Deterministic script not found at ${scriptPath}`));
+      console.log(chalk.yellow(`Expected internal asset at: ${defaultScriptPath}`));
+      return;
+    }
+
+    console.log(chalk.blue.bold(`\n🚀 Projecting Sovereign Tenant: ${name}\n`));
+    const spinner = ora();
 
     try {
+      // 1. SCAFFOLDING INFRA
+      spinner.start('Setting up environment (Vite + TS)...');
       await fs.ensureDir(targetDir);
+      await execa('npm', ['create', 'vite@latest', '.', '--', '--template', 'react-ts'], { cwd: targetDir });
+      spinner.succeed('Environment scaffolded.');
 
-      // 1. Vite Scaffold
-      spinner.text = 'Scaffolding Vite + React + TS...';
-      await execa('npm', ['create', 'vite@latest', '.', '--', '--template', 'react-swc-ts'], { cwd: targetDir });
+      // 2. CLEANUP (Piazza pulita per il determinismo)
+      spinner.start('Wiping default boilerplate...');
+      await fs.emptyDir(path.join(targetDir, 'src'));
+      const junk = ['App.css', 'App.tsx', 'main.tsx', 'vite-env.d.ts', 'favicon.ico', 'index.html'];
+      for (const file of junk) {
+        await fs.remove(path.join(targetDir, file)).catch(() => {});
+        await fs.remove(path.join(targetDir, 'src', file)).catch(() => {});
+      }
+      spinner.succeed('Clean slate achieved.');
 
-      // 2. Iniezione File
-      spinner.text = 'Injecting Golden Master Logic...';
-      await injectGoldenMasterFiles(targetDir, name);
+      // 3. INJECTION
+      spinner.start('Injecting Sovereign Configurations...');
+      await injectInfraFiles(targetDir, name);
+      spinner.succeed('Infrastructure configured.');
 
-      // 3. Installazione Base
-      spinner.text = 'Installing base dependencies...';
-      await execa('npm', ['install'], { cwd: targetDir });
+      // 4. DETERMINISTIC SRC (Proiezione dal DNA interno)
+      spinner.start('Executing deterministic src projection...');
+      const localScript = path.join(targetDir, 'setup_src.sh');
+      await fs.copy(scriptPath, localScript);
+      await fs.chmod(localScript, '755');
       
-      // 4. Linking Core
-      spinner.text = 'Linking @jsonpages/core...';
+      // Esecuzione dello script (che ora crea anche index.html se incluso)
+      await execa('./setup_src.sh', [], { cwd: targetDir, shell: true });
+      await fs.remove(localScript);
+      spinner.succeed('Source code and assets projected successfully.');
+
+      // 5. DEPENDENCY RESOLUTION (Green Build Enforcement)
+      spinner.start('Installing dependencies (this may take a minute)...');
+      
+      // 5a. Runtime Dependencies (Risolve Radix, CVA e Animations)
+      await execa('npm', ['install', 
+        'react', 
+        'react-dom', 
+        'zod', 
+        'react-router-dom', 
+        'lucide-react', 
+        'radix-ui',                 // 🛡️ Risolve TS2307
+        '@base-ui/react',           // Supporto componenti headless
+        'class-variance-authority', // Supporto varianti componenti
+        'tailwind-merge', 
+        'clsx', 
+        'tw-animate-css',           // Supporto animazioni tenant
+        'file-saver', 
+        'jszip'
+      ], { cwd: targetDir });
+      
+      // 5b. Dev Dependencies
+      await execa('npm', ['install', '-D', 
+        'vite', 
+        '@vitejs/plugin-react', 
+        'typescript', 
+        '@tailwindcss/vite', 
+        'tailwindcss', 
+        '@types/node', 
+        '@types/react', 
+        '@types/react-dom', 
+        '@types/file-saver'
+      ], { cwd: targetDir });
+
+      // 5c. Linking Core via yalc
+      spinner.text = 'Linking @jsonpages/core via yalc...';
       try {
         await execa('yalc', ['add', '@jsonpages/core'], { cwd: targetDir });
       } catch (e) {
-        spinner.warn(chalk.yellow('Yalc link failed. Make sure you ran "yalc publish" in packages/core.'));
+        spinner.warn(chalk.yellow('Yalc link failed. Ensure "@jsonpages/core" is published in yalc.'));
       }
       
-      // 5. Peer Dependencies (Runtime)
-      spinner.text = 'Installing runtime dependencies...';
-      await execa('npm', ['install', 'zod', 'react-router-dom', 'lucide-react', 'tailwind-merge', 'clsx'], { cwd: targetDir });
+      spinner.succeed(chalk.green.bold('✨ Tenant Ready!'));
 
-      // 6. Dev Dependencies (Build Tools - FIX: Tailwind v4)
-      spinner.text = 'Installing build tools (Tailwind v4)...';
-      await execa('npm', ['install', '-D', '@tailwindcss/vite', 'tailwindcss', '@types/node'], { cwd: targetDir });
-
-      spinner.succeed(chalk.green(`Golden Master Tenant ${name} created successfully!`));
-      console.log(`\nTo start developing:\n  ${chalk.cyan(`cd ${name}`)}\n  ${chalk.cyan(`npm run dev`)}\n`);
+      console.log(`\n${chalk.white.bgBlue(' NEXT STEPS ')}`);
+      console.log(`  ${chalk.cyan(`cd ${name}`)}`);
+      console.log(`  ${chalk.cyan(`npm run dev`)}   <- Start development`);
+      console.log(`  ${chalk.cyan(`npm run build`)} <- Validate Green Build`);
+      console.log(`\nGovernance enforced. Build is now safe.\n`);
 
     } catch (error) {
-      spinner.fail(chalk.red('Failed to create tenant.'));
+      spinner.fail(chalk.red('Projection failed.'));
       console.error(error);
     }
   });
 
-async function injectGoldenMasterFiles(targetDir, name) {
-  const srcDir = path.join(targetDir, 'src');
-  const libDir = path.join(srcDir, 'lib');
-  const componentsDir = path.join(srcDir, 'components');
-  const dataConfigDir = path.join(srcDir, 'data/config');
-  const dataPagesDir = path.join(srcDir, 'data/pages');
+async function injectInfraFiles(targetDir, name) {
+  const pkg = {
+    name: name,
+    private: true,
+    version: "1.0.0",
+    type: "module",
+    scripts: {
+      "dev": "vite",
+      "build": "tsc && vite build",
+      "preview": "vite preview"
+    }
+  };
+  await fs.writeJson(path.join(targetDir, 'package.json'), pkg, { spaces: 2 });
 
-  await fs.ensureDir(libDir);
-  await fs.ensureDir(componentsDir);
-  await fs.ensureDir(dataConfigDir);
-  await fs.ensureDir(dataPagesDir);
-
-  // --- 1. VITE CONFIG ---
   const viteConfig = `
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react-swc';
+import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
@@ -95,7 +163,6 @@ export default defineConfig({
 });`;
   await fs.writeFile(path.join(targetDir, 'vite.config.ts'), viteConfig.trim());
 
-  // --- 2. TSCONFIG ---
   const tsConfig = `
 {
   "compilerOptions": {
@@ -111,311 +178,39 @@ export default defineConfig({
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src"]
 }`;
   await fs.writeFile(path.join(targetDir, 'tsconfig.json'), tsConfig.trim());
 
-  // --- 2b. TSCONFIG.NODE (green build: composite + emitDeclarationOnly, no noEmit) ---
-  const tsConfigNode = `{
-  "compilerOptions": {
-    "composite": true,
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "target": "ES2023",
-    "lib": ["ES2023"],
-    "module": "ESNext",
-    "types": ["node"],
-    "skipLibCheck": true,
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "emitDeclarationOnly": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
-
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
-  },
-  "include": ["vite.config.ts"]
-}
-`;
-  await fs.writeFile(path.join(targetDir, 'tsconfig.node.json'), tsConfigNode.trim());
-
-  // --- 2c. VITE-ENV.D.TS (Vite client types + *.css?inline for App.tsx) ---
-  const viteEnvDts = `/// <reference types="vite/client" />
-
-declare module '*.css?inline' {
-  const src: string;
-  export default src;
-}
-`;
-  await fs.writeFile(path.join(srcDir, 'vite-env.d.ts'), viteEnvDts.trim());
-
-  // --- 3. INDEX.CSS ---
-  const cssContent = `
-@import "tailwindcss";
-@source "./**/*.tsx";
-@theme {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-primary: var(--primary);
-  --color-accent: var(--accent);
-  --color-border: var(--border);
-  --font-primary: var(--theme-font-primary);
-  --font-display: var(--theme-font-display, 'Playfair Display', Georgia, serif);
-}
-:root {
-  --background: var(--theme-background);
-  --foreground: var(--theme-text);
-  --card: var(--theme-surface);
-  --primary: var(--theme-primary);
-  --border: var(--theme-border);
-  --accent: var(--theme-accent, var(--theme-primary));
-}
-@layer base {
-  * { border-color: var(--border); }
-  body {
-    background-color: var(--background);
-    color: var(--foreground);
-    font-family: var(--font-primary);
-    line-height: 1.7;
-    @apply antialiased;
-  }
-}
-.font-display { font-family: var(--font-display, var(--font-primary)); }
-html { scroll-behavior: smooth; }`;
-  await fs.writeFile(path.join(srcDir, 'index.css'), cssContent.trim());
-
-  // --- 4. TYPES.TS ---
-  const typesContent = `
-import { z } from 'zod';
-import { SECTION_SCHEMAS, HeroSchema, FeatureGridSchema, ProblemStatementSchema, PillarsGridSchema, ArchLayersSchema, ProductTriadSchema, PaSectionSchema, PhilosophySchema, CtaBannerSchema, CodeBlockSchema } from './lib/schemas';
-
-export type HeaderData = z.infer<typeof SECTION_SCHEMAS.header>;
-export type FooterData = z.infer<typeof SECTION_SCHEMAS.footer>;
-export type HeroData = z.infer<typeof HeroSchema>;
-export type FeatureGridData = z.infer<typeof FeatureGridSchema>;
-export type ProblemStatementData = z.infer<typeof ProblemStatementSchema>;
-export type PillarsGridData = z.infer<typeof PillarsGridSchema>;
-export type ArchLayersData = z.infer<typeof ArchLayersSchema>;
-export type ProductTriadData = z.infer<typeof ProductTriadSchema>;
-export type PaSectionData = z.infer<typeof PaSectionSchema>;
-export type PhilosophyData = z.infer<typeof PhilosophySchema>;
-export type CtaBannerData = z.infer<typeof CtaBannerSchema>;
-export type CodeBlockData = z.infer<typeof CodeBlockSchema>;
-
-declare module '@jsonpages/core' {
-  export interface SectionDataRegistry {
-    'header': HeaderData;
-    'footer': FooterData;
-    'hero': HeroData;
-    'feature-grid': FeatureGridData;
-    'problem-statement': ProblemStatementData;
-    'pillars-grid': PillarsGridData;
-    'arch-layers': ArchLayersData;
-    'product-triad': ProductTriadData;
-    'pa-section': PaSectionData;
-    'philosophy': PhilosophyData;
-    'cta-banner': CtaBannerData;
-    'code-block': CodeBlockData;
-  }
-}
-export * from '@jsonpages/core';`;
-  await fs.writeFile(path.join(srcDir, 'types.ts'), typesContent.trim());
-
-  // --- 5. LIB/SCHEMAS.TS ---
-  const schemasContent = `
-import { z } from 'zod';
-const BaseSectionData = z.object({ anchorId: z.string().optional().describe('ui:text') });
-const BaseArrayItem = z.object({ id: z.string().optional() });
-
-export const HeroSchema = BaseSectionData.extend({
-  badge: z.string().optional().describe('ui:text'),
-  title: z.string().describe('ui:text'),
-  titleHighlight: z.string().optional().describe('ui:text'),
-  description: z.string().optional().describe('ui:textarea'),
-  ctas: z.array(z.object({ label: z.string().describe('ui:text'), href: z.string().describe('ui:text'), variant: z.enum(['primary', 'secondary']).default('primary').describe('ui:select') })).optional().describe('ui:list'),
-});
-
-export const FeatureGridSchema = BaseSectionData.extend({
-  sectionTitle: z.string().describe('ui:text'),
-  cards: z.array(BaseArrayItem.extend({ icon: z.string().optional().describe('ui:icon-picker'), title: z.string().describe('ui:text'), description: z.string().describe('ui:textarea') })).describe('ui:list'),
-});
-
-export const ProblemStatementSchema = BaseSectionData.extend({
-  title: z.string().describe('ui:text'),
-  siloGroups: z.array(z.object({ label: z.string().describe('ui:text'), blocks: z.array(BaseArrayItem.extend({ label: z.string().describe('ui:text'), variant: z.string().describe('ui:text') })) })).describe('ui:list'),
-  paragraphs: z.array(z.object({ text: z.string().describe('ui:textarea'), isBold: z.boolean().default(false).describe('ui:checkbox') })).describe('ui:list'),
-});
-
-export const PillarsGridSchema = BaseSectionData.extend({
-  title: z.string().describe('ui:text'),
-  pillars: z.array(BaseArrayItem.extend({ icon: z.string().describe('ui:text'), title: z.string().describe('ui:text'), description: z.string().describe('ui:textarea'), tag: z.string().describe('ui:text') })).describe('ui:list'),
-});
-
-export const ArchLayersSchema = BaseSectionData.extend({
-  title: z.string().describe('ui:text'),
-  layers: z.array(BaseArrayItem.extend({ number: z.string().describe('ui:text'), title: z.string().describe('ui:text'), description: z.string().describe('ui:textarea') })).describe('ui:list'),
-});
-
-export const ProductTriadSchema = BaseSectionData.extend({
-  title: z.string().describe('ui:text'),
-  products: z.array(BaseArrayItem.extend({ name: z.string().describe('ui:text'), price: z.string().describe('ui:text'), features: z.array(z.object({ text: z.string().describe('ui:text') })) })).describe('ui:list'),
-});
-
-export const PaSectionSchema = BaseSectionData.extend({
-  title: z.string().describe('ui:text'),
-  subtitle: z.string().describe('ui:text'),
-  paragraphs: z.array(z.object({ text: z.string().describe('ui:textarea') })),
-});
-
-export const PhilosophySchema = BaseSectionData.extend({
-  title: z.string().describe('ui:text'),
-  quote: z.string().describe('ui:textarea'),
-});
-
-export const CtaBannerSchema = BaseSectionData.extend({
-  title: z.string().describe('ui:text'),
-  description: z.string().describe('ui:textarea'),
-});
-
-export const CodeBlockSchema = BaseSectionData.extend({
-  label: z.string().describe('ui:text'),
-  lines: z.array(z.object({ content: z.string().describe('ui:text'), isComment: z.boolean().default(false).describe('ui:checkbox') })),
-});
-
-export const SECTION_SCHEMAS = {
-  'hero': HeroSchema,
-  'feature-grid': FeatureGridSchema,
-  'problem-statement': ProblemStatementSchema,
-  'pillars-grid': PillarsGridSchema,
-  'arch-layers': ArchLayersSchema,
-  'product-triad': ProductTriadSchema,
-  'pa-section': PaSectionSchema,
-  'philosophy': PhilosophySchema,
-  'cta-banner': CtaBannerSchema,
-  'code-block': CodeBlockSchema,
-  'header': z.object({ logoText: z.string().describe('ui:text'), links: z.array(z.object({ label: z.string().describe('ui:text'), href: z.string().describe('ui:text') })) }),
-  'footer': z.object({ brandText: z.string().describe('ui:text'), copyright: z.string().describe('ui:text') }),
-} as const;`;
-  await fs.writeFile(path.join(libDir, 'schemas.ts'), schemasContent.trim());
-
-  // --- 6. LIB/COMPONENTREGISTRY.TSX ---
-  const registryContent = `
-import { Hero } from '../components/Hero';
-import { FeatureGrid } from '../components/FeatureGrid';
-import { ProblemStatement } from '../components/ProblemStatement';
-import { PillarsGrid } from '../components/PillarsGrid';
-import { ArchLayers } from '../components/ArchLayers';
-import { ProductTriad } from '../components/ProductTriad';
-import { PaSection } from '../components/PaSection';
-import { Philosophy } from '../components/Philosophy';
-import { CtaBanner } from '../components/CtaBanner';
-import { CodeBlock } from '../components/CodeBlock';
-
-const Header = ({ data }: any) => <header className="p-6 bg-black text-white flex justify-between"><div>{data.logoText}</div></header>;
-const Footer = ({ data }: any) => <footer className="p-10 bg-zinc-900 text-zinc-500 text-center">{data.copyright}</footer>;
-
-export const ComponentRegistry = {
-  'hero': Hero,
-  'feature-grid': FeatureGrid,
-  'problem-statement': ProblemStatement,
-  'pillars-grid': PillarsGrid,
-  'arch-layers': ArchLayers,
-  'product-triad': ProductTriad,
-  'pa-section': PaSection,
-  'philosophy': Philosophy,
-  'cta-banner': CtaBanner,
-  'code-block': CodeBlock,
-  'header': Header,
-  'footer': Footer,
-};`;
-  await fs.writeFile(path.join(libDir, 'ComponentRegistry.tsx'), registryContent.trim());
-
-  // --- 7. COMPONENTS (Hero) ---
-  const heroContent = `
-import { cn } from '../lib/utils';
-export const Hero = ({ data }: any) => (
-  <section className="relative py-32 px-10 bg-[var(--background)] overflow-hidden">
-    <div className="max-w-4xl mx-auto relative z-10">
-      {data.badge && <span className="inline-block px-4 py-1.5 mb-6 text-xs font-bold tracking-widest uppercase bg-primary/10 text-primary rounded-full">{data.badge}</span>}
-      <h1 className="text-7xl font-black tracking-tighter leading-none mb-8">
-        {data.title} <br/>
-        <span className="text-primary">{data.titleHighlight}</span>
-      </h1>
-      <p className="text-xl text-zinc-500 max-w-2xl mb-10">{data.description}</p>
-      <div className="flex gap-4">
-        {data.ctas?.map((cta: any, i: number) => (
-          <a key={i} href={cta.href} className={cn("px-8 py-4 rounded-lg font-bold transition-all", cta.variant === 'primary' ? "bg-primary text-white hover:scale-105" : "border border-zinc-800 hover:bg-zinc-900")}>
-            {cta.label}
-          </a>
-        ))}
-      </div>
-    </div>
-  </section>
-);`;
-  await fs.writeFile(path.join(componentsDir, 'Hero.tsx'), heroContent.trim());
-
-  // --- 8. DATA ---
-  const siteJson = { identity: { title: name }, header: { id: 'h1', type: 'header', data: { logoText: 'JSONPAGES', links: [] } }, footer: { id: 'f1', type: 'footer', data: { brandText: 'JsonPages', copyright: '© 2026' } }, pages: [{ slug: 'home', label: 'Home' }] };
-  const themeJson = { name: 'Golden Master', tokens: { colors: { primary: '#3b82f6', background: '#060d1b', text: '#e2e8f0', border: '#162a4d', surface: '#0b1529', surfaceAlt: '#101e38', textMuted: '#94a3b8', accent: '#60a5fa', secondary: '#22d3ee' }, typography: { fontFamily: { primary: 'sans-serif', mono: 'monospace' } }, borderRadius: { sm: '4px', md: '8px', lg: '12px' } } };
-  const homeJson = { id: 'p1', slug: 'home', meta: { title: 'Home', description: 'Golden Master' }, sections: [{ id: 's1', type: 'hero', data: { badge: 'V2.8.5 READY', title: 'Global Authoring.', titleHighlight: 'Global Governance.', description: 'Scaffolded via JsonPages CLI.' } }] };
-
-  await fs.writeJson(path.join(dataConfigDir, 'site.json'), siteJson, { spaces: 2 });
-  await fs.writeJson(path.join(dataConfigDir, 'theme.json'), themeJson, { spaces: 2 });
-  await fs.writeJson(path.join(dataConfigDir, 'menu.json'), { main: [] }, { spaces: 2 });
-  await fs.writeJson(path.join(dataPagesDir, 'home.json'), homeJson, { spaces: 2 });
-
-  // --- 9. UTILS & APP.TSX ---
-  await fs.writeFile(path.join(libDir, 'utils.ts'), `import { clsx } from 'clsx'; import { twMerge } from 'tailwind-merge'; export function cn(...inputs: any[]) { return twMerge(clsx(inputs)); }`);
-  
-  const appContent = `
-import { JsonPagesEngine } from '@jsonpages/core';
-import { ComponentRegistry } from './lib/ComponentRegistry';
-import { SECTION_SCHEMAS } from './lib/schemas';
-import './index.css';
-
-import siteData from './data/config/site.json';
-import themeData from './data/config/theme.json';
-import menuData from './data/config/menu.json';
-import homeData from './data/pages/home.json';
-import tenantCss from './index.css?inline';
-
-const config: any = {
-  tenantId: '${name}',
-  registry: ComponentRegistry,
-  schemas: SECTION_SCHEMAS,
-  pages: { home: homeData },
-  siteConfig: siteData,
-  themeConfig: themeData,
-  menuConfig: menuData,
-  themeCss: { tenant: tenantCss },
-};
-
-export default function App() {
-  return <JsonPagesEngine config={config} />;
-}
-`;
-  await fs.writeFile(path.join(srcDir, 'App.tsx'), appContent.trim());
-
-  // --- 10. PLACEHOLDERS ---
-  const placeholder = (name) => `export const ${name} = () => <div className="p-20 border border-dashed border-zinc-800 text-center text-zinc-500">${name} Component Placeholder</div>;`;
-  const comps = ['FeatureGrid', 'ProblemStatement', 'PillarsGrid', 'ArchLayers', 'ProductTriad', 'PaSection', 'Philosophy', 'CtaBanner', 'CodeBlock'];
-  for (const c of comps) {
-    await fs.writeFile(path.join(componentsDir, `${c}.tsx`), placeholder(c));
-  }
+  const shadcnConfig = {
+    "$schema": "https://ui.shadcn.com/schema.json",
+    "style": "radix-nova",
+    "rsc": false,
+    "tsx": true,
+    "tailwind": {
+      "config": "",
+      "css": "src/index.css",
+      "baseColor": "zinc",
+      "cssVariables": true,
+      "prefix": ""
+    },
+    "aliases": {
+      "components": "@/components",
+      "utils": "@/lib/utils",
+      "ui": "@/components/ui",
+      "lib": "@/lib",
+      "hooks": "@/hooks"
+    }
+  };
+  await fs.writeJson(path.join(targetDir, 'components.json'), shadcnConfig, { spaces: 2 });
 }
 
 program.parse();
