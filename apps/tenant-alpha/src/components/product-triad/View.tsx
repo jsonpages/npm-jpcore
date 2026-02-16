@@ -1,13 +1,8 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import type { ProductTriadData, ProductTriadSettings } from '@/types';
+import type { ProductTriadData, ProductTriadSettings } from './types';
 
-interface ProductTriadProps {
-  data: ProductTriadData;
-  settings?: ProductTriadSettings;
-}
-
-export const ProductTriad: React.FC<ProductTriadProps> = ({ data }) => {
+export const ProductTriad: React.FC<{ data: ProductTriadData; settings?: ProductTriadSettings }> = ({ data }) => {
   return (
     <section
       style={{
@@ -21,7 +16,6 @@ export const ProductTriad: React.FC<ProductTriadProps> = ({ data }) => {
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
       <div className="max-w-[1200px] mx-auto px-8">
-        {/* Section Header */}
         <div className="text-center">
           {data.label && (
             <div className="jp-section-label inline-flex items-center gap-2 text-[0.72rem] font-bold uppercase tracking-[0.12em] text-[var(--local-accent)] mb-4">
@@ -38,8 +32,6 @@ export const ProductTriad: React.FC<ProductTriadProps> = ({ data }) => {
             </p>
           )}
         </div>
-
-        {/* Product Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-14">
           {data.products.map((product, idx) => (
             <div
@@ -51,24 +43,17 @@ export const ProductTriad: React.FC<ProductTriadProps> = ({ data }) => {
                   : 'border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.015)] hover:border-[rgba(59,130,246,0.2)]'
               )}
             >
-              {/* Featured Badge */}
               {product.featured && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--local-primary)] text-white text-[0.7rem] font-bold px-4 py-1 rounded-full uppercase tracking-wide">
                   Most Popular
                 </div>
               )}
-
-              {/* Tier */}
               <div className="text-[0.75rem] font-bold uppercase tracking-[0.1em] text-[var(--local-accent)] mb-2">
                 {product.tier}
               </div>
-
-              {/* Name */}
               <div className="text-2xl font-extrabold text-[var(--local-text)] mb-2">
                 {product.name}
               </div>
-
-              {/* Price */}
               <div className="font-display text-[2.2rem] font-extrabold text-[var(--local-text)] mb-1">
                 {product.price}
                 {product.priceSuffix && (
@@ -77,13 +62,9 @@ export const ProductTriad: React.FC<ProductTriadProps> = ({ data }) => {
                   </span>
                 )}
               </div>
-
-              {/* Delivery */}
               <div className="text-[0.85rem] text-[var(--local-text-muted)] mb-6 pb-6 border-b border-[rgba(255,255,255,0.06)]">
                 {product.delivery}
               </div>
-
-              {/* Features */}
               <ul className="mb-8 space-y-0">
                 {product.features.map((feature, fIdx) => (
                   <li
@@ -94,8 +75,6 @@ export const ProductTriad: React.FC<ProductTriadProps> = ({ data }) => {
                   </li>
                 ))}
               </ul>
-
-              {/* CTA */}
               {product.ctaLabel && product.ctaHref && (
                 <a
                   href={product.ctaHref}
@@ -116,5 +95,3 @@ export const ProductTriad: React.FC<ProductTriadProps> = ({ data }) => {
     </section>
   );
 };
-
-

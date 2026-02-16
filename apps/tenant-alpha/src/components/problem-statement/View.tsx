@@ -1,12 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import type { ProblemStatementData, ProblemStatementSettings } from '@/types';
-import type { SiloBlockVariant } from '@/lib/schemas';
-
-interface ProblemStatementProps {
-  data: ProblemStatementData;
-  settings?: ProblemStatementSettings;
-}
+import type { ProblemStatementData, ProblemStatementSettings, SiloBlockVariant } from './types';
 
 const variantStyles: Record<SiloBlockVariant, string> = {
   red: 'bg-[rgba(239,68,68,0.08)] border-[rgba(239,68,68,0.3)] text-[#f87171]',
@@ -15,7 +9,7 @@ const variantStyles: Record<SiloBlockVariant, string> = {
   blue: 'bg-[rgba(59,130,246,0.08)] border-[rgba(59,130,246,0.3)] text-[#60a5fa]',
 };
 
-export const ProblemStatement: React.FC<ProblemStatementProps> = ({ data }) => {
+export const ProblemStatement: React.FC<{ data: ProblemStatementData; settings?: ProblemStatementSettings }> = ({ data }) => {
   return (
     <section
       style={{
@@ -29,7 +23,6 @@ export const ProblemStatement: React.FC<ProblemStatementProps> = ({ data }) => {
     >
       <div className="max-w-[1200px] mx-auto px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          {/* Visual - Silo Blocks */}
           <div className="relative h-[360px] border border-[rgba(255,255,255,0.06)] rounded-lg bg-[rgba(255,255,255,0.02)] overflow-hidden flex items-center justify-center">
             <div className="text-center p-8">
               {data.siloGroups.map((group, gIdx) => (
@@ -54,8 +47,6 @@ export const ProblemStatement: React.FC<ProblemStatementProps> = ({ data }) => {
               ))}
             </div>
           </div>
-
-          {/* Text Content */}
           <div>
             <h3 className="text-2xl font-bold text-[var(--local-text)] mb-4">
               {data.title}
@@ -74,5 +65,3 @@ export const ProblemStatement: React.FC<ProblemStatementProps> = ({ data }) => {
     </section>
   );
 };
-
-

@@ -1,12 +1,7 @@
 import React from 'react';
-import type { PaSectionData, PaSectionSettings } from '@/types';
+import type { PaSectionData, PaSectionSettings } from './types';
 
-interface PaSectionProps {
-  data: PaSectionData;
-  settings?: PaSectionSettings;
-}
-
-export const PaSection: React.FC<PaSectionProps> = ({ data }) => {
+export const PaSection: React.FC<{ data: PaSectionData; settings?: PaSectionSettings }> = ({ data }) => {
   return (
     <section
       style={{
@@ -19,10 +14,8 @@ export const PaSection: React.FC<PaSectionProps> = ({ data }) => {
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
-      {/* Top/Bottom dividers */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
-
       <div className="max-w-[1200px] mx-auto px-8">
         {data.label && (
           <div className="jp-section-label inline-flex items-center gap-2 text-[0.72rem] font-bold uppercase tracking-[0.12em] text-[var(--local-accent)] mb-4">
@@ -33,9 +26,7 @@ export const PaSection: React.FC<PaSectionProps> = ({ data }) => {
         <h2 className="font-display text-[clamp(2rem,4vw,3.2rem)] font-extrabold text-[var(--local-text)] leading-[1.15] tracking-tight mb-4">
           {data.title}
         </h2>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mt-12">
-          {/* Text Content */}
           <div>
             <h3 className="text-2xl font-bold text-[var(--local-text)] mb-4">
               {data.subtitle}
@@ -58,8 +49,6 @@ export const PaSection: React.FC<PaSectionProps> = ({ data }) => {
               </div>
             )}
           </div>
-
-          {/* Visual - Engine Switch */}
           <div className="border border-[rgba(255,255,255,0.06)] rounded-lg p-12 bg-[rgba(255,255,255,0.02)] text-center">
             {data.engines && data.engines.length >= 2 && (
               <div className="flex items-center justify-center gap-6 mb-8">
@@ -79,7 +68,6 @@ export const PaSection: React.FC<PaSectionProps> = ({ data }) => {
                 ))}
               </div>
             )}
-
             {data.codeSnippet && (
               <div className="font-mono text-[0.85rem] text-[var(--local-text-muted)] bg-[var(--local-deep)] p-4 rounded-lg text-left border border-[rgba(255,255,255,0.04)]">
                 <pre className="whitespace-pre-wrap m-0">{data.codeSnippet}</pre>
@@ -94,5 +82,3 @@ export const PaSection: React.FC<PaSectionProps> = ({ data }) => {
     </section>
   );
 };
-
-

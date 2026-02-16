@@ -1,17 +1,7 @@
 import React from 'react';
-import type { PhilosophyData, PhilosophySettings } from '@/types';
+import type { PhilosophyData, PhilosophySettings } from './types';
 
-interface PhilosophyProps {
-  data: PhilosophyData;
-  settings?: PhilosophySettings;
-}
-
-export const Philosophy: React.FC<PhilosophyProps> = ({ data }) => {
-  /**
-   * Renders the quote, highlighting occurrences of quoteHighlightWord
-   * with the accent color. Pure rendering — no data manipulation beyond
-   * splitting for visual emphasis.
-   */
+export const Philosophy: React.FC<{ data: PhilosophyData; settings?: PhilosophySettings }> = ({ data }) => {
   const renderQuote = () => {
     if (!data.quoteHighlightWord) {
       return <>{data.quote}</>;
@@ -55,13 +45,9 @@ export const Philosophy: React.FC<PhilosophyProps> = ({ data }) => {
           <h2 className="font-display text-[clamp(2rem,4vw,3.2rem)] font-extrabold text-[var(--local-text)] leading-[1.15] tracking-tight mb-4">
             {data.title}
           </h2>
-
-          {/* Quote */}
           <blockquote className="font-display text-[clamp(1.6rem,3vw,2.4rem)] text-[var(--local-text)] font-bold leading-[1.35] my-8">
             &ldquo;{renderQuote()}&rdquo;
           </blockquote>
-
-          {/* Description */}
           {data.description && (
             <p className="text-[1.05rem] text-[var(--local-text-muted)] max-w-[560px] mx-auto leading-relaxed">
               {data.description}
@@ -72,5 +58,3 @@ export const Philosophy: React.FC<PhilosophyProps> = ({ data }) => {
     </section>
   );
 };
-
-

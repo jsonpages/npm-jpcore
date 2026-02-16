@@ -1,4 +1,4 @@
-import './registry-types'; // 🔥 Attiva l'augmentation globale dei tipi
+import '@/types'; // TBP: load type augmentation from capsule-driven types
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';

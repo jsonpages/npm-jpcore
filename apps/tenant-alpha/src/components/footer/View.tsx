@@ -1,12 +1,7 @@
 import React from 'react';
-import type { FooterData, FooterSettings } from '@/types';
+import type { FooterData, FooterSettings } from './types';
 
-interface FooterProps {
-  data: FooterData;
-  settings?: FooterSettings;
-}
-
-export const Footer: React.FC<FooterProps> = ({ data }) => {
+export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> = ({ data }) => {
   return (
     <footer
       style={{
@@ -20,15 +15,12 @@ export const Footer: React.FC<FooterProps> = ({ data }) => {
     >
       <div className="max-w-[1200px] mx-auto px-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Brand */}
           <div className="flex items-center gap-2 font-bold text-[0.9rem] text-[var(--local-text-muted)]">
             {data.brandText}
             {data.brandHighlight && (
               <span className="text-[var(--local-accent)]">{data.brandHighlight}</span>
             )}
           </div>
-
-          {/* Links */}
           {data.links && data.links.length > 0 && (
             <nav className="flex gap-6">
               {data.links.map((link, idx) => (
@@ -42,8 +34,6 @@ export const Footer: React.FC<FooterProps> = ({ data }) => {
               ))}
             </nav>
           )}
-
-          {/* Copyright */}
           <div className="text-[0.8rem] text-[var(--local-text-muted)] opacity-60">
             {data.copyright}
           </div>
@@ -52,5 +42,3 @@ export const Footer: React.FC<FooterProps> = ({ data }) => {
     </footer>
   );
 };
-
-

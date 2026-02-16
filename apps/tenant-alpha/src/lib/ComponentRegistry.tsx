@@ -1,28 +1,24 @@
 import React from 'react';
-// 🛡️ Importiamo l'Header dalla sua nuova capsula (TBP Protocol)
 import { Header } from '@/components/header';
-
-// Gli altri componenti rimangono temporaneamente flat fino alla loro capsulizzazione
-import { Footer } from '@/components/Footer';
-import { Hero } from '@/components/Hero';
-import { FeatureGrid } from '@/components/FeatureGrid';
-import { CodeBlock } from '@/components/CodeBlock';
-import { ProblemStatement } from '@/components/ProblemStatement';
-import { PillarsGrid } from '@/components/PillarsGrid';
-import { ArchLayers } from '@/components/ArchLayers';
-import { ProductTriad } from '@/components/ProductTriad';
-import { PaSection } from '@/components/PaSection';
-import { Philosophy } from '@/components/Philosophy';
-import { CtaBanner } from '@/components/CtaBanner';
+import { Footer } from '@/components/footer';
+import { Hero } from '@/components/hero';
+import { FeatureGrid } from '@/components/feature-grid';
+import { CodeBlock } from '@/components/code-block';
+import { ProblemStatement } from '@/components/problem-statement';
+import { PillarsGrid } from '@/components/pillars-grid';
+import { ArchLayers } from '@/components/arch-layers';
+import { ProductTriad } from '@/components/product-triad';
+import { PaSection } from '@/components/pa-section';
+import { Philosophy } from '@/components/philosophy';
+import { CtaBanner } from '@/components/cta-banner';
 
 import type { SectionType } from '@jsonpages/core';
-// 🛡️ Usiamo la mappa dei tipi aggiornata dal nostro bridge
 import type { SectionComponentPropsMap } from '@/types';
 
 export const ComponentRegistry: {
   [K in SectionType]: React.FC<SectionComponentPropsMap[K]>;
 } = {
-  'header': Header, // 🛂 Collegato alla Capsula
+  'header': Header,
   'footer': Footer,
   'hero': Hero,
   'feature-grid': FeatureGrid,

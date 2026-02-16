@@ -1,12 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import type { ArchLayersData, ArchLayersSettings } from '@/types';
-import type { ArchLayerLevel, SyntaxTokenType } from '@/lib/schemas';
-
-interface ArchLayersProps {
-  data: ArchLayersData;
-  settings?: ArchLayersSettings;
-}
+import type { ArchLayersData, ArchLayersSettings, ArchLayerLevel, SyntaxTokenType } from './types';
 
 const layerBgStyles: Record<ArchLayerLevel, string> = {
   l0: 'bg-[#3b82f6]',
@@ -23,7 +17,7 @@ const tokenStyles: Record<SyntaxTokenType, string> = {
   operator: 'text-[#f472b6]',
 };
 
-export const ArchLayers: React.FC<ArchLayersProps> = ({ data }) => {
+export const ArchLayers: React.FC<{ data: ArchLayersData; settings?: ArchLayersSettings }> = ({ data }) => {
   return (
     <section
       style={{
@@ -37,12 +31,9 @@ export const ArchLayers: React.FC<ArchLayersProps> = ({ data }) => {
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
-      {/* Top/Bottom dividers */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
-
       <div className="max-w-[1200px] mx-auto px-8">
-        {/* Section Header */}
         <div className="text-center">
           {data.label && (
             <div className="jp-section-label inline-flex items-center gap-2 text-[0.72rem] font-bold uppercase tracking-[0.12em] text-[var(--local-accent)] mb-4">
@@ -59,8 +50,6 @@ export const ArchLayers: React.FC<ArchLayersProps> = ({ data }) => {
             </p>
           )}
         </div>
-
-        {/* Layers */}
         <div className="mt-14 max-w-[740px] mx-auto">
           {data.layers.map((layer, idx) => (
             <div
@@ -84,12 +73,9 @@ export const ArchLayers: React.FC<ArchLayersProps> = ({ data }) => {
             </div>
           ))}
         </div>
-
-        {/* Code Showcase */}
         {data.codeLines && data.codeLines.length > 0 && (
           <div className="mt-12 max-w-[740px] mx-auto">
             <div className="border border-[rgba(255,255,255,0.08)] rounded-[7px] overflow-hidden bg-[var(--local-deep)]">
-              {/* Code Header */}
               <div className="flex items-center gap-2 px-5 py-3 bg-[rgba(255,255,255,0.03)] border-b border-[rgba(255,255,255,0.06)]">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
                 <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
@@ -100,7 +86,6 @@ export const ArchLayers: React.FC<ArchLayersProps> = ({ data }) => {
                   </span>
                 )}
               </div>
-              {/* Code Body */}
               <div className="p-6 font-mono text-[0.82rem] leading-[1.7] overflow-x-auto">
                 {data.codeLines.map((line, idx) => (
                   <div key={idx}>
@@ -117,5 +102,3 @@ export const ArchLayers: React.FC<ArchLayersProps> = ({ data }) => {
     </section>
   );
 };
-
-
