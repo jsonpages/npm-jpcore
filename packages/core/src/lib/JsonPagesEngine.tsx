@@ -8,7 +8,7 @@ import { PageRenderer } from './PageRenderer';
 import { StudioProvider } from './StudioContext';
 import { ConfigProvider } from './ConfigContext';
 import { ThemeLoader } from './ThemeLoader';
-import { AdminSidebar } from '../admin/AdminSidebar';
+import { AdminSidebar, type LayerItem } from '../admin/AdminSidebar';
 import { ControlBar } from '../admin/ControlBar';
 import { StudioStage } from '../admin/StudioStage';
 import { PreviewEntry } from '../admin/PreviewEntry';
@@ -190,7 +190,22 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       }
     });
     const [selected, setSelected] = useState<{ id: string; type: string; scope: string } | null>(null);
+    const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+    const [scrollToSectionId, setScrollToSectionId] = useState<string | null>(null);
     const [addSectionLibraryOpen, setAddSectionLibraryOpen] = useState(false);
+
+    const allLayers: LayerItem[] = draft
+      ? [
+          ...(globalDraft.header ? [{ id: globalDraft.header.id, type: globalDraft.header.type, scope: 'global' as const, title: 'Header' }] : []),
+          ...draft.sections.map((s) => ({
+            id: s.id,
+            type: s.type,
+            scope: 'local' as const,
+            title: (s.data as Record<string, unknown>)?.title as string | undefined ?? (s.data as Record<string, unknown>)?.titleHighlight as string | undefined,
+          })),
+          ...(globalDraft.footer ? [{ id: globalDraft.footer.id, type: globalDraft.footer.type, scope: 'global' as const, title: 'Footer' }] : []),
+        ]
+      : [];
 
     useEffect(() => {
       const data = pageRegistry[slug];
@@ -219,6 +234,9 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
         if (event.data.type === STUDIO_EVENTS.SECTION_SELECT) {
           setSelected(event.data.section);
         }
+        if (event.data.type === STUDIO_EVENTS.ACTIVE_SECTION_CHANGED) {
+          setActiveSectionId(event.data.activeSectionId ?? null);
+        }
         if (event.data.type === 'jsonpages:section-reorder' && draft) {
           const { sectionId, newIndex } = event.data as { sectionId?: string; newIndex?: number };
           if (typeof sectionId === 'string' && typeof newIndex === 'number' && newIndex >= 0) {
@@ -245,6 +263,28 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       window.addEventListener('message', handleBakeResponse);
       return () => window.removeEventListener('message', handleBakeResponse);
     }, [handleBakeResponse]);
+
+    const handleRequestScrollToSection = useCallback((sectionId: string) => {
+      const layer = allLayers.find((l) => l.id === sectionId);
+      if (layer) setSelected({ id: layer.id, type: layer.type, scope: layer.scope });
+      setScrollToSectionId(sectionId);
+    }, [allLayers]);
+
+    const handleScrollRequested = useCallback(() => {
+      setScrollToSectionId(null);
+    }, []);
+
+    const handleDeleteSection = useCallback(
+      (sectionId: string) => {
+        setDraft((prev) => {
+          if (!prev) return prev;
+          return { ...prev, sections: prev.sections.filter((s) => s.id !== sectionId) };
+        });
+        setHasChanges(true);
+        setSelected((prev) => (prev?.id === sectionId ? null : prev));
+      },
+      []
+    );
 
     const handleUpdate = (newData: Record<string, unknown>) => {
       if (!selected || !draft) return;
@@ -328,6 +368,8 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   themeConfig={themeConfig}
                   slug={slug}
                   selectedId={selected?.id}
+                  scrollToSectionId={scrollToSectionId}
+                  onScrollRequested={handleScrollRequested}
                 />
               </main>
               <AdminSidebar
@@ -340,6 +382,10 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                     ? (sectionId, newIndex) => handleReorderSection(sectionId, newIndex, draft)
                     : undefined
                 }
+                allLayers={allLayers}
+                activeSectionId={activeSectionId}
+                onRequestScrollToSection={handleRequestScrollToSection}
+                onDeleteSection={draft ? handleDeleteSection : undefined}
               />
             </div>
             <AddSectionLibrary

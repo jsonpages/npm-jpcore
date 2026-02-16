@@ -17,7 +17,13 @@ export const STUDIO_EVENTS = {
   
   // Child -> Parent (User Interaction)
   SECTION_SELECT: 'jsonpages:section-select',
-  
+
+  // Parent -> Child (Scroll Stage to section)
+  REQUEST_SCROLL_TO_SECTION: 'jsonpages:request-scroll-to-section',
+
+  // Child -> Parent (Active section in viewport)
+  ACTIVE_SECTION_CHANGED: 'jsonpages:active-section-changed',
+
   // Child -> Parent (Lifecycle)
   STAGE_READY: 'jsonpages:stage-ready',
 } as const;

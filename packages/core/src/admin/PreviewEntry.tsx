@@ -9,6 +9,7 @@ export const PreviewEntry: React.FC = () => {
   const [draft, setDraft] = useState<PageConfig | null>(null);
   const [globalDraft, setGlobalDraft] = useState<SiteConfig | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [scrollToSectionId, setScrollToSectionId] = useState<string | null>(null);
   const [isBaking, setIsBaking] = useState(false);
 
   useEffect(() => {
@@ -20,9 +21,13 @@ export const PreviewEntry: React.FC = () => {
            themeManager.setTheme(event.data.themeConfig);
         }
       }
-      
+
       if (event.data.type === STUDIO_EVENTS.SYNC_SELECTION) {
         setSelectedId(event.data.selectedId);
+      }
+
+      if (event.data.type === STUDIO_EVENTS.REQUEST_SCROLL_TO_SECTION) {
+        setScrollToSectionId(event.data.sectionId ?? null);
       }
 
       // 🛡️ BAKE HANDSHAKE: Switch to visitor mode and send HTML back
@@ -31,9 +36,9 @@ export const PreviewEntry: React.FC = () => {
         // Use setTimeout to ensure React has rendered the "Visitor" mode (no outlines)
         setTimeout(() => {
           const html = document.documentElement.outerHTML;
-          window.parent.postMessage({ 
-            type: STUDIO_EVENTS.SEND_CLEAN_HTML, 
-            html 
+          window.parent.postMessage({
+            type: STUDIO_EVENTS.SEND_CLEAN_HTML,
+            html
           }, '*');
           setIsBaking(false);
         }, 50);
@@ -44,6 +49,13 @@ export const PreviewEntry: React.FC = () => {
     window.parent.postMessage({ type: STUDIO_EVENTS.STAGE_READY }, '*');
     return () => window.removeEventListener('message', handleMessage);
   }, []);
+
+  /** Clear scrollToSectionId after triggering scroll (must run unconditionally for Rules of Hooks). */
+  useEffect(() => {
+    if (!scrollToSectionId) return;
+    const t = setTimeout(() => setScrollToSectionId(null), 600);
+    return () => clearTimeout(t);
+  }, [scrollToSectionId]);
 
   if (!draft || !globalDraft) {
     return (
@@ -58,17 +70,25 @@ export const PreviewEntry: React.FC = () => {
     main: headerData?.links ?? []
   };
 
+  const handleActiveSectionChange = (sectionId: string | null) => {
+    window.parent.postMessage({
+      type: STUDIO_EVENTS.ACTIVE_SECTION_CHANGED,
+      activeSectionId: sectionId,
+    }, '*');
+  };
+
   return (
     <StudioProvider mode={isBaking ? "visitor" : "studio"}>
       <div className={isBaking ? "" : "jp-ice-active"}>
-        <PageRenderer 
-          pageConfig={draft} 
-          siteConfig={globalDraft} 
+        <PageRenderer
+          pageConfig={draft}
+          siteConfig={globalDraft}
           menuConfig={currentMenuConfig}
           selectedId={isBaking ? null : selectedId}
+          scrollToSectionId={scrollToSectionId}
+          onActiveSectionChange={handleActiveSectionChange}
         />
       </div>
     </StudioProvider>
   );
 };
-

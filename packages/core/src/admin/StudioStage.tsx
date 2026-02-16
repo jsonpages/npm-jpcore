@@ -8,6 +8,8 @@ interface StudioStageProps {
   themeConfig: ThemeConfig;
   slug: string;
   selectedId?: string | null;
+  scrollToSectionId?: string | null;
+  onScrollRequested?: () => void;
 }
 
 /**
@@ -21,6 +23,8 @@ export const StudioStage: React.FC<StudioStageProps> = ({
   themeConfig,
   slug,
   selectedId,
+  scrollToSectionId,
+  onScrollRequested,
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -75,6 +79,15 @@ export const StudioStage: React.FC<StudioStageProps> = ({
       }, '*');
     }
   }, [selectedId]);
+
+  useEffect(() => {
+    if (!scrollToSectionId || !iframeRef.current?.contentWindow) return;
+    iframeRef.current.contentWindow.postMessage({
+      type: STUDIO_EVENTS.REQUEST_SCROLL_TO_SECTION,
+      sectionId: scrollToSectionId,
+    }, '*');
+    onScrollRequested?.();
+  }, [scrollToSectionId, onScrollRequested]);
 
   return (
     <div className="w-full h-full bg-background overflow-hidden">

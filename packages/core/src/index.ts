@@ -22,7 +22,7 @@ export { themeManager } from './utils/theme-manager';
 export { resolveAssetUrl } from './utils/asset-resolver';
 
 // Admin
-export { AdminSidebar } from './admin/AdminSidebar';
+export { AdminSidebar, type LayerItem } from './admin/AdminSidebar';
 export { ControlBar } from './admin/ControlBar';
 export { StudioStage } from './admin/StudioStage';
 export { PreviewEntry } from './admin/PreviewEntry';

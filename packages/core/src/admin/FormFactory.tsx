@@ -50,18 +50,23 @@ interface FormFactoryProps {
   schema: z.ZodObject<z.ZodRawShape>;
   data: Record<string, unknown>;
   onChange: (newData: Record<string, unknown>) => void;
+  /** When set, only render fields whose key is in this array (e.g. Content vs Settings tabs). */
+  keys?: string[] | null;
 }
 
 /**
  * 🏭 POLYMORPHIC FORM FACTORY (V2.8.0)
  * Governance through deterministic IDs.
  */
-export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange }) => {
+export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange, keys }) => {
   const shape = schema.shape;
+  const fieldKeys = keys != null
+    ? Object.keys(shape).filter((k) => keys.includes(k))
+    : Object.keys(shape);
 
   return (
     <div className="space-y-4">
-      {Object.keys(shape).map((key) => {
+      {fieldKeys.map((key) => {
         const fieldSchema = shape[key];
         if (!fieldSchema) return null;
 
