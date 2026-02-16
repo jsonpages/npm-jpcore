@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useConfig } from '../lib/ConfigContext';
 import { FormFactory } from './FormFactory';
@@ -101,7 +101,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (selectedSection) setLayersOpen(false);
+  }, [selectedSection?.id]);
+
   const handleLayerClick = (sectionId: string) => {
+    setLayersOpen(false);
     onRequestScrollToSection?.(sectionId);
   };
 
@@ -221,6 +226,27 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               </div>
               {layersOpen ? <ChevronUp size={14} className="text-zinc-500" /> : <ChevronDown size={14} className="text-zinc-500" />}
             </button>
+            {!layersOpen && selectedSection && (() => {
+              const activeLayer = allLayers.find((l) => l.id === selectedSection.id);
+              if (!activeLayer) return null;
+              const isActive = activeSectionId === selectedSection.id;
+              return (
+                <div className="px-3 py-2 flex items-center gap-2 bg-primary/10 border-t border-zinc-800/50">
+                  <GripVertical size={12} className="text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-mono uppercase tracking-wider text-primary truncate flex items-center gap-1">
+                      {activeLayer.type}
+                      {isActive && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden />
+                      )}
+                    </p>
+                    <p className="text-xs text-white font-medium truncate">
+                      {activeLayer.title ?? `${activeLayer.type} section`}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
             {layersOpen && (
               <div className="px-3 pb-3 space-y-1">
                 {allLayers.map((layer) => {
