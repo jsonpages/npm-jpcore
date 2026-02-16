@@ -1,14 +1,14 @@
 import { z } from 'zod';
+// 🛡️ Importiamo lo schema dalla capsula Header
+import { HeaderSchema } from '@/components/header';
 
 // =============================================================================
 // 0. BASE SCHEMAS (Governance)
 // =============================================================================
-// Ogni sezione deve poter avere un anchorId per la navigazione
 const BaseSectionData = z.object({
   anchorId: z.string().optional().describe('ui:text'),
 });
 
-// Ogni oggetto dentro un array deve avere un ID per la stabilità di React
 const BaseArrayItem = z.object({
   id: z.string().optional(), 
 });
@@ -242,16 +242,7 @@ export const SECTION_SCHEMAS = {
   'pa-section': PaSectionSchema,
   'philosophy': PhilosophySchema,
   'cta-banner': CtaBannerSchema,
-  'header': z.object({
-    logoText: z.string().describe('ui:text'),
-    logoHighlight: z.string().optional().describe('ui:text'),
-    logoIconText: z.string().optional().describe('ui:text'),
-    links: z.array(z.object({
-      label: z.string().describe('ui:text'),
-      href: z.string().describe('ui:text'),
-      isCta: z.boolean().default(false).describe('ui:checkbox'),
-    })).describe('ui:list'),
-  }),
+  'header': HeaderSchema, // 🛡️ Ora punta allo schema della capsula
   'footer': z.object({
     brandText: z.string().describe('ui:text'),
     brandHighlight: z.string().optional().describe('ui:text'),

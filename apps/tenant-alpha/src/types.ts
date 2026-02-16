@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import type { MenuItem } from '@jsonpages/core';
+// 🛡️ Importiamo i tipi dalla nuova capsula Header
+import { HeaderData, HeaderSettings } from '@/components/header';
+
 import {
   BaseSectionSettingsSchema,
   HeroSchema,
@@ -15,10 +18,8 @@ import {
   SECTION_SCHEMAS,
 } from './lib/schemas';
 
-// 1. Core types are augmented via declare module '@jsonpages/core' below.
-
-// 2. Inferiamo i tipi Zod (Il Contenuto)
-export type HeaderData = z.infer<typeof SECTION_SCHEMAS.header>;
+// 1. Tipi inferiti per i componenti ancora "Flat"
+// (Verranno rimossi man mano che creiamo le capsule)
 export type FooterData = z.infer<typeof SECTION_SCHEMAS.footer>;
 export type HeroData = z.infer<typeof HeroSchema>;
 export type FeatureGridData = z.infer<typeof FeatureGridSchema>;
@@ -31,20 +32,17 @@ export type PaSectionData = z.infer<typeof PaSectionSchema>;
 export type PhilosophyData = z.infer<typeof PhilosophySchema>;
 export type CtaBannerData = z.infer<typeof CtaBannerSchema>;
 
-// 3. Definiamo i Settings (Standard + Specifici)
+// 2. Definizione Settings
 export type StandardSectionSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
-export interface HeaderSettings { sticky?: boolean; }
 export interface FooterSettings { showLogo?: boolean; }
 export type CodeBlockSettings = StandardSectionSettings & { showLineNumbers?: boolean };
-
-// 🔥 FIX: Ripristino delle proprietà specifiche per FeatureGrid (Legacy Component)
 export type FeatureGridSettings = StandardSectionSettings & {
   columns?: number;
   cardStyle?: 'plain' | 'bordered';
 };
 
-// Alias per gli altri componenti (che usano solo settings standard)
+// Alias per gli altri componenti (standard)
 export type HeroSettings = StandardSectionSettings;
 export type ProblemStatementSettings = StandardSectionSettings;
 export type PillarsGridSettings = StandardSectionSettings;
@@ -54,7 +52,8 @@ export type PaSectionSettings = StandardSectionSettings;
 export type PhilosophySettings = StandardSectionSettings;
 export type CtaBannerSettings = StandardSectionSettings;
 
-// 3b. Section component props map — SSOT for ComponentRegistry (full type safety)
+// 3. Section component props map — SSOT per ComponentRegistry
+// 🛡️ Nota: 'header' ora usa i tipi della Capsula
 export type SectionComponentPropsMap = {
   'header': { data: HeaderData; settings?: HeaderSettings; menu: MenuItem[] };
   'footer': { data: FooterData; settings?: FooterSettings };
@@ -70,7 +69,9 @@ export type SectionComponentPropsMap = {
   'cta-banner': { data: CtaBannerData; settings?: CtaBannerSettings };
 };
 
-// 4. 🔥 MTRP AUGMENTATION — augment core's registries so Section includes tenant section types
+// 4. 🔥 MTRP AUGMENTATION
+// Estendiamo il Core con i tipi del Tenant. 
+// L'Header è il primo a essere "Capsule-driven".
 declare module '@jsonpages/core' {
   export interface SectionDataRegistry {
     'header': HeaderData;
@@ -103,6 +104,5 @@ declare module '@jsonpages/core' {
   }
 }
 
-// 5. Re-export structural types from Core (do not redefine here)
+// 5. Re-export structural types from Core
 export * from '@jsonpages/core';
-
