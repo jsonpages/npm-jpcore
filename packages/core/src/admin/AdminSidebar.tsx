@@ -119,6 +119,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     onRequestScrollToSection?.(sectionId);
   };
 
+  /** Scroll sidebar to top on "Page Layers" header click so the list is immediately visible without manual scroll. */
+  const handlePageLayersHeaderClick = () => {
+    setLayersOpen(true);
+    requestAnimationFrame(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }));
+  };
+
   /** Open the section-settings modal for the given section (no Inspector tab/selection change to avoid UI freeze). */
   const handleOpenSectionSettings = (sectionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -226,18 +232,25 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </div>
         {allLayers.length > 0 && (
           <div className="bg-zinc-900/20 opacity-100">
-            <button
-              type="button"
-              onClick={() => setLayersOpen(!layersOpen)}
-              className="w-full py-3 px-4 flex items-center justify-between text-left hover:bg-zinc-800/30 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Layers size={14} className="text-primary" />
+            <div className="flex items-center justify-between py-3 px-4 hover:bg-zinc-800/30 transition-colors">
+              <button
+                type="button"
+                onClick={handlePageLayersHeaderClick}
+                className="flex-1 flex items-center gap-2 text-left min-w-0"
+              >
+                <Layers size={14} className="text-primary shrink-0" />
                 <span className="text-xs font-bold text-white">Page Layers</span>
                 <span className="text-[10px] text-zinc-500">({allLayers.length})</span>
-              </div>
-              {showLayersList ? <ChevronUp size={14} className="text-zinc-500" /> : <ChevronDown size={14} className="text-zinc-500" />}
-            </button>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLayersOpen((prev) => !prev)}
+                className="p-0.5 rounded text-zinc-500 hover:text-white transition-colors shrink-0"
+                aria-label={showLayersList ? 'Collapse Page Layers' : 'Expand Page Layers'}
+              >
+                {showLayersList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+            </div>
             {!showLayersList && selectedSection && (() => {
               const activeLayer = allLayers.find((l) => l.id === selectedSection.id);
               if (!activeLayer) return null;
