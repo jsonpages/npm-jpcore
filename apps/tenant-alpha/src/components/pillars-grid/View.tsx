@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { Icon, isIconName } from '@/lib/IconResolver';
 import type { PillarsGridData, PillarsGridSettings, PillarIconVariant, PillarTagVariant } from './types';
 
 const iconVariantStyles: Record<PillarIconVariant, string> = {
@@ -56,7 +57,11 @@ export const PillarsGrid: React.FC<{ data: PillarsGridData; settings?: PillarsGr
                 'w-12 h-12 rounded-xl flex items-center justify-center mb-6 text-xl font-bold',
                 iconVariantStyles[pillar.iconVariant]
               )}>
-                {pillar.icon}
+                {pillar.icon && isIconName(pillar.icon) ? (
+                  <Icon name={pillar.icon} size={24} className="shrink-0" />
+                ) : pillar.icon ? (
+                  <span>{pillar.icon}</span>
+                ) : null}
               </div>
               <h3 className="text-xl font-bold text-[var(--local-text)] mb-3">
                 {pillar.title}

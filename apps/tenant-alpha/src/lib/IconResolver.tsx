@@ -8,6 +8,8 @@ import {
   ChevronRight,
   Menu,
   X,
+  Sparkles,
+  Zap,
   type LucideIcon
 } from 'lucide-react';
 
@@ -20,11 +22,13 @@ const iconMap = {
   'chevron-right': ChevronRight,
   'menu': Menu,
   'x': X,
+  'sparkles': Sparkles,
+  'zap': Zap,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof iconMap;
 
-function isIconName(s: string): s is IconName {
+export function isIconName(s: string): s is IconName {
   return s in iconMap;
 }
 

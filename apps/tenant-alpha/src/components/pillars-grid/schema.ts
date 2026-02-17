@@ -5,7 +5,7 @@ export const PillarIconVariantSchema = z.enum(['split', 'registry', 'federation'
 export const PillarTagVariantSchema = z.enum(['core', 'pattern', 'enterprise']);
 
 const PillarCardSchema = BaseArrayItem.extend({
-  icon: z.string().describe('ui:text'),
+  icon: z.string().describe('ui:icon-picker'),
   iconVariant: PillarIconVariantSchema.describe('ui:select'),
   title: z.string().describe('ui:text'),
   description: z.string().describe('ui:textarea'),
