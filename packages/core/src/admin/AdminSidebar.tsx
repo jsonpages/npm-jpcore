@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useDeferredValue } from 'react';
 import { z } from 'zod';
 import { useConfig } from '../lib/ConfigContext';
 import { cn } from '../lib/utils';
@@ -84,6 +84,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
+  /** Defer heavy form render so first-time open + edit doesn't freeze the UI (enterprise-grade UX). */
+  const deferredSection = useDeferredValue(selectedSection);
+  const isFormPending = selectedSection != null && deferredSection?.id !== selectedSection.id;
+
   // Canvas path takes precedence; otherwise single-level sidebar expansion.
   const effectiveExpandedItemPath =
     expandedItemPath && expandedItemPath.length > 0
@@ -106,12 +110,40 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     prevPathRef.current = expandedItemPath;
   }, [expandedItemPath]);
 
+  /** Scroll sidebar content to top. Double rAF so it runs after layout (fixes scroll not moving). */
+  const scrollSidebarToTop = () => {
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = contentScrollRef.current;
+        if (el) {
+          el.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+    });
+    return () => cancelAnimationFrame(id);
+  };
+
+  /** Scroll sidebar to top when Page Layers list is opened via chevron (effect runs after commit). */
+  const prevLayersOpenRef = useRef(layersOpen);
+  useEffect(() => {
+    if (layersOpen && !prevLayersOpenRef.current) {
+      const cancel = scrollSidebarToTop();
+      prevLayersOpenRef.current = layersOpen;
+      return cancel;
+    }
+    prevLayersOpenRef.current = layersOpen;
+  }, [layersOpen]);
+
+  /** Defer scroll to next frame to avoid blocking main thread when form mounts (enterprise-grade UX). */
   useEffect(() => {
     if (!effectiveExpandedItem) return;
     const scrollEl = contentScrollRef.current;
     if (!scrollEl) return;
-    const el = scrollEl.querySelector('[data-jp-expanded-item]') ?? scrollEl.querySelector('[data-jp-focused-field]');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const id = requestAnimationFrame(() => {
+      const el = scrollEl.querySelector('[data-jp-expanded-item]') ?? scrollEl.querySelector('[data-jp-focused-field]');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => cancelAnimationFrame(id);
   }, [effectiveExpandedItem]);
 
   const handleLayerClick = (sectionId: string) => {
@@ -119,10 +151,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     onRequestScrollToSection?.(sectionId);
   };
 
-  /** Scroll sidebar to top on "Page Layers" header click so the list is immediately visible without manual scroll. */
+  /** Open Page Layers list (if collapsed) and always scroll sidebar to top. */
   const handlePageLayersHeaderClick = () => {
     setLayersOpen(true);
-    requestAnimationFrame(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }));
+    scrollSidebarToTop();
+  };
+
+  /** Chevron: toggle list and always scroll sidebar to top so list is in view. */
+  const handlePageLayersChevronClick = () => {
+    setLayersOpen((prev) => !prev);
+    scrollSidebarToTop();
   };
 
   /** Open the section-settings modal for the given section (no Inspector tab/selection change to avoid UI freeze). */
@@ -185,6 +223,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const schema = selectedSection
     ? (schemas[selectedSection.type] as z.ZodObject<z.ZodRawShape> | undefined)
     : undefined;
+  /** Section/schema for the form only: deferred so heavy FormFactory doesn't block the main thread. */
+  const formSection = deferredSection
+    ? pageData.sections.find((s: Section) => s.id === deferredSection.id)
+    : undefined;
+  const formSchema = deferredSection
+    ? (schemas[deferredSection.type] as z.ZodObject<z.ZodRawShape> | undefined)
+    : undefined;
 
   /** When no section is selected, Page Layers list is always shown (open); otherwise use accordion state. */
   const showLayersList = allLayers.length > 0 && (layersOpen || !selectedSection);
@@ -228,6 +273,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 <span className="text-xs font-medium">Add section</span>
               </button>
             )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 rounded text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+              title="Close Inspector"
+              aria-label="Close Inspector"
+            >
+              <X size={16} />
+            </button>
           </div>
         </div>
         {allLayers.length > 0 && (
@@ -244,7 +298,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setLayersOpen((prev) => !prev)}
+                onClick={handlePageLayersChevronClick}
                 className="p-0.5 rounded text-zinc-500 hover:text-white transition-colors shrink-0"
                 aria-label={showLayersList ? 'Collapse Page Layers' : 'Expand Page Layers'}
               >
@@ -407,19 +461,30 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           );
         })()}
 
-        <div className="flex-1 p-4">
+        <div
+          className="flex-1 p-4"
+          onFocusCapture={() => selectedSection != null && setLayersOpen(false)}
+        >
           {!selectedSection ? (
             <p className="text-xs text-zinc-500 text-center py-8">
               Select a layer above or on the stage to edit.
             </p>
-          ) : !schema ? (
+          ) : isFormPending ? (
+            <div className="space-y-4 animate-pulse" role="status" aria-label="Loading form">
+              <div className="h-4 w-3/4 rounded bg-zinc-800" />
+              <div className="h-10 rounded bg-zinc-800/80" />
+              <div className="h-10 rounded bg-zinc-800/80" />
+              <div className="h-20 rounded bg-zinc-800/80" />
+              <div className="h-10 rounded bg-zinc-800/60" />
+            </div>
+          ) : !formSchema ? (
             <div className="text-xs text-red-400 p-4 border border-dashed border-red-900/30 rounded bg-red-900/10">
-              No schema found for {selectedSection.type}
+              No schema found for {deferredSection?.type ?? selectedSection.type}
             </div>
           ) : (() => {
-            const shapeKeys = Object.keys(schema.shape);
+            const shapeKeys = Object.keys(formSchema.shape);
             const contentKeys = shapeKeys.filter((k) => !SETTINGS_KEYS.has(k));
-            const data = (section?.data as Record<string, unknown>) || {};
+            const data = (formSection?.data as Record<string, unknown>) || {};
             if (contentKeys.length === 0) {
               return (
                 <p className="text-xs text-zinc-500">No content fields in schema.</p>
@@ -435,7 +500,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             const focusedFieldKey = firstSeg?.fieldKey ?? effectiveExpandedItem?.fieldKey ?? null;
             return (
               <FormFactory
-                schema={schema}
+                schema={formSchema}
                 data={data}
                 onChange={(newData) => onUpdate(newData)}
                 keys={contentKeys}
