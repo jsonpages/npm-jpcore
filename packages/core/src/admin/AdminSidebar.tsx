@@ -4,7 +4,7 @@ import { useConfig } from '../lib/ConfigContext';
 import { cn } from '../lib/utils';
 import { FormFactory } from './FormFactory';
 import type { PageConfig, Section } from '../lib/kernel';
-import { Layers, ChevronUp, ChevronDown, GripVertical, Settings, Trash2, AlertCircle, X, PlusSquare, FileCode, FileJson } from 'lucide-react';
+import { Layers, ChevronUp, ChevronDown, GripVertical, Settings, Trash2, AlertCircle, X, Plus, FileCode, FileJson } from 'lucide-react';
 
 interface SelectedSectionInfo {
   id: string;
@@ -214,22 +214,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               <button
                 type="button"
                 onClick={onAddSection}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 transition-colors"
+                className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors p-1 hover:bg-zinc-800 rounded"
                 title="Add section"
                 aria-label="Add section"
               >
-                <PlusSquare size={12} />
-                <span>Add section</span>
+                <Plus size={16} />
+                <span className="text-xs font-medium">Add section</span>
               </button>
             )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-zinc-500 hover:text-white transition-colors p-1 hover:bg-zinc-800 rounded"
-              aria-label="Close inspector"
-            >
-              <X size={16} />
-            </button>
           </div>
         </div>
         {allLayers.length > 0 && (
@@ -459,37 +451,44 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             </span>
           </div>
         )}
-        {onExportHTML != null && (
-          <button
-            type="button"
-            onClick={onExportHTML}
-            disabled={!hasChanges}
-            className={cn(
-              'w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-xs font-medium transition-all border',
-              hasChanges
-                ? 'opacity-100 bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600'
-                : 'opacity-100 bg-transparent border-zinc-800 text-zinc-600 cursor-not-allowed'
+        {(onExportHTML != null || onExportJSON != null) && (
+          <div className="flex items-stretch gap-0 rounded-md overflow-hidden border border-zinc-800">
+            {onExportHTML != null && (
+              <button
+                type="button"
+                onClick={onExportHTML}
+                disabled={!hasChanges}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium transition-all min-w-0',
+                  hasChanges
+                    ? 'opacity-100 bg-zinc-900 text-zinc-200 hover:bg-zinc-800'
+                    : 'opacity-100 bg-transparent text-zinc-600 cursor-not-allowed'
+                )}
+              >
+                <FileCode size={14} className="shrink-0" />
+                <span>Bake HTML</span>
+              </button>
             )}
-          >
-            <FileCode size={14} />
-            Bake HTML
-          </button>
-        )}
-        {onExportJSON != null && (
-          <button
-            type="button"
-            onClick={onExportJSON}
-            disabled={!hasChanges}
-            className={cn(
-              'w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-xs font-bold transition-all shadow-lg',
-              hasChanges
-                ? 'opacity-100 bg-blue-600 text-white hover:bg-blue-500 shadow-blue-900/20'
-                : 'opacity-100 bg-zinc-900 text-zinc-600 cursor-not-allowed'
+            {onExportHTML != null && onExportJSON != null && (
+              <div className="w-px bg-zinc-700 shrink-0" aria-hidden />
             )}
-          >
-            <FileJson size={14} />
-            Export JSON
-          </button>
+            {onExportJSON != null && (
+              <button
+                type="button"
+                onClick={onExportJSON}
+                disabled={!hasChanges}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold transition-all min-w-0',
+                  hasChanges
+                    ? 'opacity-100 bg-blue-600 text-white hover:bg-blue-500 shadow-blue-900/20'
+                    : 'opacity-100 bg-zinc-900 text-zinc-600 cursor-not-allowed'
+                )}
+              >
+                <FileJson size={14} className="shrink-0" />
+                <span>Export JSON</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
 
