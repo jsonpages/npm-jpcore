@@ -19,18 +19,6 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   return (
     <div className="h-14 border-b border-zinc-800 bg-zinc-950 flex items-center justify-between px-6 shrink-0 z-50 relative">
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className={cn(
-            "w-2 h-2 rounded-full transition-colors duration-300",
-            hasChanges ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" : "bg-emerald-500"
-          )} />
-          <span className={cn(
-            "text-xs font-medium transition-colors duration-300",
-            hasChanges ? "text-amber-500" : "text-zinc-500"
-          )}>
-            {hasChanges ? "Unsaved Changes" : "All Changes Saved"}
-          </span>
-        </div>
         {onAddSection != null && (
           <button
             type="button"

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { z } from 'zod';
 import { useConfig } from '../lib/ConfigContext';
+import { cn } from '../lib/utils';
 import { FormFactory } from './FormFactory';
 import type { PageConfig, Section } from '../lib/kernel';
-import { MousePointerClick, SlidersHorizontal, Save, Layers, ChevronUp, ChevronDown, GripVertical, Type, Settings, Trash2, AlertCircle, X } from 'lucide-react';
+import { MousePointerClick, SlidersHorizontal, Save, Layers, ChevronUp, ChevronDown, GripVertical, Type, Settings, Trash2, AlertCircle, X, PlusSquare, FileCode, FileJson } from 'lucide-react';
 
 interface SelectedSectionInfo {
   id: string;
@@ -30,6 +31,14 @@ interface AdminSidebarProps {
   activeSectionId?: string | null;
   onRequestScrollToSection?: (sectionId: string) => void;
   onDeleteSection?: (sectionId: string) => void;
+  /** When provided, shows an "Add section" button in the inspector header that opens the section library. */
+  onAddSection?: () => void;
+  /** Whether there are unsaved changes (disables Bake HTML / Export JSON when false). */
+  hasChanges?: boolean;
+  /** Trigger Bake HTML (same as ControlBar). */
+  onExportHTML?: () => void;
+  /** Trigger Export JSON (same as ControlBar). */
+  onExportJSON?: () => void;
 }
 
 const ZeroStateContent: React.FC = () => (
@@ -96,6 +105,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   activeSectionId,
   onRequestScrollToSection,
   onDeleteSection,
+  onAddSection,
+  hasChanges = false,
+  onExportHTML,
+  onExportJSON,
 }) => {
   const { schemas } = useConfig();
   const [layersOpen, setLayersOpen] = useState(true);
@@ -189,6 +202,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               Waiting for Selection...
             </p>
           </div>
+          {onAddSection != null && (
+            <button
+              type="button"
+              onClick={onAddSection}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 transition-colors shrink-0"
+              title="Add section"
+              aria-label="Add section"
+            >
+              <PlusSquare size={14} />
+              <span>Add section</span>
+            </button>
+          )}
         </div>
         <ZeroStateContent />
       </aside>
@@ -214,14 +239,28 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-zinc-500 hover:text-white transition-colors p-1 hover:bg-zinc-800 rounded shrink-0"
-          aria-label="Close inspector"
-        >
-          <X size={16} />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {onAddSection != null && (
+            <button
+              type="button"
+              onClick={onAddSection}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 transition-colors"
+              title="Add section"
+              aria-label="Add section"
+            >
+              <PlusSquare size={12} />
+              <span>Add section</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-zinc-500 hover:text-white transition-colors p-1 hover:bg-zinc-800 rounded"
+            aria-label="Close inspector"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       <div className="border-b border-zinc-800 bg-zinc-900/30 flex">
@@ -434,11 +473,53 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </div>
       </div>
 
-      <div className={`p-4 border-t border-zinc-800 bg-zinc-900/50 transition-opacity duration-200 ${effectiveExpandedItem ? 'opacity-10' : 'opacity-100'}`}>
-        <button className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2.5 rounded shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
-          <Save size={14} />
-          Save Changes
-        </button>
+      <div className="p-4 border-t border-zinc-800 bg-zinc-900/50 flex flex-col gap-2 opacity-100">
+        {(onExportHTML != null || onExportJSON != null) && (
+          <div className="flex items-center gap-2 mb-1">
+            <div className={cn(
+              'w-2 h-2 rounded-full transition-colors duration-300 shrink-0',
+              hasChanges ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-emerald-500'
+            )} />
+            <span className={cn(
+              'text-xs font-medium transition-colors duration-300',
+              hasChanges ? 'text-amber-500' : 'text-zinc-500'
+            )}>
+              {hasChanges ? 'Unsaved Changes' : 'All Changes Saved'}
+            </span>
+          </div>
+        )}
+        {onExportHTML != null && (
+          <button
+            type="button"
+            onClick={onExportHTML}
+            disabled={!hasChanges}
+            className={cn(
+              'w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-xs font-medium transition-all border',
+              hasChanges
+                ? 'opacity-100 bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600'
+                : 'opacity-100 bg-transparent border-zinc-800 text-zinc-600 cursor-not-allowed'
+            )}
+          >
+            <FileCode size={14} />
+            Bake HTML
+          </button>
+        )}
+        {onExportJSON != null && (
+          <button
+            type="button"
+            onClick={onExportJSON}
+            disabled={!hasChanges}
+            className={cn(
+              'w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-md text-xs font-bold transition-all shadow-lg',
+              hasChanges
+                ? 'opacity-100 bg-blue-600 text-white hover:bg-blue-500 shadow-blue-900/20'
+                : 'opacity-100 bg-zinc-900 text-zinc-600 cursor-not-allowed'
+            )}
+          >
+            <FileJson size={14} />
+            Export JSON
+          </button>
+        )}
       </div>
     </aside>
   );

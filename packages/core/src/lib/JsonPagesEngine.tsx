@@ -9,7 +9,6 @@ import { StudioProvider } from './StudioContext';
 import { ConfigProvider } from './ConfigContext';
 import { ThemeLoader } from './ThemeLoader';
 import { AdminSidebar, type LayerItem } from '../admin/AdminSidebar';
-import { ControlBar } from '../admin/ControlBar';
 import { StudioStage } from '../admin/StudioStage';
 import { PreviewEntry } from '../admin/PreviewEntry';
 import { AddSectionLibrary } from '../admin/AddSectionLibrary';
@@ -400,16 +399,6 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       <ThemeLoader mode="admin" tenantCss={tenantCss} adminCss={adminCss}>
         <StudioProvider mode="studio">
           <div className="flex flex-col h-screen w-screen bg-background text-foreground overflow-hidden">
-            <ControlBar
-              hasChanges={hasChanges}
-              onExportJSON={handleExportJSON}
-              onExportHTML={triggerBake}
-              onAddSection={
-                addableSectionTypes.length > 0
-                  ? () => setAddSectionLibraryOpen(true)
-                  : undefined
-              }
-            />
             <div className="flex flex-1 min-h-0 overflow-hidden">
               <main className="flex-1 min-w-0 relative bg-zinc-900/50 overflow-hidden">
                 <StudioStage
@@ -446,9 +435,17 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   }
                   allLayers={allLayers}
                   activeSectionId={activeSectionId}
-                onRequestScrollToSection={handleRequestScrollToSection}
-                onDeleteSection={draft ? handleDeleteSection : undefined}
-              />
+                  onRequestScrollToSection={handleRequestScrollToSection}
+                  onDeleteSection={draft ? handleDeleteSection : undefined}
+                  onAddSection={
+                    addableSectionTypes.length > 0
+                      ? () => setAddSectionLibraryOpen(true)
+                      : undefined
+                  }
+                  hasChanges={hasChanges}
+                  onExportHTML={triggerBake}
+                  onExportJSON={handleExportJSON}
+                />
               </div>
             </div>
             <AddSectionLibrary
