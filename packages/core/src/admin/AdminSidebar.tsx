@@ -4,7 +4,7 @@ import { useConfig } from '../lib/ConfigContext';
 import { cn } from '../lib/utils';
 import { FormFactory } from './FormFactory';
 import type { PageConfig, Section } from '../lib/kernel';
-import { MousePointerClick, SlidersHorizontal, Save, Layers, ChevronUp, ChevronDown, GripVertical, Type, Settings, Trash2, AlertCircle, X, PlusSquare, FileCode, FileJson } from 'lucide-react';
+import { Layers, ChevronUp, ChevronDown, GripVertical, Settings, Trash2, AlertCircle, X, PlusSquare, FileCode, FileJson } from 'lucide-react';
 
 interface SelectedSectionInfo {
   id: string;
@@ -53,57 +53,6 @@ interface AdminSidebarProps {
   onExportJSON?: () => void;
 }
 
-const ZeroStateContent: React.FC = () => (
-  <div className="flex flex-col h-full">
-    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
-      <div className="relative">
-        <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
-        <div className="relative w-20 h-20 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center shadow-2xl">
-          <Layers className="text-zinc-400" size={40} strokeWidth={1.5} />
-        </div>
-      </div>
-      <div className="space-y-2 max-w-[200px]">
-        <h3 className="text-sm font-semibold text-zinc-100">Welcome to Studio</h3>
-        <p className="text-xs text-zinc-500 leading-relaxed">
-          The canvas is ready. Select an element to begin editing.
-        </p>
-      </div>
-    </div>
-    <div className="p-6 border-t border-zinc-800/50 bg-zinc-900/20">
-      <h4 className="text-[10px] font-bold uppercase tracking-widest text-zinc-600 mb-4">How it works</h4>
-      <ul className="space-y-4">
-        <li className="flex items-start gap-3 group">
-          <div className="mt-0.5 p-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-500 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-colors">
-            <MousePointerClick size={14} />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-zinc-300">Select</p>
-            <p className="text-[10px] text-zinc-500">Click any section on the stage.</p>
-          </div>
-        </li>
-        <li className="flex items-start gap-3 group">
-          <div className="mt-0.5 p-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-500 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-colors">
-            <SlidersHorizontal size={14} />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-zinc-300">Edit</p>
-            <p className="text-[10px] text-zinc-500">Tweak content and settings.</p>
-          </div>
-        </li>
-        <li className="flex items-start gap-3 group">
-          <div className="mt-0.5 p-1.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-500 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-colors">
-            <Save size={14} />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-zinc-300">Save</p>
-            <p className="text-[10px] text-zinc-500">Persist changes to JSON.</p>
-          </div>
-        </li>
-      </ul>
-    </div>
-  </div>
-);
-
 const SETTINGS_KEYS = new Set(['anchorId', 'paddingTop', 'paddingBottom', 'theme', 'container']);
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -126,7 +75,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 }) => {
   const { schemas } = useConfig();
   const [layersOpen, setLayersOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'content' | 'settings'>('content');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -151,10 +99,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         }
       : null;
 
-  useEffect(() => {
-    if (selectedSection) setLayersOpen(false);
-  }, [selectedSection?.id]);
-
   // When engine clears path (e.g. user clicked section on canvas), clear sidebar expansion too.
   const prevPathRef = useRef(expandedItemPath);
   useEffect(() => {
@@ -164,7 +108,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   useEffect(() => {
     if (!effectiveExpandedItem) return;
-    setActiveTab('content');
     const scrollEl = contentScrollRef.current;
     if (!scrollEl) return;
     const el = scrollEl.querySelector('[data-jp-expanded-item]') ?? scrollEl.querySelector('[data-jp-focused-field]');
@@ -184,7 +127,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     } else {
       setLayersOpen(false);
       onRequestScrollToSection?.(sectionId);
-      setActiveTab('settings');
     }
   };
 
@@ -231,105 +173,67 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     onReorderSection(draggedId, targetIndex);
   };
 
-  if (!selectedSection) {
-    return (
-      <aside className="relative w-full h-full bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 min-w-0">
-        <div className="py-2 px-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
-          <div>
-            <h3 className="text-sm font-bold text-white leading-tight">Inspector</h3>
-            <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider leading-tight mt-0.5">
-              Waiting for Selection...
-            </p>
-          </div>
-          {onAddSection != null && (
-            <button
-              type="button"
-              onClick={onAddSection}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 transition-colors shrink-0"
-              title="Add section"
-              aria-label="Add section"
-            >
-              <PlusSquare size={14} />
-              <span>Add section</span>
-            </button>
-          )}
-        </div>
-        <ZeroStateContent />
-      </aside>
-    );
-  }
+  const section = selectedSection
+    ? pageData.sections.find((s: Section) => s.id === selectedSection.id)
+    : undefined;
+  const schema = selectedSection
+    ? (schemas[selectedSection.type] as z.ZodObject<z.ZodRawShape> | undefined)
+    : undefined;
 
-  const section = pageData.sections.find((s: Section) => s.id === selectedSection.id);
-  const schema = schemas[selectedSection.type] as z.ZodObject<z.ZodRawShape> | undefined;
+  /** When no section is selected, Page Layers list is always shown (open); otherwise use accordion state. */
+  const showLayersList = allLayers.length > 0 && (layersOpen || !selectedSection);
 
   return (
     <aside className="relative w-full h-full bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 min-w-0 animate-in slide-in-from-right duration-300">
-      <div className="py-2 px-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
-        <div className="flex items-center gap-2 min-w-0">
-          <div>
-            <h3 className="text-sm font-bold text-white leading-tight">Inspector</h3>
-            <p className="text-[10px] font-mono text-blue-400 uppercase tracking-wider flex items-center gap-1.5 leading-tight mt-0.5">
-              {onReorderSection && selectedSection.scope === 'local' && (
-                <span className="text-zinc-500 shrink-0" title="Reorder section on page">
-                  <GripVertical size={12} strokeWidth={2} />
-                </span>
-              )}
-              {selectedSection.type} <span className="text-zinc-600">|</span> {selectedSection.scope}
-            </p>
+      {/* Sticky: Section header (Inspector + type) + Page Layers header (and section summary when collapsed). */}
+      <div className="sticky top-0 z-10 flex flex-col shrink-0 bg-zinc-950 border-b border-zinc-800">
+        <div className="py-2 px-3 flex justify-between items-center bg-zinc-900/50">
+          <div className="flex items-center gap-2 min-w-0">
+            <div>
+              <h3 className="text-sm font-bold text-white leading-tight">Inspector</h3>
+              <p className="text-[10px] font-mono uppercase tracking-wider flex items-center gap-1.5 leading-tight mt-0.5">
+                {selectedSection ? (
+                  <>
+                    {onReorderSection && selectedSection.scope === 'local' && (
+                      <span className="text-zinc-500 shrink-0" title="Reorder section on page">
+                        <GripVertical size={12} strokeWidth={2} />
+                      </span>
+                    )}
+                    <span className="text-blue-400">{selectedSection.type}</span>
+                    <span className="text-zinc-600">|</span>
+                    <span className="text-zinc-500">{selectedSection.scope}</span>
+                  </>
+                ) : (
+                  <span className="text-zinc-500">Waiting for Selection...</span>
+                )}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {onAddSection != null && (
+          <div className="flex items-center gap-1 shrink-0">
+            {onAddSection != null && (
+              <button
+                type="button"
+                onClick={onAddSection}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 transition-colors"
+                title="Add section"
+                aria-label="Add section"
+              >
+                <PlusSquare size={12} />
+                <span>Add section</span>
+              </button>
+            )}
             <button
               type="button"
-              onClick={onAddSection}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600 transition-colors"
-              title="Add section"
-              aria-label="Add section"
+              onClick={onClose}
+              className="text-zinc-500 hover:text-white transition-colors p-1 hover:bg-zinc-800 rounded"
+              aria-label="Close inspector"
             >
-              <PlusSquare size={12} />
-              <span>Add section</span>
+              <X size={16} />
             </button>
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-zinc-500 hover:text-white transition-colors p-1 hover:bg-zinc-800 rounded"
-            aria-label="Close inspector"
-          >
-            <X size={16} />
-          </button>
+          </div>
         </div>
-      </div>
-
-      <div className="border-b border-zinc-800 bg-zinc-900/30 flex">
-        <button
-          type="button"
-          onClick={() => setActiveTab('content')}
-          className={`flex-1 py-3 px-4 text-xs font-semibold flex items-center justify-center gap-2 transition-colors ${
-            activeTab === 'content' ? 'text-white bg-zinc-950 border-b-2 border-primary' : 'text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          <Type size={14} />
-          Content
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('settings')}
-          className={`flex-1 py-3 px-4 text-xs font-semibold flex items-center justify-center gap-2 transition-colors ${
-            activeTab === 'settings' ? 'text-white bg-zinc-950 border-b-2 border-primary' : 'text-zinc-500 hover:text-zinc-300'
-          }`}
-        >
-          <Settings size={14} />
-          Settings
-        </button>
-      </div>
-
-      <div ref={contentScrollRef} className="flex-1 overflow-y-auto flex flex-col custom-scrollbar">
         {allLayers.length > 0 && (
-          <div
-            className={`border-b border-zinc-800 bg-zinc-900/20 transition-opacity duration-200 ${effectiveExpandedItem ? 'opacity-10' : 'opacity-100'}`}
-          >
+          <div className="bg-zinc-900/20 opacity-100">
             <button
               type="button"
               onClick={() => setLayersOpen(!layersOpen)}
@@ -340,9 +244,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 <span className="text-xs font-bold text-white">Page Layers</span>
                 <span className="text-[10px] text-zinc-500">({allLayers.length})</span>
               </div>
-              {layersOpen ? <ChevronUp size={14} className="text-zinc-500" /> : <ChevronDown size={14} className="text-zinc-500" />}
+              {showLayersList ? <ChevronUp size={14} className="text-zinc-500" /> : <ChevronDown size={14} className="text-zinc-500" />}
             </button>
-            {!layersOpen && selectedSection && (() => {
+            {!showLayersList && selectedSection && (() => {
               const activeLayer = allLayers.find((l) => l.id === selectedSection.id);
               if (!activeLayer) return null;
               const isActive = activeSectionId === selectedSection.id;
@@ -372,10 +276,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 </div>
               );
             })()}
-            {layersOpen && (
-              <div className="px-3 pb-3 space-y-1">
-                {allLayers.map((layer) => {
-                  const isSelected = selectedSection.id === layer.id;
+          </div>
+        )}
+      </div>
+
+      <div ref={contentScrollRef} className="flex-1 min-h-0 overflow-y-auto flex flex-col custom-scrollbar">
+        {showLayersList && (
+          <div className="border-b border-zinc-800 bg-zinc-900/20 px-3 pb-3 pt-1 space-y-1">
+            {allLayers.map((layer) => {
+                  const isSelected = selectedSection?.id === layer.id;
                   const isActive = activeSectionId === layer.id;
                   const isDragging = draggedId === layer.id;
                   const isDragOver = dragOverId === layer.id;
@@ -431,12 +340,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                     </div>
                   );
                 })}
-                {deleteConfirm && (
-                  <div className="flex items-center gap-2 py-2 px-3 mt-1 rounded-md bg-amber-500/10 border border-amber-500/30">
-                    <AlertCircle size={12} className="text-amber-500 shrink-0" />
-                    <p className="text-[10px] text-amber-500 font-medium">Click delete again to confirm</p>
-                  </div>
-                )}
+            {deleteConfirm && (
+              <div className="flex items-center gap-2 py-2 px-3 mt-1 rounded-md bg-amber-500/10 border border-amber-500/30">
+                <AlertCircle size={12} className="text-amber-500 shrink-0" />
+                <p className="text-[10px] text-amber-500 font-medium">Click delete again to confirm</p>
               </div>
             )}
           </div>
@@ -489,21 +396,21 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         })()}
 
         <div className="flex-1 p-4">
-          {!schema ? (
+          {!selectedSection ? (
+            <p className="text-xs text-zinc-500 text-center py-8">
+              Select a layer above or on the stage to edit.
+            </p>
+          ) : !schema ? (
             <div className="text-xs text-red-400 p-4 border border-dashed border-red-900/30 rounded bg-red-900/10">
               No schema found for {selectedSection.type}
             </div>
           ) : (() => {
             const shapeKeys = Object.keys(schema.shape);
             const contentKeys = shapeKeys.filter((k) => !SETTINGS_KEYS.has(k));
-            const settingsKeys = shapeKeys.filter((k) => SETTINGS_KEYS.has(k));
             const data = (section?.data as Record<string, unknown>) || {};
-            const keys = activeTab === 'content' ? contentKeys : settingsKeys;
-            if (keys.length === 0) {
+            if (contentKeys.length === 0) {
               return (
-                <p className="text-xs text-zinc-500">
-                  {activeTab === 'content' ? 'No content fields in schema.' : 'No settings fields in schema.'}
-                </p>
+                <p className="text-xs text-zinc-500">No content fields in schema.</p>
               );
             }
             const firstSeg = effectiveExpandedItemPath?.[0];
@@ -519,7 +426,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 schema={schema}
                 data={data}
                 onChange={(newData) => onUpdate(newData)}
-                keys={keys}
+                keys={contentKeys}
                 expandedItemPath={effectiveExpandedItemPath}
                 expandedItemIdByField={expandedItemIdByField}
                 focusedFieldKey={focusedFieldKey}
