@@ -183,7 +183,6 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
                   return (
                     <ArrayItemWrapper 
                       key={stableKey} 
-                      fieldKey={key}
                       itemId={itemIdStr}
                       openItemId={openItemId != null ? String(openItemId) : undefined}
                       isFaded={isFadedItem}
@@ -245,7 +244,6 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
 };
 
 interface ArrayItemWrapperProps {
-  fieldKey: string;
   itemId: string;
   /** When this matches itemId, the item is expanded (e.g. after clicking it on the Stage). */
   openItemId?: string | null;
@@ -264,7 +262,6 @@ interface ArrayItemWrapperProps {
 }
 
 const ArrayItemWrapper: React.FC<ArrayItemWrapperProps> = ({ 
-  fieldKey,
   itemId,
   openItemId,
   isFaded = false,

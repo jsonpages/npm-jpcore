@@ -7,7 +7,7 @@
     "jsonpages": "./src/index.js"
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc -p ."
   },
   "dependencies": {
     "chalk": "^5.3.0",
