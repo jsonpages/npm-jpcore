@@ -110,6 +110,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     prevPathRef.current = expandedItemPath;
   }, [expandedItemPath]);
 
+  /** When a section is selected (from Stage preview click or from Page Layers click), collapse the list so behaviour is the same. */
+  useEffect(() => {
+    if (selectedSection?.id != null) setLayersOpen(false);
+  }, [selectedSection?.id]);
+
   /** Scroll sidebar content to top. Double rAF so it runs after layout (fixes scroll not moving). */
   const scrollSidebarToTop = () => {
     const id = requestAnimationFrame(() => {
