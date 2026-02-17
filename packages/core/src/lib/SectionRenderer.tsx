@@ -188,32 +188,30 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
       }, '*');
       return;
     }
-    // Walk up from element at point to find data-jp-item-id or data-jp-field
-    let itemId: string | null = null;
-    let itemField: string | null = null;
+    // Collect full path of nested array items (root-to-leaf) for deep focus
+    const itemPath: Array<{ fieldKey: string; itemId?: string }> = [];
     let el: HTMLElement | null = rootAtPoint;
     while (el && el !== sectionEl) {
       const id = el.getAttribute?.('data-jp-item-id');
-      if (id) {
-        itemId = id;
-        itemField = el.getAttribute?.('data-jp-item-field') || 'items';
-        break;
+      const field = el.getAttribute?.('data-jp-item-field');
+      if (id && field) {
+        itemPath.push({ fieldKey: field || 'items', itemId: id });
       }
       el = el.parentElement;
     }
-    if (!itemField) {
+    itemPath.reverse();
+    if (itemPath.length === 0) {
       el = rootAtPoint;
       while (el && el !== sectionEl) {
         const field = el.getAttribute?.('data-jp-field');
         if (field) {
-          itemField = field;
+          itemPath.push({ fieldKey: field });
           break;
         }
         el = el.parentElement;
       }
     }
-    // If still no hit, find deepest descendant of rootAtPoint that contains (x,y) and has an attribute
-    if (!itemField && rootAtPoint) {
+    if (itemPath.length === 0 && rootAtPoint) {
       let best: HTMLElement | null = null;
       const visit = (node: HTMLElement) => {
         const rect = node.getBoundingClientRect();
@@ -224,22 +222,28 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
       };
       visit(rootAtPoint);
       if (best) {
-        const el: HTMLElement = best;
+        const el = best as HTMLElement;
         const id = el.getAttribute?.('data-jp-item-id');
         const field = el.getAttribute?.('data-jp-field');
-        if (id) {
-          itemId = id;
-          itemField = field || 'items';
-        } else if (field) {
-          itemField = field;
-        }
+        if (id && field) itemPath.push({ fieldKey: field || 'items', itemId: id });
+        else if (field) itemPath.push({ fieldKey: field });
       }
     }
-    window.parent.postMessage({
+    const payload: Record<string, unknown> = {
       type: STUDIO_EVENTS.SECTION_SELECT,
       section: { id: section.id, type: section.type, scope: scope },
-      ...(itemField ? { itemField, ...(itemId ? { itemId } : {}) } : {}),
-    }, '*');
+    };
+    if (itemPath.length > 0) {
+      payload.itemPath = itemPath;
+      const first = itemPath[0];
+      if (first.itemId != null) {
+        payload.itemField = first.fieldKey;
+        payload.itemId = first.itemId;
+      } else {
+        payload.itemField = first.fieldKey;
+      }
+    }
+    window.parent.postMessage(payload, '*');
   };
 
   const renderInnerComponent = () => {

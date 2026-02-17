@@ -40,6 +40,8 @@ export const ProblemStatement: React.FC<{ data: ProblemStatementData; settings?:
                           'inline-block px-4 py-2 rounded-lg text-[0.8rem] font-semibold border',
                           variantStyles[block.variant]
                         )}
+                        data-jp-item-id={(block as { id?: string }).id ?? `legacy-${bIdx}`}
+                        data-jp-item-field="blocks"
                       >
                         {block.label}
                       </span>

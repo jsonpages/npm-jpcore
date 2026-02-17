@@ -52,6 +52,8 @@ interface FormFactoryProps {
   onChange: (newData: Record<string, unknown>) => void;
   /** When set, only render fields whose key is in this array (e.g. Content vs Settings tabs). */
   keys?: string[] | null;
+  /** Root-to-leaf path for deep focus (e.g. silos -> blocks). First segment applies to this level. */
+  expandedItemPath?: Array<{ fieldKey: string; itemId?: string }> | null;
   /** When user selects an item on the Stage, expand that array item (fieldKey -> itemId). */
   expandedItemIdByField?: Record<string, string>;
   /** When user clicks a field on the Stage, show it at top / scroll to it (simple field key). */
@@ -79,12 +81,16 @@ const getExpandedItemIdForField = (map: Record<string, string> | undefined, sche
   return entry?.[1];
 };
 
-export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange, keys, expandedItemIdByField, focusedFieldKey, onSidebarExpandedItemChange }) => {
+export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange, keys, expandedItemPath, expandedItemIdByField, focusedFieldKey, onSidebarExpandedItemChange }) => {
   const shape = schema.shape;
   const fieldKeys = keys != null
     ? Object.keys(shape).filter((k) => keys.includes(k))
     : Object.keys(shape);
-  const inItemScope = focusedFieldKey != null;
+  const firstSeg = expandedItemPath?.[0];
+  const effectiveExpandedItemIdByField =
+    firstSeg?.itemId != null ? { [firstSeg.fieldKey]: firstSeg.itemId } : expandedItemIdByField;
+  const effectiveFocusedFieldKey = firstSeg?.fieldKey ?? focusedFieldKey ?? null;
+  const inItemScope = effectiveFocusedFieldKey != null;
 
   return (
     <div className="space-y-4">
@@ -99,7 +105,7 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
         // 1. OBJECT HANDLING
         if (effectiveSchema instanceof z.ZodObject) {
           const objectData = (value as Record<string, unknown>) || {};
-          const isFocusedField = fieldKeyMatches(focusedFieldKey, key);
+          const isFocusedField = fieldKeyMatches(effectiveFocusedFieldKey, key);
           return (
             <div
               key={key}
@@ -116,8 +122,9 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
                 schema={effectiveSchema} 
                 data={objectData} 
                 onChange={(val) => onChange({ ...data, [key]: val })}
-                expandedItemIdByField={expandedItemIdByField}
-                focusedFieldKey={focusedFieldKey}
+                expandedItemPath={expandedItemPath && fieldKeyMatches(firstSeg?.fieldKey, key) ? expandedItemPath.slice(1) : undefined}
+                expandedItemIdByField={effectiveExpandedItemIdByField}
+                focusedFieldKey={effectiveFocusedFieldKey}
               />
             </div>
           );
@@ -136,7 +143,9 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
             onChange({ ...data, [key]: newItems });
           };
 
-          const isFocusedField = fieldKeyMatches(focusedFieldKey, key);
+          const isFocusedField = fieldKeyMatches(effectiveFocusedFieldKey, key);
+          const openItemIdFromPath = fieldKeyMatches(firstSeg?.fieldKey, key) ? firstSeg?.itemId : undefined;
+          const effectiveOpenItemId = getExpandedItemIdForField(effectiveExpandedItemIdByField, key) ?? openItemIdFromPath;
           return (
             <div
               key={key}
@@ -176,9 +185,11 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
                     (typeof itemRecord.text === 'string' ? itemRecord.text : null) || 
                     `${key} #${index + 1}`;
 
-                  const openItemId = getExpandedItemIdForField(expandedItemIdByField, key);
+                  const openItemId = effectiveOpenItemId;
                   const itemIdStr = String(itemRecord.id ?? stableKey);
                   const isExpandedItem = openItemId != null && String(openItemId) === itemIdStr;
+                  const pathTail =
+                    isExpandedItem && expandedItemPath && expandedItemPath.length > 1 ? expandedItemPath.slice(1) : undefined;
                   const isFadedItem = inItemScope && isFocusedField && openItemId != null && !isExpandedItem;
                   return (
                     <ArrayItemWrapper 
@@ -202,6 +213,7 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
                         <FormFactory 
                           schema={itemSchema} 
                           data={itemRecord || {}}
+                          expandedItemPath={pathTail}
                           onChange={(val) => {
                             const newItems = [...items];
                             newItems[index] = val;
@@ -222,7 +234,7 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
         // 3. ATOMIC WIDGET HANDLING
         const Widget = (InputWidgets[uiHint] || InputWidgets['ui:text']) as React.ComponentType<BaseWidgetProps>;
         const options = effectiveSchema instanceof z.ZodEnum ? (effectiveSchema._def.values as string[]) : undefined;
-        const isFocusedField = fieldKeyMatches(focusedFieldKey, key);
+        const isFocusedField = fieldKeyMatches(effectiveFocusedFieldKey, key);
 
         return (
           <div
@@ -278,6 +290,7 @@ const ArrayItemWrapper: React.FC<ArrayItemWrapperProps> = ({
   const [isOpen, setIsOpen] = React.useState(shouldOpen);
   React.useEffect(() => {
     if (shouldOpen && !isOpen) setIsOpen(true);
+    if (!shouldOpen && isOpen) setIsOpen(false);
   }, [shouldOpen, isOpen]);
 
   const handleToggle = () => {

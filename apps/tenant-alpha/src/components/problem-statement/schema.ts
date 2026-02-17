@@ -7,12 +7,12 @@ const SiloBlockSchema = BaseArrayItem.extend({
   variant: SiloBlockVariantSchema.describe('ui:select'),
 });
 
-const SiloGroupSchema = z.object({
+const SiloGroupSchema = BaseArrayItem.extend({
   blocks: z.array(SiloBlockSchema).describe('ui:list'),
   label: z.string().describe('ui:text'),
 });
 
-const ProblemParagraphSchema = z.object({
+const ProblemParagraphSchema = BaseArrayItem.extend({
   text: z.string().describe('ui:textarea'),
   isBold: z.boolean().default(false).describe('ui:checkbox'),
 });

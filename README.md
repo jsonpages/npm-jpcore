@@ -25,3 +25,9 @@ npm install
 npm run build:all   # type-check core + build app
 npm run dev         # run app
 ```
+
+## Shipping & testing
+
+- **Core** (`packages/core`) is the sovereign engine; it is tested in **tenant-alpha** (`apps/tenant-alpha`) via the monorepo workspace link and, for release-like validation, via **jalc** (or yalc).
+- **Both are shipped:** `@jsonpages/core` is published to npm; tenant-alpha is the reference app (golden master) and is built and deployed as a first-class deliverable.
+- In-repo, `tenant-alpha` depends on core with `workspace:*` so it always uses the local package; publish core first, then build or deploy the app.

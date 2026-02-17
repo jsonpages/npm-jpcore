@@ -7,9 +7,9 @@
 
 ## 1. Monorepo Architecture
 The project is divided into three distinct areas of responsibility:
-*   `packages/core`: The engine (**Sovereign Shell**). Headless, agnostic, and distributable via NPM.
+*   `packages/core`: The engine (**Sovereign Shell**). Headless, agnostic, and distributable via NPM. **Shipped** as `@jsonpages/core`.
 *   `packages/cli`: The scaffolding tool. Used to project new Tenants.
-*   `apps/tenant-alpha`: The **Golden Master**. The reference site used to test and validate new features.
+*   `apps/tenant-alpha`: The **Golden Master**. The reference site used to test and validate new features. **Shipped** as the reference app (enterprise deliverable). Core is tested here via the monorepo workspace and, for release-like validation, via **jalc** (or yalc).
 
 ---
 
@@ -33,8 +33,8 @@ Thanks to NPM Workspaces, changes to the Core are usually seen in real-time by `
 npm install # Forces a refresh of the symbolic links
 ```
 
-### B. SDK Distribution (Yalc Loop)
-To test the Core in a project **outside** the monorepo (like your standalone tests), use this protocol:
+### B. SDK Distribution (Jalc / Yalc Loop)
+To test the Core in a project **outside** the monorepo (or for release-like validation), use the jalc/yalc protocol:
 
 ```bash
 # 1. Enter the core package
@@ -43,7 +43,7 @@ cd packages/core
 # 2. Build the engine (generates the /dist folder)
 npm run build
 
-# 3. Publish to the local store and "push" updates to linked tenants
+# 3. Publish to the local store and push updates to linked consumers
 yalc publish --push
 ```
 

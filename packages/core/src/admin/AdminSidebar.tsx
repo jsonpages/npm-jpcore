@@ -23,8 +23,8 @@ interface AdminSidebarProps {
   pageData: PageConfig | { sections: Section[] };
   onUpdate: (newData: Record<string, unknown>) => void;
   onClose: () => void;
-  /** When user clicks an item in the Stage, expand that array item (or focus field when no itemId). */
-  expandedItem?: { fieldKey: string; itemId?: string } | null;
+  /** Root-to-leaf path for deep focus (e.g. silos -> blocks). When null, no canvas selection. */
+  expandedItemPath?: Array<{ fieldKey: string; itemId?: string }> | null;
   onReorderSection?: (sectionId: string, newIndex: number) => void;
   allLayers?: LayerItem[];
   activeSectionId?: string | null;
@@ -90,7 +90,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   pageData,
   onUpdate,
   onClose,
-  expandedItem = null,
+  expandedItemPath = null,
   onReorderSection,
   allLayers = [],
   activeSectionId,
@@ -106,19 +106,31 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const [sidebarExpandedItem, setSidebarExpandedItem] = useState<{ fieldKey: string; itemId?: string } | null>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
 
-  // When canvas selects an item, use that; otherwise use sidebar expansion (e.g. user opened a row in the form).
-  const effectiveExpandedItem = expandedItem ?? sidebarExpandedItem;
+  // Canvas path takes precedence; otherwise single-level sidebar expansion.
+  const effectiveExpandedItemPath =
+    expandedItemPath && expandedItemPath.length > 0
+      ? expandedItemPath
+      : sidebarExpandedItem
+        ? [sidebarExpandedItem]
+        : null;
+  const effectiveExpandedItem =
+    effectiveExpandedItemPath?.length
+      ? {
+          fieldKey: effectiveExpandedItemPath[effectiveExpandedItemPath.length - 1].fieldKey,
+          itemId: effectiveExpandedItemPath[effectiveExpandedItemPath.length - 1].itemId,
+        }
+      : null;
 
   useEffect(() => {
     if (selectedSection) setLayersOpen(false);
   }, [selectedSection?.id]);
 
-  // When engine clears expandedItem (e.g. user clicked section on canvas), clear sidebar expansion too.
-  const prevExpandedItemRef = useRef(expandedItem);
+  // When engine clears path (e.g. user clicked section on canvas), clear sidebar expansion too.
+  const prevPathRef = useRef(expandedItemPath);
   useEffect(() => {
-    if (prevExpandedItemRef.current != null && expandedItem == null) setSidebarExpandedItem(null);
-    prevExpandedItemRef.current = expandedItem;
-  }, [expandedItem]);
+    if (prevPathRef.current != null && expandedItemPath == null) setSidebarExpandedItem(null);
+    prevPathRef.current = expandedItemPath;
+  }, [expandedItemPath]);
 
   useEffect(() => {
     if (!effectiveExpandedItem) return;
@@ -169,7 +181,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   if (!selectedSection) {
     return (
-      <aside className="relative w-full h-screen bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 min-w-0">
+      <aside className="relative w-full h-full bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 min-w-0">
         <div className="py-2 px-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
           <div>
             <h3 className="text-sm font-bold text-white leading-tight">Inspector</h3>
@@ -187,7 +199,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const schema = schemas[selectedSection.type] as z.ZodObject<z.ZodRawShape> | undefined;
 
   return (
-    <aside className="relative w-full h-screen bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 min-w-0 animate-in slide-in-from-right duration-300">
+    <aside className="relative w-full h-full bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 min-w-0 animate-in slide-in-from-right duration-300">
       <div className="py-2 px-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
         <div className="flex items-center gap-2 min-w-0">
           <div>
@@ -336,19 +348,41 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
         {effectiveExpandedItem && section && (() => {
           const data = (section.data as Record<string, unknown>) || {};
-          const fieldKey = effectiveExpandedItem.fieldKey;
           let label: string;
-          if (effectiveExpandedItem.itemId != null) {
-            const arr = Array.isArray(data[fieldKey]) ? (data[fieldKey] as Record<string, unknown>[]) : [];
-            const item = arr.find((i) => String(i?.id) === String(effectiveExpandedItem!.itemId));
-            const rec = (item as Record<string, unknown>) || {};
+          if (effectiveExpandedItemPath && effectiveExpandedItemPath.length > 0) {
+            let current: unknown = data;
+            for (const seg of effectiveExpandedItemPath) {
+              const next = (current as Record<string, unknown>)?.[seg.fieldKey];
+              if (seg.itemId != null && Array.isArray(next)) {
+                const item = (next as Record<string, unknown>[]).find(
+                  (i) => String((i as Record<string, unknown>)?.id) === String(seg.itemId)
+                );
+                current = item ?? null;
+              } else {
+                current = next;
+              }
+            }
+            const rec = (current as Record<string, unknown>) || {};
+            const fieldKey = effectiveExpandedItem.fieldKey;
             label =
               (typeof rec.name === 'string' ? rec.name : null) ??
               (typeof rec.title === 'string' ? rec.title : null) ??
               (typeof rec.label === 'string' ? rec.label : null) ??
-              fieldKey;
+              fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1).replace(/([A-Z])/g, ' $1').trim();
           } else {
-            label = fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1).replace(/([A-Z])/g, ' $1').trim();
+            const fieldKey = effectiveExpandedItem.fieldKey;
+            if (effectiveExpandedItem.itemId != null) {
+              const arr = Array.isArray(data[fieldKey]) ? (data[fieldKey] as Record<string, unknown>[]) : [];
+              const item = arr.find((i) => String(i?.id) === String(effectiveExpandedItem!.itemId));
+              const rec = (item as Record<string, unknown>) || {};
+              label =
+                (typeof rec.name === 'string' ? rec.name : null) ??
+                (typeof rec.title === 'string' ? rec.title : null) ??
+                (typeof rec.label === 'string' ? rec.label : null) ??
+                fieldKey;
+            } else {
+              label = fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1).replace(/([A-Z])/g, ' $1').trim();
+            }
           }
           return (
             <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900/50">
@@ -376,17 +410,21 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 </p>
               );
             }
+            const firstSeg = effectiveExpandedItemPath?.[0];
             const expandedItemIdByField =
-              effectiveExpandedItem?.itemId != null
-                ? { [effectiveExpandedItem.fieldKey]: effectiveExpandedItem.itemId }
-                : undefined;
-            const focusedFieldKey = effectiveExpandedItem?.fieldKey;
+              firstSeg?.itemId != null
+                ? { [firstSeg.fieldKey]: firstSeg.itemId }
+                : effectiveExpandedItem?.itemId != null
+                  ? { [effectiveExpandedItem.fieldKey]: effectiveExpandedItem.itemId }
+                  : undefined;
+            const focusedFieldKey = firstSeg?.fieldKey ?? effectiveExpandedItem?.fieldKey ?? null;
             return (
               <FormFactory
                 schema={schema}
                 data={data}
                 onChange={(newData) => onUpdate(newData)}
                 keys={keys}
+                expandedItemPath={effectiveExpandedItemPath}
                 expandedItemIdByField={expandedItemIdByField}
                 focusedFieldKey={focusedFieldKey}
                 onSidebarExpandedItemChange={setSidebarExpandedItem}

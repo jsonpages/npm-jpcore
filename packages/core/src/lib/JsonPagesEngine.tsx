@@ -190,7 +190,8 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       }
     });
     const [selected, setSelected] = useState<{ id: string; type: string; scope: string } | null>(null);
-    const [expandedItem, setExpandedItem] = useState<{ fieldKey: string; itemId?: string } | null>(null);
+    /** Root-to-leaf path for deep focus (e.g. silos -> blocks). */
+    const [expandedItemPath, setExpandedItemPath] = useState<Array<{ fieldKey: string; itemId?: string }> | null>(null);
     const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
     const [scrollToSectionId, setScrollToSectionId] = useState<string | null>(null);
     const [addSectionLibraryOpen, setAddSectionLibraryOpen] = useState(false);
@@ -241,7 +242,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       const data = pageRegistry[slug];
       if (data) setDraft(JSON.parse(JSON.stringify(data)));
       setSelected(null);
-      setExpandedItem(null);
+      setExpandedItemPath(null);
       setHasChanges(false);
     }, [slug, pageRegistry]);
 
@@ -264,15 +265,22 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
         if (event.origin !== window.location.origin) return;
         if (event.data.type === STUDIO_EVENTS.SECTION_SELECT) {
           setSelected(event.data.section);
-          const itemField = event.data.itemField;
-          const itemId = event.data.itemId;
-          if (typeof itemField === 'string') {
-            setExpandedItem({
-              fieldKey: itemField,
-              ...(itemId != null ? { itemId: String(itemId) } : {}),
-            });
+          const itemPath = event.data.itemPath;
+          if (Array.isArray(itemPath) && itemPath.length > 0) {
+            setExpandedItemPath(itemPath.map((s: { fieldKey: string; itemId?: string }) => ({
+              fieldKey: s.fieldKey,
+              ...(s.itemId != null ? { itemId: String(s.itemId) } : {}),
+            })));
           } else {
-            setExpandedItem(null);
+            const itemField = event.data.itemField;
+            const itemId = event.data.itemId;
+            if (typeof itemField === 'string') {
+              setExpandedItemPath([
+                { fieldKey: itemField, ...(itemId != null ? { itemId: String(itemId) } : {}) },
+              ]);
+            } else {
+              setExpandedItemPath(null);
+            }
           }
         }
         if (event.data.type === STUDIO_EVENTS.ACTIVE_SECTION_CHANGED) {
@@ -308,7 +316,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
     const handleRequestScrollToSection = useCallback((sectionId: string) => {
       const layer = allLayers.find((l) => l.id === sectionId);
       if (layer) setSelected({ id: layer.id, type: layer.type, scope: layer.scope });
-      setExpandedItem(null);
+      setExpandedItemPath(null);
       setScrollToSectionId(sectionId);
     }, [allLayers]);
 
@@ -402,7 +410,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   : undefined
               }
             />
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 min-h-0 overflow-hidden">
               <main className="flex-1 min-w-0 relative bg-zinc-900/50 overflow-hidden">
                 <StudioStage
                   draft={draft}
@@ -429,8 +437,8 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   selectedSection={selected}
                   pageData={sidebarData}
                   onUpdate={handleUpdate}
-                  onClose={() => { setSelected(null); setExpandedItem(null); }}
-                  expandedItem={expandedItem}
+                  onClose={() => { setSelected(null); setExpandedItemPath(null); }}
+                  expandedItemPath={expandedItemPath}
                   onReorderSection={
                     draft && selected?.scope === 'local'
                       ? (sectionId, newIndex) => handleReorderSection(sectionId, newIndex, draft)
