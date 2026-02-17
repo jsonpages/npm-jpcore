@@ -516,7 +516,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
 
   return (
     <EngineErrorBoundary>
-      <ConfigProvider config={{ registry, schemas }}>
+      <ConfigProvider config={{ registry, schemas, tenantId: config.tenantId ?? 'default' }}>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<VisitorView />} />

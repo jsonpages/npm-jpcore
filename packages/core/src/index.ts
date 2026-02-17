@@ -13,7 +13,7 @@ export { PageRenderer } from './lib/PageRenderer';
 export { SectionRenderer } from './lib/SectionRenderer';
 export { JsonPagesEngine } from './lib/JsonPagesEngine';
 export { StudioProvider, useStudio } from './lib/StudioContext';
-export { ConfigProvider, useConfig } from './lib/ConfigContext';
+export { ConfigProvider, useConfig, type ConfigContextValue } from './lib/ConfigContext';
 export { ThemeLoader } from './lib/ThemeLoader';
 export { DefaultNotFound } from './lib/DefaultNotFound';
 

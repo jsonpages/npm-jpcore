@@ -8,18 +8,20 @@ import type { JsonPagesConfig } from './types-engine';
 type Registry = JsonPagesConfig['registry'];
 type Schemas = JsonPagesConfig['schemas'];
 
-interface ConfigContextValue {
+export interface ConfigContextValue {
   registry: Registry;
   schemas: Schemas;
+  /** For asset resolution (e.g. image picker preview). */
+  tenantId?: string;
 }
 
 const ConfigContext = createContext<ConfigContextValue | undefined>(undefined);
 
-export const ConfigProvider: React.FC<{ config: Pick<JsonPagesConfig, 'registry' | 'schemas'>; children: React.ReactNode }> = ({
+export const ConfigProvider: React.FC<{ config: Pick<JsonPagesConfig, 'registry' | 'schemas' | 'tenantId'>; children: React.ReactNode }> = ({
   config,
   children,
 }) => (
-  <ConfigContext.Provider value={{ registry: config.registry, schemas: config.schemas }}>
+  <ConfigContext.Provider value={{ registry: config.registry, schemas: config.schemas, tenantId: config.tenantId }}>
     {children}
   </ConfigContext.Provider>
 );

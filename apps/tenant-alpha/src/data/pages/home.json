@@ -125,7 +125,7 @@
         "description": "A contract-first architecture designed to scale without core refactoring.",
         "pillars": [
           {
-            "icon": "⟐",
+            "icon": "box",
             "iconVariant": "split",
             "title": "The Machine-Readable Blueprint. 📐",
             "description": "We enforce a strict file-system ontology that physically separates Global Governance from Local Content. By utilizing \"Dumb Components\" (CIP), we create a deterministic environment where the UI is a predictable function of data. This protocol allows AI agents to understand your site structure instantly, eliminating the \"guessing game\" of traditional web development.",
@@ -133,7 +133,7 @@
             "tagVariant": "core"
           },
           {
-            "icon": "⬡",
+            "icon": "sparkles",
             "iconVariant": "registry",
             "title": "The Semantic Brain. 🧠",
             "description": "We reject hardcoded Union Types. The Kernel defines an open registry where independent modules inject their DNA via Zod schemas. This provides the AI with a precise, type-safe vocabulary to build brand-compliant interfaces. Because the registry is the Single Source of Truth, the AI knows exactly which components exist and how to configure them without ever touching the core code.",
@@ -141,7 +141,7 @@
             "tagVariant": "pattern"
           },
           {
-            "icon": "◈",
+            "icon": "zap",
             "iconVariant": "federation",
             "title": "The 5-Minute Tenant. 🤖",
             "description": "AI doesn't guess; it follows the Protocol. Because our ecosystem is governed by 5 deterministic standards, agents like Claude can project a complex, multi-page, brand-compliant tenant in under 5 minutes. The result is 100% Type-Safe JSON that perfectly matches your schemas, delivering a production-ready site with zero technical drift and an instant polymorphic CMS.",

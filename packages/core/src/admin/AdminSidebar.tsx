@@ -225,9 +225,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const section = selectedSection
     ? pageData.sections.find((s: Section) => s.id === selectedSection.id)
     : undefined;
-  const schema = selectedSection
-    ? (schemas[selectedSection.type] as z.ZodObject<z.ZodRawShape> | undefined)
-    : undefined;
   /** Section/schema for the form only: deferred so heavy FormFactory doesn't block the main thread. */
   const formSection = deferredSection
     ? pageData.sections.find((s: Section) => s.id === deferredSection.id)
