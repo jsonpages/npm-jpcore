@@ -352,6 +352,26 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       }
     };
 
+    /** Update a section by id/scope without changing selection (e.g. from section-settings modal). */
+    const handleUpdateSection = useCallback(
+      (sectionId: string, scope: 'global' | 'local', _sectionType: string, newData: Record<string, unknown>) => {
+        setHasChanges(true);
+        if (scope === 'global') {
+          if (globalDraft.header?.id === sectionId) {
+            setGlobalDraft({ ...globalDraft, header: { ...globalDraft.header!, data: newData } as Section });
+          } else if (globalDraft.footer?.id === sectionId) {
+            setGlobalDraft({ ...globalDraft, footer: { ...globalDraft.footer!, data: newData } as Section });
+          }
+        } else if (draft) {
+          const updatedSections = draft.sections.map((s) =>
+            s.id === sectionId ? ({ ...s, data: newData } as Section) : s
+          );
+          setDraft({ ...draft, sections: updatedSections });
+        }
+      },
+      [draft, globalDraft]
+    );
+
     const triggerBake = () => {
       const iframe = document.querySelector('iframe');
       iframe?.contentWindow?.postMessage({ type: STUDIO_EVENTS.REQUEST_CLEAN_HTML }, '*');
@@ -395,6 +415,12 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
         ? { sections: [globalDraft.header, globalDraft.footer].filter((s): s is Section => s != null) }
         : draft;
 
+    const allSectionsData: Section[] = [
+      ...(globalDraft.header ? [globalDraft.header] : []),
+      ...draft.sections,
+      ...(globalDraft.footer ? [globalDraft.footer] : []),
+    ];
+
     return (
       <ThemeLoader mode="admin" tenantCss={tenantCss} adminCss={adminCss}>
         <StudioProvider mode="studio">
@@ -425,7 +451,9 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                 <AdminSidebar
                   selectedSection={selected}
                   pageData={sidebarData}
+                  allSectionsData={allSectionsData}
                   onUpdate={handleUpdate}
+                  onUpdateSection={handleUpdateSection}
                   onClose={() => { setSelected(null); setExpandedItemPath(null); }}
                   expandedItemPath={expandedItemPath}
                   onReorderSection={

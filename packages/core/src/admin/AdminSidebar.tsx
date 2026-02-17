@@ -19,10 +19,22 @@ export interface LayerItem {
   title?: string;
 }
 
+/** Used by the section-settings modal to update a section without changing Inspector selection. */
+export type OnUpdateSection = (
+  sectionId: string,
+  scope: 'global' | 'local',
+  sectionType: string,
+  newData: Record<string, unknown>
+) => void;
+
 interface AdminSidebarProps {
   selectedSection: SelectedSectionInfo | null;
   pageData: PageConfig | { sections: Section[] };
+  /** All sections (header + page sections + footer) for resolving modal section data. */
+  allSectionsData?: Section[];
   onUpdate: (newData: Record<string, unknown>) => void;
+  /** Update a section by id/scope (e.g. from settings modal). When provided with allSectionsData, gear opens modal. */
+  onUpdateSection?: OnUpdateSection;
   onClose: () => void;
   /** Root-to-leaf path for deep focus (e.g. silos -> blocks). When null, no canvas selection. */
   expandedItemPath?: Array<{ fieldKey: string; itemId?: string }> | null;
@@ -97,7 +109,9 @@ const SETTINGS_KEYS = new Set(['anchorId', 'paddingTop', 'paddingBottom', 'theme
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   selectedSection,
   pageData,
+  allSectionsData = [],
   onUpdate,
+  onUpdateSection,
   onClose,
   expandedItemPath = null,
   onReorderSection,
@@ -117,7 +131,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [sidebarExpandedItem, setSidebarExpandedItem] = useState<{ fieldKey: string; itemId?: string } | null>(null);
+  /** When set, the section-settings modal is open for this section id (avoids Inspector tab/selection state freeze). */
+  const [settingsModalSectionId, setSettingsModalSectionId] = useState<string | null>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
+  const modalContentRef = useRef<HTMLDivElement>(null);
 
   // Canvas path takes precedence; otherwise single-level sidebar expansion.
   const effectiveExpandedItemPath =
@@ -158,6 +175,28 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     setLayersOpen(false);
     onRequestScrollToSection?.(sectionId);
   };
+
+  /** Open the section-settings modal for the given section (no Inspector tab/selection change to avoid UI freeze). */
+  const handleOpenSectionSettings = (sectionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (allSectionsData.length > 0 && onUpdateSection) {
+      setSettingsModalSectionId(sectionId);
+    } else {
+      setLayersOpen(false);
+      onRequestScrollToSection?.(sectionId);
+      setActiveTab('settings');
+    }
+  };
+
+  // ESC closes the section-settings modal.
+  useEffect(() => {
+    if (settingsModalSectionId == null) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSettingsModalSectionId(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [settingsModalSectionId]);
 
   const handleDelete = (sectionId: string) => {
     if (deleteConfirm === sectionId) {
@@ -321,6 +360,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                       {activeLayer.title ?? `${activeLayer.type} section`}
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={(e) => handleOpenSectionSettings(activeLayer.id, e)}
+                    className="p-1 rounded shrink-0 text-zinc-500 hover:text-primary transition-colors"
+                    title={`Open settings for ${activeLayer.type}`}
+                    aria-label={`Open settings for ${activeLayer.type} section`}
+                  >
+                    <Settings size={12} />
+                  </button>
                 </div>
               );
             })()}
@@ -360,6 +408,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                         <p className={`text-xs truncate ${isSelected ? 'text-white font-medium' : 'text-zinc-500'}`}>
                           {layer.title ?? `${layer.type} section`}
                         </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenSectionSettings(layer.id, e)}
+                        className="p-1 rounded shrink-0 text-zinc-500 hover:text-primary transition-colors"
+                        title={`Open settings for ${layer.type}`}
+                        aria-label={`Open settings for ${layer.type} section`}
+                      >
+                        <Settings size={12} />
                       </button>
                       {canDelete && (
                         <button
@@ -521,6 +578,95 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </button>
         )}
       </div>
+
+      {/* Section settings modal: centered, close via X or Escape to avoid Inspector state freeze. */}
+      {settingsModalSectionId != null && allSectionsData.length > 0 && onUpdateSection != null && (() => {
+        const modalSection = allSectionsData.find((s) => s.id === settingsModalSectionId);
+        const layer = allLayers.find((l) => l.id === settingsModalSectionId);
+        if (!modalSection) return null;
+        const scope = (layer?.scope === 'global' ? 'global' : 'local') as 'global' | 'local';
+        const sectionType = modalSection.type;
+        const schema = schemas[sectionType] as z.ZodObject<z.ZodRawShape> | undefined;
+        const shapeKeys = schema ? Object.keys(schema.shape) : [];
+        const settingsKeys = shapeKeys.filter((k) => SETTINGS_KEYS.has(k));
+        const data = (modalSection.data as Record<string, unknown>) ?? {};
+
+        if (settingsKeys.length === 0) {
+          return (
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="section-settings-modal-title"
+              onClick={() => setSettingsModalSectionId(null)}
+            >
+              <div
+                ref={modalContentRef}
+                className="relative rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl max-w-md w-full overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+                  <h2 id="section-settings-modal-title" className="text-sm font-bold text-white">
+                    Settings — {sectionType}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setSettingsModalSectionId(null)}
+                    className="p-1.5 rounded text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                    aria-label="Close settings"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="p-4">
+                  <p className="text-xs text-zinc-500">No settings fields for this section.</p>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="section-settings-modal-title"
+            onClick={(e) => e.target === e.currentTarget && setSettingsModalSectionId(null)}
+          >
+            <div
+              ref={modalContentRef}
+              className="relative rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
+                <h2 id="section-settings-modal-title" className="text-sm font-bold text-white">
+                  Settings — {sectionType}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setSettingsModalSectionId(null)}
+                  className="p-1.5 rounded text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
+                  aria-label="Close settings (Escape)"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                <FormFactory
+                  schema={schema!}
+                  data={data}
+                  onChange={(newData) => {
+                    const merged = { ...(modalSection.data as Record<string, unknown>), ...newData };
+                    onUpdateSection(settingsModalSectionId, scope, sectionType, merged);
+                  }}
+                  keys={settingsKeys}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </aside>
   );
 };
