@@ -457,7 +457,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   onClose={() => { setSelected(null); setExpandedItemPath(null); }}
                   expandedItemPath={expandedItemPath}
                   onReorderSection={
-                    draft && selected?.scope === 'local'
+                    draft
                       ? (sectionId, newIndex) => handleReorderSection(sectionId, newIndex, draft)
                       : undefined
                   }

@@ -282,25 +282,32 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
       <div ref={contentScrollRef} className="flex-1 min-h-0 overflow-y-auto flex flex-col custom-scrollbar">
         {showLayersList && (
-          <div className="border-b border-zinc-800 bg-zinc-900/20 px-3 pb-3 pt-1 space-y-1">
+          <div className="border-b border-zinc-800 bg-zinc-900/20 px-3 pb-3 pt-1">
             {allLayers.map((layer) => {
                   const isSelected = selectedSection?.id === layer.id;
                   const isActive = activeSectionId === layer.id;
                   const isDragging = draggedId === layer.id;
                   const isDragOver = dragOverId === layer.id;
                   const canDelete = layer.scope === 'local' && onDeleteSection;
+                  const isLocal = layer.scope === 'local';
+                  const canReorder = isLocal && !!onReorderSection;
                   return (
                     <div
                       key={layer.id}
-                      draggable={layer.scope === 'local' && !!onReorderSection}
-                      onDragStart={(e) => layer.scope === 'local' && handleDragStart(e, layer.id)}
-                      onDragOver={(e) => layer.scope === 'local' && handleDragOver(e, layer.id)}
+                      draggable={canReorder}
+                      onDragStart={(e) => canReorder && handleDragStart(e, layer.id)}
+                      onDragOver={(e) => canReorder && handleDragOver(e, layer.id)}
                       onDragLeave={() => setDragOverId(null)}
-                      onDrop={(e) => layer.scope === 'local' && handleDrop(e, layer.id)}
+                      onDrop={(e) => canReorder && handleDrop(e, layer.id)}
                       onDragEnd={() => { setDraggedId(null); setDragOverId(null); }}
-                      className={`flex items-center gap-2 py-2 px-2 rounded-md cursor-grab border transition-colors ${
-                        isSelected ? 'bg-primary/10 border-primary/30' : 'border-transparent hover:bg-zinc-800/50'
-                      } ${isDragOver ? 'border-dashed border-primary' : ''} ${isDragging ? 'opacity-40' : ''}`}
+                      className={cn(
+                        'flex items-center gap-2 py-2.5 px-2 rounded-sm border-b transition-colors',
+                        isDragOver && 'border-b-2 border-dashed border-primary bg-primary/5',
+                        !isDragOver && isSelected && 'border-primary/30 bg-primary/10',
+                        !isDragOver && !isSelected && 'border-zinc-800/90 hover:bg-zinc-800/40',
+                        isDragging && 'opacity-40',
+                        canReorder ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+                      )}
                     >
                       <GripVertical size={12} className={`shrink-0 ${isSelected ? 'text-primary' : 'text-zinc-500'}`} />
                       <button
