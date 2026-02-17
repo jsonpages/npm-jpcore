@@ -163,9 +163,25 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
     const sectionEl = e.currentTarget as HTMLElement;
     const x = e.clientX;
     const y = e.clientY;
+    // Click directly on section container (out of item scope) → restore section-level view
+    if ((e.target as HTMLElement) === sectionEl) {
+      window.parent.postMessage({
+        type: STUDIO_EVENTS.SECTION_SELECT,
+        section: { id: section.id, type: section.type, scope: scope },
+      }, '*');
+      return;
+    }
     // Resolve actual element under cursor (overlay/content wrappers may have pointer-events so e.target can be wrong)
     const rootAtPoint = (document.elementFromPoint(x, y) as HTMLElement) ?? (e.target as HTMLElement);
     if (!rootAtPoint || !sectionEl.contains(rootAtPoint)) {
+      window.parent.postMessage({
+        type: STUDIO_EVENTS.SECTION_SELECT,
+        section: { id: section.id, type: section.type, scope: scope },
+      }, '*');
+      return;
+    }
+    // Section container click (e.g. overlay/padding): restore section-level view, out of item scope
+    if (rootAtPoint === sectionEl) {
       window.parent.postMessage({
         type: STUDIO_EVENTS.SECTION_SELECT,
         section: { id: section.id, type: section.type, scope: scope },

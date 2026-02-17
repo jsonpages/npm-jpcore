@@ -22,7 +22,7 @@ export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ da
       <div className="relative max-w-[1200px] mx-auto px-8 w-full">
         <div className="max-w-[820px]">
           {data.badge && (
-            <div className="inline-flex items-center gap-2 bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.2)] px-4 py-1.5 rounded-full text-[0.78rem] font-semibold text-[var(--local-accent)] mb-8 tracking-wide jp-animate-in">
+            <div className="inline-flex items-center gap-2 bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.2)] px-4 py-1.5 rounded-full text-[0.78rem] font-semibold text-[var(--local-accent)] mb-8 tracking-wide jp-animate-in" data-jp-field="badge">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--local-accent)] jp-pulse-dot" />
               {data.badge}
             </div>
@@ -35,14 +35,14 @@ export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ da
             {data.titleHighlight && (
               <>
                 <br />
-                <em className="not-italic bg-gradient-to-br from-[var(--local-accent)] to-[var(--local-cyan)] bg-clip-text text-transparent">
+                <em className="not-italic bg-gradient-to-br from-[var(--local-accent)] to-[var(--local-cyan)] bg-clip-text text-transparent" data-jp-field="titleHighlight">
                   {data.titleHighlight}
                 </em>
               </>
             )}
           </h1>
           {data.description && (
-            <p className="text-xl text-[var(--local-text-muted)] max-w-[600px] leading-relaxed mb-10 jp-animate-in jp-d2">
+            <p className="text-xl text-[var(--local-text-muted)] max-w-[600px] leading-relaxed mb-10 jp-animate-in jp-d2" data-jp-field="description">
               {data.description}
             </p>
           )}

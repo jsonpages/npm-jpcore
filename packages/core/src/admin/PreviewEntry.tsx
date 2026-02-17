@@ -80,9 +80,19 @@ export const PreviewEntry: React.FC = () => {
       const sectionScope = sectionEl.getAttribute('data-section-scope');
       if (!sectionId || !sectionType || !sectionScope) return;
       const section = { id: sectionId, type: sectionType, scope: sectionScope };
+      // Click directly on section container (out of item scope) → restore section-level view
+      if (target === sectionEl) {
+        window.parent.postMessage({ type: STUDIO_EVENTS.SECTION_SELECT, section }, '*');
+        return;
+      }
 
       const rootAtPoint = (document.elementFromPoint(x, y) as HTMLElement) ?? target;
       if (!rootAtPoint || !sectionEl.contains(rootAtPoint)) {
+        window.parent.postMessage({ type: STUDIO_EVENTS.SECTION_SELECT, section }, '*');
+        return;
+      }
+      // Section container click: restore section-level view, out of item scope
+      if (rootAtPoint === sectionEl) {
         window.parent.postMessage({ type: STUDIO_EVENTS.SECTION_SELECT, section }, '*');
         return;
       }

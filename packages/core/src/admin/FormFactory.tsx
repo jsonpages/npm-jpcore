@@ -56,17 +56,35 @@ interface FormFactoryProps {
   expandedItemIdByField?: Record<string, string>;
   /** When user clicks a field on the Stage, show it at top / scroll to it (simple field key). */
   focusedFieldKey?: string | null;
+  /** Called when user expands/collapses an array item in the sidebar (so parent can drive fade). */
+  onSidebarExpandedItemChange?: (item: { fieldKey: string; itemId?: string } | null) => void;
 }
 
 /**
  * 🏭 POLYMORPHIC FORM FACTORY (V2.8.0)
  * Governance through deterministic IDs.
  */
-export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange, keys, expandedItemIdByField, focusedFieldKey }) => {
+const fadeWhenUnfocused = (inItemScope: boolean, isFocused: boolean) =>
+  inItemScope && !isFocused ? 'opacity-10' : 'opacity-100';
+
+/** Match canvas-sent field key to schema key (e.g. "badge" vs "BADGE", "titleHighlight" vs "TITLEHIGHLIGHT"). */
+const fieldKeyMatches = (focusedKey: string | null | undefined, schemaKey: string) =>
+  focusedKey != null && schemaKey.toLowerCase() === focusedKey.toLowerCase();
+
+/** Get expanded item id for a schema key from map that may use canvas casing (e.g. "ctas" vs "CTAS"). */
+const getExpandedItemIdForField = (map: Record<string, string> | undefined, schemaKey: string): string | undefined => {
+  if (!map) return undefined;
+  const lower = schemaKey.toLowerCase();
+  const entry = Object.entries(map).find(([k]) => k.toLowerCase() === lower);
+  return entry?.[1];
+};
+
+export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange, keys, expandedItemIdByField, focusedFieldKey, onSidebarExpandedItemChange }) => {
   const shape = schema.shape;
   const fieldKeys = keys != null
     ? Object.keys(shape).filter((k) => keys.includes(k))
     : Object.keys(shape);
+  const inItemScope = focusedFieldKey != null;
 
   return (
     <div className="space-y-4">
@@ -81,9 +99,13 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
         // 1. OBJECT HANDLING
         if (effectiveSchema instanceof z.ZodObject) {
           const objectData = (value as Record<string, unknown>) || {};
-          const isFocusedField = focusedFieldKey === key;
+          const isFocusedField = fieldKeyMatches(focusedFieldKey, key);
           return (
-            <div key={key} className="group/obj mb-6 p-4 border border-zinc-800 rounded-lg bg-zinc-900/20 hover:border-zinc-700 transition-colors" {...(isFocusedField ? { 'data-jp-focused-field': key } : {})}>
+            <div
+              key={key}
+              className={`group/obj mb-6 p-4 border border-zinc-800 rounded-lg bg-zinc-900/20 hover:border-zinc-700 transition-[border-color,opacity] duration-200 ${fadeWhenUnfocused(inItemScope, isFocusedField)}`}
+              {...(isFocusedField ? { 'data-jp-focused-field': key } : {})}
+            >
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-1 h-3 bg-blue-500 rounded-full" />
                 <h4 className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">
@@ -114,9 +136,13 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
             onChange({ ...data, [key]: newItems });
           };
 
-          const isFocusedField = focusedFieldKey === key;
+          const isFocusedField = fieldKeyMatches(focusedFieldKey, key);
           return (
-            <div key={key} className="mb-8" {...(isFocusedField ? { 'data-jp-focused-field': key } : {})}>
+            <div
+              key={key}
+              className={`mb-8 transition-opacity duration-200 ${fadeWhenUnfocused(inItemScope, isFocusedField)}`}
+              {...(isFocusedField ? { 'data-jp-focused-field': key } : {})}
+            >
               <div className="flex items-center justify-between mb-3">
                 <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">
                   {key} ({items.length})
@@ -150,17 +176,22 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
                     (typeof itemRecord.text === 'string' ? itemRecord.text : null) || 
                     `${key} #${index + 1}`;
 
-                  const openItemId = expandedItemIdByField?.[key];
+                  const openItemId = getExpandedItemIdForField(expandedItemIdByField, key);
                   const itemIdStr = String(itemRecord.id ?? stableKey);
+                  const isExpandedItem = openItemId != null && String(openItemId) === itemIdStr;
+                  const isFadedItem = inItemScope && isFocusedField && openItemId != null && !isExpandedItem;
                   return (
                     <ArrayItemWrapper 
                       key={stableKey} 
+                      fieldKey={key}
                       itemId={itemIdStr}
                       openItemId={openItemId != null ? String(openItemId) : undefined}
+                      isFaded={isFadedItem}
                       index={index}
                       isFirst={index === 0}
                       isLast={index === items.length - 1}
                       label={itemTitle}
+                      onExpandedChange={onSidebarExpandedItemChange ? (open) => onSidebarExpandedItemChange(open ? { fieldKey: key, itemId: itemIdStr } : null) : undefined}
                       onRemove={() => {
                         const newItems = items.filter((_, i) => i !== index);
                         onChange({ ...data, [key]: newItems });
@@ -172,8 +203,6 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
                         <FormFactory 
                           schema={itemSchema} 
                           data={itemRecord || {}}
-                          expandedItemIdByField={expandedItemIdByField}
-                          focusedFieldKey={focusedFieldKey}
                           onChange={(val) => {
                             const newItems = [...items];
                             newItems[index] = val;
@@ -194,10 +223,14 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
         // 3. ATOMIC WIDGET HANDLING
         const Widget = (InputWidgets[uiHint] || InputWidgets['ui:text']) as React.ComponentType<BaseWidgetProps>;
         const options = effectiveSchema instanceof z.ZodEnum ? (effectiveSchema._def.values as string[]) : undefined;
-        const isFocusedField = focusedFieldKey === key;
+        const isFocusedField = fieldKeyMatches(focusedFieldKey, key);
 
         return (
-          <div key={key} {...(isFocusedField ? { 'data-jp-focused-field': key } : {})}>
+          <div
+            key={key}
+            className={`transition-opacity duration-200 ${fadeWhenUnfocused(inItemScope, isFocusedField)}`}
+            {...(isFocusedField ? { 'data-jp-focused-field': key } : {})}
+          >
             <Widget 
               label={key}
               value={value}
@@ -212,13 +245,18 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
 };
 
 interface ArrayItemWrapperProps {
+  fieldKey: string;
   itemId: string;
   /** When this matches itemId, the item is expanded (e.g. after clicking it on the Stage). */
   openItemId?: string | null;
+  /** When true, fade this row (other items in the same array when one is focused). */
+  isFaded?: boolean;
   index: number;
   isFirst: boolean;
   isLast: boolean;
   label: string;
+  /** Called when user toggles open/close (so parent can drive fade). */
+  onExpandedChange?: (open: boolean) => void;
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -226,9 +264,12 @@ interface ArrayItemWrapperProps {
 }
 
 const ArrayItemWrapper: React.FC<ArrayItemWrapperProps> = ({ 
+  fieldKey,
   itemId,
   openItemId,
+  isFaded = false,
   label, 
+  onExpandedChange,
   onRemove, 
   onMoveUp, 
   onMoveDown, 
@@ -242,17 +283,23 @@ const ArrayItemWrapper: React.FC<ArrayItemWrapperProps> = ({
     if (shouldOpen && !isOpen) setIsOpen(true);
   }, [shouldOpen, isOpen]);
 
+  const handleToggle = () => {
+    const next = !isOpen;
+    setIsOpen(next);
+    onExpandedChange?.(next);
+  };
+
   const isExpandedTarget = shouldOpen && isOpen;
   return (
     <div
-      className="border border-zinc-800 rounded-md bg-zinc-900/40 overflow-hidden"
+      className={`border border-zinc-800 rounded-md bg-zinc-900/40 overflow-hidden transition-opacity duration-200 ${isFaded ? 'opacity-10' : 'opacity-100'}`}
       {...(isExpandedTarget ? { 'data-jp-expanded-item': itemId } : {})}
     >
       <div className="flex items-center justify-between px-3 py-2 bg-zinc-900/60">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <button 
             type="button"
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={handleToggle}
             className="flex items-center gap-2 text-[10px] font-bold text-zinc-300 uppercase tracking-tight truncate"
           >
             {isOpen ? <ChevronUp size={12} className="shrink-0" /> : <ChevronDown size={12} className="shrink-0" />}

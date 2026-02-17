@@ -103,20 +103,31 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [sidebarExpandedItem, setSidebarExpandedItem] = useState<{ fieldKey: string; itemId?: string } | null>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
+
+  // When canvas selects an item, use that; otherwise use sidebar expansion (e.g. user opened a row in the form).
+  const effectiveExpandedItem = expandedItem ?? sidebarExpandedItem;
 
   useEffect(() => {
     if (selectedSection) setLayersOpen(false);
   }, [selectedSection?.id]);
 
+  // When engine clears expandedItem (e.g. user clicked section on canvas), clear sidebar expansion too.
+  const prevExpandedItemRef = useRef(expandedItem);
   useEffect(() => {
-    if (!expandedItem) return;
+    if (prevExpandedItemRef.current != null && expandedItem == null) setSidebarExpandedItem(null);
+    prevExpandedItemRef.current = expandedItem;
+  }, [expandedItem]);
+
+  useEffect(() => {
+    if (!effectiveExpandedItem) return;
     setActiveTab('content');
     const scrollEl = contentScrollRef.current;
     if (!scrollEl) return;
     const el = scrollEl.querySelector('[data-jp-expanded-item]') ?? scrollEl.querySelector('[data-jp-focused-field]');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [expandedItem]);
+  }, [effectiveExpandedItem]);
 
   const handleLayerClick = (sectionId: string) => {
     setLayersOpen(false);
@@ -226,7 +237,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
       <div ref={contentScrollRef} className="flex-1 overflow-y-auto flex flex-col custom-scrollbar">
         {allLayers.length > 0 && (
-          <div className="border-b border-zinc-800 bg-zinc-900/20">
+          <div
+            className={`border-b border-zinc-800 bg-zinc-900/20 transition-opacity duration-200 ${effectiveExpandedItem ? 'opacity-10' : 'opacity-100'}`}
+          >
             <button
               type="button"
               onClick={() => setLayersOpen(!layersOpen)}
@@ -321,13 +334,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </div>
         )}
 
-        {expandedItem && section && (() => {
+        {effectiveExpandedItem && section && (() => {
           const data = (section.data as Record<string, unknown>) || {};
-          const fieldKey = expandedItem.fieldKey;
+          const fieldKey = effectiveExpandedItem.fieldKey;
           let label: string;
-          if (expandedItem.itemId != null) {
+          if (effectiveExpandedItem.itemId != null) {
             const arr = Array.isArray(data[fieldKey]) ? (data[fieldKey] as Record<string, unknown>[]) : [];
-            const item = arr.find((i) => String(i?.id) === String(expandedItem!.itemId));
+            const item = arr.find((i) => String(i?.id) === String(effectiveExpandedItem!.itemId));
             const rec = (item as Record<string, unknown>) || {};
             label =
               (typeof rec.name === 'string' ? rec.name : null) ??
@@ -364,10 +377,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               );
             }
             const expandedItemIdByField =
-              expandedItem?.itemId != null
-                ? { [expandedItem.fieldKey]: expandedItem.itemId }
+              effectiveExpandedItem?.itemId != null
+                ? { [effectiveExpandedItem.fieldKey]: effectiveExpandedItem.itemId }
                 : undefined;
-            const focusedFieldKey = expandedItem?.fieldKey;
+            const focusedFieldKey = effectiveExpandedItem?.fieldKey;
             return (
               <FormFactory
                 schema={schema}
@@ -376,13 +389,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 keys={keys}
                 expandedItemIdByField={expandedItemIdByField}
                 focusedFieldKey={focusedFieldKey}
+                onSidebarExpandedItemChange={setSidebarExpandedItem}
               />
             );
           })()}
         </div>
       </div>
 
-      <div className="p-4 border-t border-zinc-800 bg-zinc-900/50">
+      <div className={`p-4 border-t border-zinc-800 bg-zinc-900/50 transition-opacity duration-200 ${effectiveExpandedItem ? 'opacity-10' : 'opacity-100'}`}>
         <button className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2.5 rounded shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
           <Save size={14} />
           Save Changes
