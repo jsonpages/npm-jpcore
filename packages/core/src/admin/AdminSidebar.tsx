@@ -301,8 +301,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                       onDrop={(e) => canReorder && handleDrop(e, layer.id)}
                       onDragEnd={() => { setDraggedId(null); setDragOverId(null); }}
                       className={cn(
-                        'flex items-center gap-2 py-2.5 px-2 rounded-sm border-b transition-colors',
-                        isDragOver && 'border-b-2 border-dashed border-primary bg-primary/5',
+                        'flex items-center gap-2 py-2.5 px-2 rounded-sm border-t transition-colors',
+                        isDragOver && 'border-t-2 border-dashed border-primary bg-primary/5',
                         !isDragOver && isSelected && 'border-primary/30 bg-primary/10',
                         !isDragOver && !isSelected && 'border-zinc-800/90 hover:bg-zinc-800/40',
                         isDragging && 'opacity-40',
