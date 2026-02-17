@@ -190,6 +190,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       }
     });
     const [selected, setSelected] = useState<{ id: string; type: string; scope: string } | null>(null);
+    const [expandedItem, setExpandedItem] = useState<{ fieldKey: string; itemId?: string } | null>(null);
     const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
     const [scrollToSectionId, setScrollToSectionId] = useState<string | null>(null);
     const [addSectionLibraryOpen, setAddSectionLibraryOpen] = useState(false);
@@ -240,6 +241,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       const data = pageRegistry[slug];
       if (data) setDraft(JSON.parse(JSON.stringify(data)));
       setSelected(null);
+      setExpandedItem(null);
       setHasChanges(false);
     }, [slug, pageRegistry]);
 
@@ -262,6 +264,16 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
         if (event.origin !== window.location.origin) return;
         if (event.data.type === STUDIO_EVENTS.SECTION_SELECT) {
           setSelected(event.data.section);
+          const itemField = event.data.itemField;
+          const itemId = event.data.itemId;
+          if (typeof itemField === 'string') {
+            setExpandedItem({
+              fieldKey: itemField,
+              ...(itemId != null ? { itemId: String(itemId) } : {}),
+            });
+          } else {
+            setExpandedItem(null);
+          }
         }
         if (event.data.type === STUDIO_EVENTS.ACTIVE_SECTION_CHANGED) {
           setActiveSectionId(event.data.activeSectionId ?? null);
@@ -296,6 +308,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
     const handleRequestScrollToSection = useCallback((sectionId: string) => {
       const layer = allLayers.find((l) => l.id === sectionId);
       if (layer) setSelected({ id: layer.id, type: layer.type, scope: layer.scope });
+      setExpandedItem(null);
       setScrollToSectionId(sectionId);
     }, [allLayers]);
 
@@ -416,7 +429,8 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   selectedSection={selected}
                   pageData={sidebarData}
                   onUpdate={handleUpdate}
-                  onClose={() => setSelected(null)}
+                  onClose={() => { setSelected(null); setExpandedItem(null); }}
+                  expandedItem={expandedItem}
                   onReorderSection={
                     draft && selected?.scope === 'local'
                       ? (sectionId, newIndex) => handleReorderSection(sectionId, newIndex, draft)

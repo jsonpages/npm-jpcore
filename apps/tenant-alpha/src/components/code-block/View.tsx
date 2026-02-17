@@ -21,7 +21,7 @@ export const CodeBlock: React.FC<{ data: CodeBlockData; settings?: CodeBlockSett
     >
       <div className="container mx-auto px-6 max-w-4xl">
         {data.label && (
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--local-text-muted)] mb-4">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--local-text-muted)] mb-4" data-jp-field="label">
             <Icon name="terminal" size={14} />
             <span>{data.label}</span>
           </div>
@@ -29,7 +29,7 @@ export const CodeBlock: React.FC<{ data: CodeBlockData; settings?: CodeBlockSett
         <div className="rounded-[var(--local-radius-lg)] bg-[var(--local-bg)] border border-[var(--local-border)] overflow-hidden">
           <div className="p-6 font-mono text-sm overflow-x-auto">
             {data.lines.map((line, idx) => (
-              <div key={idx} className="flex items-start gap-4 py-1">
+              <div key={idx} className="flex items-start gap-4 py-1" data-jp-item-id={(line as { id?: string }).id ?? `legacy-${idx}`} data-jp-item-field="lines">
                 {showLineNumbers && (
                   <span className="select-none w-6 text-right text-[var(--local-text-muted)]/50">
                     {idx + 1}

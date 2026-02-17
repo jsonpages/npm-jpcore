@@ -18,16 +18,16 @@ export const ProductTriad: React.FC<{ data: ProductTriadData; settings?: Product
       <div className="max-w-[1200px] mx-auto px-8">
         <div className="text-center">
           {data.label && (
-            <div className="jp-section-label inline-flex items-center gap-2 text-[0.72rem] font-bold uppercase tracking-[0.12em] text-[var(--local-accent)] mb-4">
+            <div className="jp-section-label inline-flex items-center gap-2 text-[0.72rem] font-bold uppercase tracking-[0.12em] text-[var(--local-accent)] mb-4" data-jp-field="label">
               <span className="w-5 h-px bg-[var(--local-primary)]" />
               {data.label}
             </div>
           )}
-          <h2 className="font-display text-[clamp(2rem,4vw,3.2rem)] font-extrabold text-[var(--local-text)] leading-[1.15] tracking-tight mb-4">
+          <h2 className="font-display text-[clamp(2rem,4vw,3.2rem)] font-extrabold text-[var(--local-text)] leading-[1.15] tracking-tight mb-4" data-jp-field="title">
             {data.title}
           </h2>
           {data.description && (
-            <p className="text-lg text-[var(--local-text-muted)] max-w-[600px] mx-auto leading-relaxed">
+            <p className="text-lg text-[var(--local-text-muted)] max-w-[600px] mx-auto leading-relaxed" data-jp-field="description">
               {data.description}
             </p>
           )}
@@ -35,13 +35,15 @@ export const ProductTriad: React.FC<{ data: ProductTriadData; settings?: Product
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-14">
           {data.products.map((product, idx) => (
             <div
-              key={idx}
+              key={product.id ?? idx}
               className={cn(
                 'relative border rounded-lg p-10 transition-all duration-300 hover:-translate-y-1',
                 product.featured
                   ? 'border-[rgba(59,130,246,0.3)] bg-gradient-to-b from-[rgba(59,130,246,0.06)] to-[rgba(59,130,246,0.01)] hover:border-[rgba(59,130,246,0.4)]'
                   : 'border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.015)] hover:border-[rgba(59,130,246,0.2)]'
               )}
+              data-jp-item-id={product.id ?? `legacy-${idx}`}
+              data-jp-item-field="products"
             >
               {product.featured && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--local-primary)] text-white text-[0.7rem] font-bold px-4 py-1 rounded-full uppercase tracking-wide">

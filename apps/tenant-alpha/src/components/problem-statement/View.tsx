@@ -26,11 +26,16 @@ export const ProblemStatement: React.FC<{ data: ProblemStatementData; settings?:
           <div className="relative h-[360px] border border-[rgba(255,255,255,0.06)] rounded-lg bg-[rgba(255,255,255,0.02)] overflow-hidden flex items-center justify-center">
             <div className="text-center p-8">
               {data.siloGroups.map((group, gIdx) => (
-                <div key={gIdx} className="mb-4">
+                <div
+                  key={gIdx}
+                  className="mb-4"
+                  data-jp-item-id={(group as { id?: string }).id ?? `legacy-${gIdx}`}
+                  data-jp-item-field="siloGroups"
+                >
                   <div className="flex flex-wrap justify-center gap-1.5">
                     {group.blocks.map((block, bIdx) => (
                       <span
-                        key={bIdx}
+                        key={(block as { id?: string }).id ?? bIdx}
                         className={cn(
                           'inline-block px-4 py-2 rounded-lg text-[0.8rem] font-semibold border',
                           variantStyles[block.variant]
@@ -48,13 +53,15 @@ export const ProblemStatement: React.FC<{ data: ProblemStatementData; settings?:
             </div>
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-[var(--local-text)] mb-4">
+            <h3 className="text-2xl font-bold text-[var(--local-text)] mb-4" data-jp-field="title">
               {data.title}
             </h3>
             {data.paragraphs.map((p, idx) => (
               <p
                 key={idx}
                 className="text-[var(--local-text-muted)] mb-5 text-[1.05rem] leading-relaxed"
+                data-jp-item-id={(p as { id?: string }).id ?? `legacy-${idx}`}
+                data-jp-item-field="paragraphs"
               >
                 {p.isBold ? <strong className="text-[var(--local-text)]">{p.text}</strong> : p.text}
               </p>

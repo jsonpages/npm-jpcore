@@ -15,10 +15,10 @@ export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> =
     >
       <div className="max-w-[1200px] mx-auto px-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 font-bold text-[0.9rem] text-[var(--local-text-muted)]">
+          <div className="flex items-center gap-2 font-bold text-[0.9rem] text-[var(--local-text-muted)]" data-jp-field="brandText">
             {data.brandText}
             {data.brandHighlight && (
-              <span className="text-[var(--local-accent)]">{data.brandHighlight}</span>
+              <span className="text-[var(--local-accent)]" data-jp-field="brandHighlight">{data.brandHighlight}</span>
             )}
           </div>
           {data.links && data.links.length > 0 && (
@@ -28,13 +28,15 @@ export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> =
                   key={idx}
                   href={link.href}
                   className="text-[0.82rem] text-[var(--local-text-muted)] hover:text-[var(--local-accent)] transition-colors no-underline"
+                  data-jp-item-id={(link as { id?: string }).id ?? `legacy-${idx}`}
+                  data-jp-item-field="links"
                 >
                   {link.label}
                 </a>
               ))}
             </nav>
           )}
-          <div className="text-[0.8rem] text-[var(--local-text-muted)] opacity-60">
+          <div className="text-[0.8rem] text-[var(--local-text-muted)] opacity-60" data-jp-field="copyright">
             {data.copyright}
           </div>
         </div>

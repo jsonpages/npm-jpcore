@@ -40,14 +40,14 @@ export const Header: React.FC<{
           className="flex items-center gap-2.5 no-underline font-bold text-xl tracking-tight text-[var(--local-text)]"
         >
           {data.logoIconText && (
-            <div className="w-8 h-8 rounded-md bg-gradient-to-br from-[var(--local-primary)] to-[var(--local-accent)] flex items-center justify-center font-mono text-[0.8rem] font-bold text-[var(--background)]">
+            <div className="w-8 h-8 rounded-md bg-gradient-to-br from-[var(--local-primary)] to-[var(--local-accent)] flex items-center justify-center font-mono text-[0.8rem] font-bold text-[var(--background)]" data-jp-field="logoIconText">
               {data.logoIconText}
             </div>
           )}
-          <span>
+          <span data-jp-field="logoText">
             {data.logoText}
             {data.logoHighlight && (
-              <span className="text-[var(--local-accent)]">{data.logoHighlight}</span>
+              <span className="text-[var(--local-accent)]" data-jp-field="logoHighlight">{data.logoHighlight}</span>
             )}
           </span>
         </a>
@@ -55,8 +55,10 @@ export const Header: React.FC<{
         <nav className="hidden md:flex items-center gap-10">
           {menu.map((item, idx) => (
             <a
-              key={idx}
+              key={(item as { id?: string }).id ?? idx}
               href={item.href}
+              data-jp-item-id={(item as { id?: string }).id ?? `legacy-${idx}`}
+              data-jp-item-field="links"
               target={item.external ? '_blank' : undefined}
               rel={item.external ? 'noopener noreferrer' : undefined}
               className={cn(
@@ -92,10 +94,12 @@ export const Header: React.FC<{
           <div className="max-w-[1200px] mx-auto px-8 py-4 flex flex-col gap-4">
             {menu.map((item, idx) => (
               <a
-                key={idx}
+                key={(item as { id?: string }).id ?? idx}
                 href={item.href}
                 className="text-base font-medium text-[var(--local-text-muted)] hover:text-[var(--local-text)] transition-colors py-2 no-underline"
                 onClick={() => setMobileMenuOpen(false)}
+                data-jp-item-id={(item as { id?: string }).id ?? `legacy-${idx}`}
+                data-jp-item-field="links"
               >
                 {item.label}
               </a>

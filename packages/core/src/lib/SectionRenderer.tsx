@@ -77,6 +77,7 @@ const SovereignOverlay: React.FC<{
   return (
     <div
       data-jp-section-overlay
+      aria-hidden
       className={cn(
         'absolute inset-0 pointer-events-none transition-all duration-200 z-[50]',
         'border-2 border-transparent group-hover:border-blue-400/50 group-hover:border-dashed',
@@ -159,9 +160,69 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
     if (!isStudio) return;
     e.preventDefault();
     e.stopPropagation();
+    const sectionEl = e.currentTarget as HTMLElement;
+    const x = e.clientX;
+    const y = e.clientY;
+    // Resolve actual element under cursor (overlay/content wrappers may have pointer-events so e.target can be wrong)
+    const rootAtPoint = (document.elementFromPoint(x, y) as HTMLElement) ?? (e.target as HTMLElement);
+    if (!rootAtPoint || !sectionEl.contains(rootAtPoint)) {
+      window.parent.postMessage({
+        type: STUDIO_EVENTS.SECTION_SELECT,
+        section: { id: section.id, type: section.type, scope: scope },
+      }, '*');
+      return;
+    }
+    // Walk up from element at point to find data-jp-item-id or data-jp-field
+    let itemId: string | null = null;
+    let itemField: string | null = null;
+    let el: HTMLElement | null = rootAtPoint;
+    while (el && el !== sectionEl) {
+      const id = el.getAttribute?.('data-jp-item-id');
+      if (id) {
+        itemId = id;
+        itemField = el.getAttribute?.('data-jp-item-field') || 'items';
+        break;
+      }
+      el = el.parentElement;
+    }
+    if (!itemField) {
+      el = rootAtPoint;
+      while (el && el !== sectionEl) {
+        const field = el.getAttribute?.('data-jp-field');
+        if (field) {
+          itemField = field;
+          break;
+        }
+        el = el.parentElement;
+      }
+    }
+    // If still no hit, find deepest descendant of rootAtPoint that contains (x,y) and has an attribute
+    if (!itemField && rootAtPoint) {
+      let best: HTMLElement | null = null;
+      const visit = (node: HTMLElement) => {
+        const rect = node.getBoundingClientRect();
+        if (rect.left <= x && x <= rect.right && rect.top <= y && y <= rect.bottom) {
+          for (let i = 0; i < node.children.length; i++) visit(node.children[i] as HTMLElement);
+          if (node.getAttribute?.('data-jp-item-id') || node.getAttribute?.('data-jp-field')) best = node;
+        }
+      };
+      visit(rootAtPoint);
+      if (best) {
+        const el: HTMLElement = best;
+        const id = el.getAttribute?.('data-jp-item-id');
+        const field = el.getAttribute?.('data-jp-field');
+        if (id) {
+          itemId = id;
+          itemField = field || 'items';
+        } else if (field) {
+          itemField = field;
+        }
+      }
+    }
     window.parent.postMessage({
       type: STUDIO_EVENTS.SECTION_SELECT,
-      section: { id: section.id, type: section.type, scope: scope }
+      section: { id: section.id, type: section.type, scope: scope },
+      ...(itemField ? { itemField, ...(itemId ? { itemId } : {}) } : {}),
     }, '*');
   };
 
@@ -179,8 +240,10 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
     <div 
       id={anchorId || undefined}
       data-section-id={isStudio ? section.id : undefined}
+      data-section-type={isStudio ? section.type : undefined}
+      data-section-scope={isStudio ? scope : undefined}
       {...(isStudio && isSelected ? { 'data-jp-selected': true } : {})}
-      onClick={isStudio ? handleSectionClick : undefined}
+      onClickCapture={isStudio ? handleSectionClick : undefined}
       className={cn(
         "relative w-full",
         isStudio && "group cursor-pointer",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { z } from 'zod';
 import { useConfig } from '../lib/ConfigContext';
 import { FormFactory } from './FormFactory';
@@ -23,6 +23,8 @@ interface AdminSidebarProps {
   pageData: PageConfig | { sections: Section[] };
   onUpdate: (newData: Record<string, unknown>) => void;
   onClose: () => void;
+  /** When user clicks an item in the Stage, expand that array item (or focus field when no itemId). */
+  expandedItem?: { fieldKey: string; itemId?: string } | null;
   onReorderSection?: (sectionId: string, newIndex: number) => void;
   allLayers?: LayerItem[];
   activeSectionId?: string | null;
@@ -88,6 +90,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   pageData,
   onUpdate,
   onClose,
+  expandedItem = null,
   onReorderSection,
   allLayers = [],
   activeSectionId,
@@ -100,10 +103,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (selectedSection) setLayersOpen(false);
   }, [selectedSection?.id]);
+
+  useEffect(() => {
+    if (!expandedItem) return;
+    setActiveTab('content');
+    const scrollEl = contentScrollRef.current;
+    if (!scrollEl) return;
+    const el = scrollEl.querySelector('[data-jp-expanded-item]') ?? scrollEl.querySelector('[data-jp-focused-field]');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [expandedItem]);
 
   const handleLayerClick = (sectionId: string) => {
     setLayersOpen(false);
@@ -211,7 +224,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto flex flex-col custom-scrollbar">
+      <div ref={contentScrollRef} className="flex-1 overflow-y-auto flex flex-col custom-scrollbar">
         {allLayers.length > 0 && (
           <div className="border-b border-zinc-800 bg-zinc-900/20">
             <button
@@ -308,6 +321,30 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </div>
         )}
 
+        {expandedItem && section && (() => {
+          const data = (section.data as Record<string, unknown>) || {};
+          const fieldKey = expandedItem.fieldKey;
+          let label: string;
+          if (expandedItem.itemId != null) {
+            const arr = Array.isArray(data[fieldKey]) ? (data[fieldKey] as Record<string, unknown>[]) : [];
+            const item = arr.find((i) => String(i?.id) === String(expandedItem!.itemId));
+            const rec = (item as Record<string, unknown>) || {};
+            label =
+              (typeof rec.name === 'string' ? rec.name : null) ??
+              (typeof rec.title === 'string' ? rec.title : null) ??
+              (typeof rec.label === 'string' ? rec.label : null) ??
+              fieldKey;
+          } else {
+            label = fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1).replace(/([A-Z])/g, ' $1').trim();
+          }
+          return (
+            <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900/50">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Editing</p>
+              <p className="text-xs font-medium text-white truncate mt-0.5">{label}</p>
+            </div>
+          );
+        })()}
+
         <div className="flex-1 p-4">
           {!schema ? (
             <div className="text-xs text-red-400 p-4 border border-dashed border-red-900/30 rounded bg-red-900/10">
@@ -326,12 +363,19 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 </p>
               );
             }
+            const expandedItemIdByField =
+              expandedItem?.itemId != null
+                ? { [expandedItem.fieldKey]: expandedItem.itemId }
+                : undefined;
+            const focusedFieldKey = expandedItem?.fieldKey;
             return (
               <FormFactory
                 schema={schema}
                 data={data}
                 onChange={(newData) => onUpdate(newData)}
                 keys={keys}
+                expandedItemIdByField={expandedItemIdByField}
+                focusedFieldKey={focusedFieldKey}
               />
             );
           })()}

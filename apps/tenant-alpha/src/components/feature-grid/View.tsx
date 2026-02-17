@@ -28,17 +28,19 @@ export const FeatureGrid: React.FC<{ data: FeatureGridData; settings?: FeatureGr
   return (
     <section style={localStyles} className="py-20 bg-[var(--local-bg)] relative z-0">
       <div className="container mx-auto px-6">
-        <h2 className="text-3xl md:text-4xl font-bold text-center text-[var(--local-text)] mb-16">
+        <h2 className="text-3xl md:text-4xl font-bold text-center text-[var(--local-text)] mb-16" data-jp-field="sectionTitle">
           {data.sectionTitle}
         </h2>
         <div className={cn('grid grid-cols-1 gap-6', cols)}>
           {data.cards.map((card, idx) => (
             <div
-              key={idx}
+              key={card.id ?? idx}
               className={cn(
                 'p-6 rounded-[var(--local-radius-lg)] bg-[var(--local-surface)]',
                 isBordered && 'border border-[var(--local-border)]'
               )}
+              data-jp-item-id={card.id ?? `legacy-${idx}`}
+              data-jp-item-field="cards"
             >
               {card.icon && (
                 <div className="w-10 h-10 rounded-[var(--local-radius-md)] bg-[var(--local-surface-alt)] flex items-center justify-center mb-4">

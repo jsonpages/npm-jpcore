@@ -20,6 +20,7 @@ export const BaseSectionSettingsSchema = z.object({
 });
 
 export const CtaSchema = z.object({
+  id: z.string().optional(),
   label: z.string().describe('ui:text'),
   href: z.string().describe('ui:text'),
   variant: z.enum(['primary', 'secondary']).default('primary').describe('ui:select'),

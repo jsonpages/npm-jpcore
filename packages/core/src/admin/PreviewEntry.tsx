@@ -50,6 +50,98 @@ export const PreviewEntry: React.FC = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  /**
+   * 📍 DOCUMENT-LEVEL CLICK (iframe event propagation fix)
+   * Capture clicks at document root so we always receive them regardless of
+   * React tree or pointer-events. Find section + item/field and notify parent.
+   */
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const x = e.clientX;
+      const y = e.clientY;
+      let sectionEl: HTMLElement | null = null;
+      let el: HTMLElement | null = target;
+      while (el && el !== document.body) {
+        const id = el.getAttribute?.('data-section-id');
+        const type = el.getAttribute?.('data-section-type');
+        const scope = el.getAttribute?.('data-section-scope');
+        if (id && type && scope) {
+          sectionEl = el;
+          break;
+        }
+        el = el.parentElement;
+      }
+      if (!sectionEl) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const sectionId = sectionEl.getAttribute('data-section-id');
+      const sectionType = sectionEl.getAttribute('data-section-type');
+      const sectionScope = sectionEl.getAttribute('data-section-scope');
+      if (!sectionId || !sectionType || !sectionScope) return;
+      const section = { id: sectionId, type: sectionType, scope: sectionScope };
+
+      const rootAtPoint = (document.elementFromPoint(x, y) as HTMLElement) ?? target;
+      if (!rootAtPoint || !sectionEl.contains(rootAtPoint)) {
+        window.parent.postMessage({ type: STUDIO_EVENTS.SECTION_SELECT, section }, '*');
+        return;
+      }
+      let itemId: string | null = null;
+      let itemField: string | null = null;
+      el = rootAtPoint;
+      while (el && el !== sectionEl) {
+        const id = el.getAttribute?.('data-jp-item-id');
+        if (id) {
+          itemId = id;
+          itemField = el.getAttribute?.('data-jp-item-field') || 'items';
+          break;
+        }
+        el = el.parentElement;
+      }
+      if (!itemField) {
+        el = rootAtPoint;
+        while (el && el !== sectionEl) {
+          const field = el.getAttribute?.('data-jp-field');
+          if (field) {
+            itemField = field;
+            break;
+          }
+          el = el.parentElement;
+        }
+      }
+      if (!itemField && rootAtPoint) {
+        let best: HTMLElement | null = null;
+        const visit = (node: HTMLElement) => {
+          const rect = node.getBoundingClientRect();
+          if (rect.left <= x && x <= rect.right && rect.top <= y && y <= rect.bottom) {
+            for (let i = 0; i < node.children.length; i++) visit(node.children[i] as HTMLElement);
+            if (node.getAttribute?.('data-jp-item-id') || node.getAttribute?.('data-jp-field')) best = node;
+          }
+        };
+        visit(rootAtPoint);
+        if (best) {
+          const el: HTMLElement = best;
+          const id = el.getAttribute?.('data-jp-item-id');
+          const field = el.getAttribute?.('data-jp-field');
+          if (id) {
+            itemId = id;
+            itemField = field || 'items';
+          } else if (field) {
+            itemField = field;
+          }
+        }
+      }
+      window.parent.postMessage({
+        type: STUDIO_EVENTS.SECTION_SELECT,
+        section,
+        ...(itemField ? { itemField, ...(itemId ? { itemId } : {}) } : {}),
+      }, '*');
+    };
+
+    document.addEventListener('click', handleDocumentClick, true);
+    return () => document.removeEventListener('click', handleDocumentClick, true);
+  }, []);
+
   /** Clear scrollToSectionId after triggering scroll (must run unconditionally for Rules of Hooks). */
   useEffect(() => {
     if (!scrollToSectionId) return;

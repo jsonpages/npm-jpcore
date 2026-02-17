@@ -27,7 +27,10 @@ export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ da
               {data.badge}
             </div>
           )}
-          <h1 className="font-display text-[clamp(2.8rem,6vw,4.8rem)] font-black text-[var(--local-text)] leading-[1.08] tracking-tight mb-6 jp-animate-in jp-d1">
+          <h1
+            className="font-display text-[clamp(2.8rem,6vw,4.8rem)] font-black text-[var(--local-text)] leading-[1.08] tracking-tight mb-6 jp-animate-in jp-d1"
+            data-jp-field="title"
+          >
             {data.title}
             {data.titleHighlight && (
               <>
@@ -47,8 +50,10 @@ export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ da
             <div className="flex gap-4 flex-wrap jp-animate-in jp-d3">
               {data.ctas.map((cta, idx) => (
                 <a
-                  key={idx}
+                  key={cta.id ?? idx}
                   href={cta.href}
+                  data-jp-item-id={cta.id ?? `legacy-${idx}`}
+                  data-jp-item-field="ctas"
                   className={cn(
                     'inline-flex items-center gap-2 px-8 py-3.5 rounded-[5px] font-semibold text-base transition-all duration-200 no-underline',
                     cta.variant === 'primary'
@@ -64,7 +69,11 @@ export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ da
           {data.metrics && data.metrics.length > 0 && (
             <div className="flex gap-12 mt-16 pt-12 border-t border-[rgba(255,255,255,0.06)] flex-wrap jp-animate-in jp-d4">
               {data.metrics.map((metric, idx) => (
-                <div key={idx}>
+                <div
+                  key={(metric as { id?: string }).id ?? idx}
+                  data-jp-item-id={(metric as { id?: string }).id ?? `legacy-${idx}`}
+                  data-jp-item-field="metrics"
+                >
                   <div className="text-[2rem] font-bold text-[var(--local-text)] font-display">
                     {metric.val}
                   </div>
