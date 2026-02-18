@@ -156,16 +156,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     onRequestScrollToSection?.(sectionId);
   };
 
-  /** Open Page Layers list (if collapsed) and always scroll sidebar to top. */
-  const handlePageLayersHeaderClick = () => {
-    setLayersOpen(true);
-    scrollSidebarToTop();
-  };
-
-  /** Chevron: toggle list and always scroll sidebar to top so list is in view. */
-  const handlePageLayersChevronClick = () => {
-    setLayersOpen((prev) => !prev);
-    scrollSidebarToTop();
+  /** Toggle Page Layers list (header or chevron); scroll to top when opening so list is in view. */
+  const handlePageLayersToggle = () => {
+    setLayersOpen((prev) => {
+      const next = !prev;
+      if (next) scrollSidebarToTop();
+      return next;
+    });
   };
 
   /** Open the section-settings modal for the given section (no Inspector tab/selection change to avoid UI freeze). */
@@ -288,25 +285,22 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </div>
         {allLayers.length > 0 && (
           <div className="bg-zinc-900/20 opacity-100">
-            <div className="flex items-center justify-between py-3 px-4 hover:bg-zinc-800/30 transition-colors">
-              <button
-                type="button"
-                onClick={handlePageLayersHeaderClick}
-                className="flex-1 flex items-center gap-2 text-left min-w-0"
-              >
+            <button
+              type="button"
+              onClick={handlePageLayersToggle}
+              className="w-full flex items-center justify-between py-3 px-4 hover:bg-zinc-800/30 transition-colors cursor-pointer text-left rounded-none border-0 bg-transparent"
+              aria-expanded={showLayersList}
+              aria-label={showLayersList ? 'Collapse Page Layers' : 'Expand Page Layers'}
+            >
+              <span className="flex items-center gap-2 min-w-0">
                 <Layers size={14} className="text-primary shrink-0" />
                 <span className="text-xs font-bold text-white">Page Layers</span>
                 <span className="text-[10px] text-zinc-500">({allLayers.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={handlePageLayersChevronClick}
-                className="p-0.5 rounded text-zinc-500 hover:text-white transition-colors shrink-0"
-                aria-label={showLayersList ? 'Collapse Page Layers' : 'Expand Page Layers'}
-              >
+              </span>
+              <span className="text-zinc-500 shrink-0 pointer-events-none" aria-hidden>
                 {showLayersList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              </button>
-            </div>
+              </span>
+            </button>
             {!showLayersList && selectedSection && (() => {
               const activeLayer = allLayers.find((l) => l.id === selectedSection.id);
               if (!activeLayer) return null;
@@ -516,41 +510,28 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </div>
       </div>
 
-      <div className="p-4 border-t border-zinc-800 bg-zinc-900/50 flex flex-col gap-2 opacity-100">
+      <div className="px-4 py-2.5 border-t border-zinc-800 bg-zinc-900/50 flex items-center gap-3 opacity-100">
         {(onExportHTML != null || onExportJSON != null) && (
-          <div className="flex items-center gap-2 mb-1">
+          <>
             <div className={cn(
               'w-2 h-2 rounded-full transition-colors duration-300 shrink-0',
               hasChanges ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-emerald-500'
             )} />
             <span className={cn(
-              'text-xs font-medium transition-colors duration-300',
+              'text-xs font-medium transition-colors duration-300 shrink-0',
               hasChanges ? 'text-amber-500' : 'text-zinc-500'
             )}>
               {hasChanges ? 'Unsaved Changes' : 'All Changes Saved'}
             </span>
-          </div>
-        )}
-        {(onExportHTML != null || onExportJSON != null) && (
-          <div className="flex items-stretch gap-0 rounded-md overflow-hidden border border-zinc-800">
             {onExportHTML != null && (
               <button
                 type="button"
                 onClick={onExportHTML}
-                disabled={!hasChanges}
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium transition-all min-w-0',
-                  hasChanges
-                    ? 'opacity-100 bg-zinc-900 text-zinc-200 hover:bg-zinc-800'
-                    : 'opacity-100 bg-transparent text-zinc-600 cursor-not-allowed'
-                )}
+                className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-all border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600"
               >
-                <FileCode size={14} className="shrink-0" />
+                <FileCode size={12} className="shrink-0" />
                 <span>Bake HTML</span>
               </button>
-            )}
-            {onExportHTML != null && onExportJSON != null && (
-              <div className="w-px bg-zinc-700 shrink-0" aria-hidden />
             )}
             {onExportJSON != null && (
               <button
@@ -558,17 +539,17 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 onClick={onExportJSON}
                 disabled={!hasChanges}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold transition-all min-w-0',
+                  'shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-all',
                   hasChanges
-                    ? 'opacity-100 bg-blue-600 text-white hover:bg-blue-500 shadow-blue-900/20'
-                    : 'opacity-100 bg-zinc-900 text-zinc-600 cursor-not-allowed'
+                    ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-900/20'
+                    : 'bg-zinc-900 text-zinc-600 cursor-not-allowed'
                 )}
               >
-                <FileJson size={14} className="shrink-0" />
+                <FileJson size={12} className="shrink-0" />
                 <span>Export JSON</span>
               </button>
             )}
-          </div>
+          </>
         )}
       </div>
 

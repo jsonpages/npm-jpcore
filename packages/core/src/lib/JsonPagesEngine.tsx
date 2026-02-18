@@ -194,9 +194,9 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
     const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
     const [scrollToSectionId, setScrollToSectionId] = useState<string | null>(null);
     const [addSectionLibraryOpen, setAddSectionLibraryOpen] = useState(false);
-    const [sidebarWidth, setSidebarWidth] = useState(320);
-    const sidebarMin = 240;
-    const sidebarMax = 720;
+    const [sidebarWidth, setSidebarWidth] = useState(400);
+    const sidebarMin = 360;
+    const sidebarMax = 920;
 
     const handleResizeStart = useCallback((e: React.PointerEvent) => {
       e.preventDefault();

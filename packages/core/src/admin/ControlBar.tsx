@@ -40,13 +40,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
       <div className="flex items-center gap-2">
         <button
           onClick={onExportHTML}
-          disabled={!hasChanges}
-          className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all border",
-            hasChanges 
-              ? "bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600" 
-              : "bg-transparent border-transparent text-zinc-600 cursor-not-allowed"
-          )}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all border bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600"
         >
           <FileCode size={14} />
           <span>Bake HTML</span>
