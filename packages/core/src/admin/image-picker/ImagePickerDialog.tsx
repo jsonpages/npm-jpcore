@@ -160,10 +160,16 @@ function UploadTab({
 
   const handleFile = useCallback(
     async (file: File) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7588/ingest/86d71502-47e1-433c-9b6d-5a1390d00813',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'34bba5'},body:JSON.stringify({sessionId:'34bba5',location:'ImagePickerDialog.tsx:handleFile',message:'handleFile called',data:{fileName:file.name,hasOnAssetUpload:!!onAssetUpload},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       if (!file.type.startsWith('image/')) return;
       if (onAssetUpload) {
         try {
           const url = await onAssetUpload(file);
+          // #region agent log
+          fetch('http://127.0.0.1:7588/ingest/86d71502-47e1-433c-9b6d-5a1390d00813',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'34bba5'},body:JSON.stringify({sessionId:'34bba5',location:'ImagePickerDialog.tsx:handleFile',message:'onAssetUpload resolved',data:{url:url?.slice(0,50)},timestamp:Date.now(),hypothesisId:'H2,H5'})}).catch(()=>{});
+          // #endregion
           onPreviewChange({ name: file.name, size: file.size, dataUrl: url });
         } catch {
           const reader = new FileReader();
@@ -387,17 +393,33 @@ export const ImagePickerDialog: React.FC<ImagePickerDialogProps> = ({
     }
   }, [open]);
 
-  // Prevent browser default (navigate to file) when dropping in Upload tab; do not stopPropagation so drop still reaches the zone
+  // #region agent log
+  useEffect(() => {
+    if (!open || tab !== 'upload') return;
+    const onBeforeUnload = () => {
+      fetch('http://127.0.0.1:7588/ingest/86d71502-47e1-433c-9b6d-5a1390d00813',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'34bba5'},body:JSON.stringify({sessionId:'34bba5',location:'ImagePickerDialog.tsx:beforeunload',message:'beforeunload fired',data:{},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [open, tab]);
+  // #endregion
+
+  // Prevent browser default (navigate to file = full page reload) when Upload tab is open. Capture only, no stopPropagation, so drop still reaches the zone.
   useEffect(() => {
     if (!open || tab !== 'upload') return;
     const prevent = (e: DragEvent) => {
       e.preventDefault();
     };
-    document.addEventListener('dragover', prevent, { capture: true });
-    document.addEventListener('drop', prevent, { capture: true });
+    const opts = { capture: true } as AddEventListenerOptions;
+    document.addEventListener('dragover', prevent, opts);
+    document.addEventListener('drop', prevent, opts);
+    window.addEventListener('dragover', prevent, opts);
+    window.addEventListener('drop', prevent, opts);
     return () => {
-      document.removeEventListener('dragover', prevent, { capture: true });
-      document.removeEventListener('drop', prevent, { capture: true });
+      document.removeEventListener('dragover', prevent, opts);
+      document.removeEventListener('drop', prevent, opts);
+      window.removeEventListener('dragover', prevent, opts);
+      window.removeEventListener('drop', prevent, opts);
     };
   }, [open, tab]);
 
@@ -428,6 +450,8 @@ export const ImagePickerDialog: React.FC<ImagePickerDialogProps> = ({
           ? 'URL pronto'
           : 'Nessuna selezione';
 
+  // Drag-and-drop reload fix: prevent browser from navigating to dropped file (would cause full page reload).
+  // Backdrop (dialog.tsx) and modal content both block drop; document-level listener (when Upload tab) prevents default only so drop still reaches the zone.
   const blockDropNavigation = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();

@@ -12,6 +12,8 @@ export const resolveAssetUrl = (path: string, tenantId: string = 'default'): str
   // 2. Path already points at tenant root assets (e.g. /assets/filename from upload): return as-is
   if (path.startsWith('/assets/')) return path;
   if (path.startsWith('assets/')) return `/${path}`;
+  // 2b. Dev in-memory uploads (served at /uploaded-assets/:name): return as-is so Stage shows image
+  if (path.startsWith('/uploaded-assets/')) return path;
 
   // 3. Detect route vs asset by extension
   const hasFileExtension = /\.(jpg|jpeg|png|gif|svg|pdf|webp|mp4|webm|ogg)$/i.test(path);

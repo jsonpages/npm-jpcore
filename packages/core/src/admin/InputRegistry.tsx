@@ -14,11 +14,9 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
 import {
@@ -50,9 +48,7 @@ const ICON_PICKER_OPTIONS: { name: string; Icon: LucideIcon }[] = [
   { name: 'zap', Icon: Zap },
 ];
 import { BaseWidgetProps } from '../lib/shared-types';
-import { useConfig } from '../lib/ConfigContext';
 import { cn } from '../lib/utils';
-import { resolveAssetUrl } from '../utils/asset-resolver';
 import { ImagePreviewField } from './image-picker';
 
 export const InputWidgets = {

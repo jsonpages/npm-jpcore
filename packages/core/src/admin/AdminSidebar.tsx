@@ -5,6 +5,8 @@ import { cn } from '../lib/utils';
 import { FormFactory } from './FormFactory';
 import type { PageConfig, Section } from '../lib/kernel';
 import { Layers, ChevronUp, ChevronDown, GripVertical, Settings, Trash2, AlertCircle, X, Plus, FileCode, FileJson } from 'lucide-react';
+import { Switch } from '../components/ui/switch';
+import { Label } from '../components/ui/label';
 
 interface SelectedSectionInfo {
   id: string;
@@ -47,6 +49,10 @@ interface AdminSidebarProps {
   onAddSection?: () => void;
   /** Whether there are unsaved changes (disables Bake HTML / Export JSON when false). */
   hasChanges?: boolean;
+  /** Autosave to localStorage when on (default on). When off, draft is not persisted automatically. */
+  autosaveEnabled?: boolean;
+  /** Called when user toggles autosave. */
+  onAutosaveChange?: (enabled: boolean) => void;
   /** Trigger Bake HTML (same as ControlBar). */
   onExportHTML?: () => void;
   /** Trigger Export JSON (same as ControlBar). */
@@ -74,6 +80,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   onDeleteSection,
   onAddSection,
   hasChanges = false,
+  autosaveEnabled = true,
+  onAutosaveChange,
   onExportHTML,
   onExportJSON,
   onResetToFile,
@@ -517,7 +525,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </div>
 
       <div className="px-4 py-2.5 border-t border-zinc-800 bg-zinc-900/50 flex items-center gap-3 opacity-100 flex-wrap">
-        {(onExportHTML != null || onExportJSON != null || onResetToFile != null) && (
+        {(onAutosaveChange != null || onExportHTML != null || onExportJSON != null || onResetToFile != null) && (
           <>
             <div className={cn(
               'w-2 h-2 rounded-full transition-colors duration-300 shrink-0',
@@ -529,6 +537,19 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             )}>
               {hasChanges ? 'Unsaved Changes' : 'All Changes Saved'}
             </span>
+            {onAutosaveChange != null && (
+              <div className="flex items-center gap-2 shrink-0">
+                <Switch
+                  id="autosave-toggle"
+                  checked={autosaveEnabled}
+                  onCheckedChange={onAutosaveChange}
+                  className="shrink-0"
+                />
+                <Label htmlFor="autosave-toggle" className="text-[11px] font-medium text-zinc-400 cursor-pointer">
+                  Autosave
+                </Label>
+              </div>
+            )}
             {onExportHTML != null && (
               <button
                 type="button"
@@ -536,7 +557,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-all border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600"
               >
                 <FileCode size={12} className="shrink-0" />
-                <span>Bake HTML</span>
+                <span>HTML</span>
               </button>
             )}
             {onExportJSON != null && (
@@ -552,7 +573,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 )}
               >
                 <FileJson size={12} className="shrink-0" />
-                <span>Export JSON</span>
+                <span>JSON</span>
               </button>
             )}
             {onResetToFile != null && showResetToFile && (

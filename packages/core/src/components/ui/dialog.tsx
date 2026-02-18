@@ -90,12 +90,19 @@ function DialogContent({ className, children, preventCloseOnBackdropClick, ...pr
 
   if (!open) return null;
 
+  const blockDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   return createPortal(
     <>
       <div
         className="fixed inset-0 z-[9998] bg-black/60"
         aria-hidden
         onClick={() => !preventCloseOnBackdropClick && onOpenChange(false)}
+        onDragOver={blockDrop}
+        onDrop={blockDrop}
       />
       <div
         role="dialog"

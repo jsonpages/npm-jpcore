@@ -30,6 +30,17 @@ const pages: Record<string, PageConfig> = {
 function App() {
   const [assetsManifest, setAssetsManifest] = useState<LibraryImageEntry[]>([]);
 
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7588/ingest/86d71502-47e1-433c-9b6d-5a1390d00813',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'34bba5'},body:JSON.stringify({sessionId:'34bba5',location:'App.tsx',message:'App mounted',data:{},timestamp:Date.now(),hypothesisId:'H1,H3'})}).catch(()=>{});
+    const onSubmit = (e: Event) => {
+      fetch('http://127.0.0.1:7588/ingest/86d71502-47e1-433c-9b6d-5a1390d00813',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'34bba5'},body:JSON.stringify({sessionId:'34bba5',location:'App.tsx:submit',message:'form submit captured',data:{targetTag:(e.target as HTMLElement)?.tagName},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+    };
+    document.addEventListener('submit', onSubmit, true);
+    return () => document.removeEventListener('submit', onSubmit, true);
+  }, []);
+  // #endregion
+
   useEffect(() => {
     fetch('/api/list-assets')
       .then((r) => (r.ok ? r.json() : []))
@@ -47,10 +58,25 @@ function App() {
     menuConfig,
     themeCss: { tenant: tenantCss },
     addSection: addSectionConfig,
+    persistence: {
+      async flushUploadedAssets(urls: string[]): Promise<Record<string, string>> {
+        const res = await fetch('/api/flush-uploaded-assets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ urls }),
+        });
+        if (!res.ok) throw new Error(`Flush failed: ${res.status}`);
+        const { urlMap } = (await res.json()) as { urlMap?: Record<string, string> };
+        return urlMap ?? {};
+      },
+    },
     assets: {
       assetsBaseUrl: '/assets',
       assetsManifest,
       async onAssetUpload(file: File): Promise<string> {
+      // #region agent log
+      fetch('http://127.0.0.1:7588/ingest/86d71502-47e1-433c-9b6d-5a1390d00813',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'34bba5'},body:JSON.stringify({sessionId:'34bba5',location:'App.tsx:onAssetUpload',message:'onAssetUpload entry',data:{fileName:file.name},timestamp:Date.now(),hypothesisId:'H2,H5'})}).catch(()=>{});
+      // #endregion
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -71,8 +97,9 @@ function App() {
         throw new Error((err as { error?: string }).error || `Upload failed: ${res.status}`);
       }
       const { url } = (await res.json()) as { url: string };
-      const id = url.split('/').pop() ?? url;
-      setAssetsManifest((prev) => [...prev, { id, url, alt: file.name, tags: [] }]);
+      // In-memory upload only: do not update assetsManifest here to avoid reload.
+      // Preview in Upload tab uses this URL; Library tab will get new items on next list-assets load.
+      // Disk write can be added later on Save.
       return url;
     },
   },

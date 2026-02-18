@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:clean": "vite --force",
     "build": "tsc && vite build",
     "dist": "bash ./src2Code.sh src index.html && sed -i 's/\\r$//' ../../packages/cli/src/index.js && npm link --force",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@jsonpages/core": "^1.0.1",
+    "@jsonpages/core": "^1.0.4",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
     "react": "^19.0.0",
