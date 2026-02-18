@@ -1,0 +1,16 @@
+{
+  "name": "@jsonpages/stack",
+  "version": "1.0.0",
+  "description": "JsonPages tenant stack manifest — single source of truth for dependency versions",
+  "private": false,
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./stack-versions.json": "./stack-versions.json"
+  },
+  "files": [
+    "index.js",
+    "stack-versions.json"
+  ]
+}

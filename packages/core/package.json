@@ -1,6 +1,6 @@
 {
   "name": "@jsonpages/core",
-  "version": "1.0.5",
+  "version": "1.0.9",
   "private": false,
   "type": "module",
   "main": "./dist/jsonpages-core.umd.cjs",
@@ -17,7 +17,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "vite build"
+    "build": "vite build",
+    "prepack": "node scripts/sync-peers-from-stack.js"
   },
   "peerDependencies": {
     "react": "^19.0.0",
@@ -34,6 +35,7 @@
     "clsx": "^2.1.1"
   },
   "devDependencies": {
+    "@jsonpages/stack": "^1.0.0",
     "vite": "^6.0.0",
     "@vitejs/plugin-react": "^4.0.0",
     "vite-plugin-dts": "^4.0.0",

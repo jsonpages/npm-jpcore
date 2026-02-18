@@ -134,25 +134,14 @@ program
       await processScriptInNode(scriptPath, targetDir);
       spinner.succeed('Source code and assets projected successfully.');
 
-      // 5. DEPENDENCY RESOLUTION
+      // 5. DEPENDENCY RESOLUTION (versions from @jsonpages/stack manifest)
       spinner.start('Installing dependencies (this may take a minute)...');
-      
-      const deps = [
-        'react', 'react-dom', 'zod', 'react-router-dom', 
-        'lucide-react', 'radix-ui', 
-        'tailwind-merge', 'clsx', 
-        'file-saver', 'jszip',
-        '@jsonpages/core' // Scarica dal registry pubblico
-      ];
-      
-      const devDeps = [
-        'vite', '@vitejs/plugin-react', 'typescript', 
-        '@tailwindcss/vite', 'tailwindcss', 
-        '@types/node', '@types/react', '@types/react-dom', '@types/file-saver'
-      ];
+      const stack = (await import('@jsonpages/stack')).default;
+      const depSpecs = Object.entries(stack.dependencies || {}).map(([name, ver]) => `${name}@${ver}`);
+      const devDepSpecs = Object.entries(stack.devDependencies || {}).map(([name, ver]) => `${name}@${ver}`);
 
-      await execa(npmCmd, ['install', ...deps], { cwd: targetDir });
-      await execa(npmCmd, ['install', '-D', ...devDeps], { cwd: targetDir });
+      await execa(npmCmd, ['install', ...depSpecs], { cwd: targetDir });
+      await execa(npmCmd, ['install', '-D', ...devDepSpecs], { cwd: targetDir });
       
       spinner.succeed(chalk.green.bold('✨ Tenant Ready!'));
 

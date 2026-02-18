@@ -1,5 +1,6 @@
 /**
  * Thin Entry Point (Tenant).
+ * Loads from localStorage draft when present (same key as Core autosave), else from file.
  */
 import { useState, useEffect } from 'react';
 import { JsonPagesEngine } from '@jsonpages/core';
@@ -7,10 +8,11 @@ import type { LibraryImageEntry } from '@jsonpages/core';
 import { ComponentRegistry } from '@/lib/ComponentRegistry';
 import { SECTION_SCHEMAS } from '@/lib/schemas';
 import { addSectionConfig } from '@/lib/addSectionConfig';
+import { getHydratedData } from '@/lib/draftStorage';
 import type { JsonPagesConfig } from '@jsonpages/core';
 import type { PageConfig, SiteConfig, ThemeConfig, MenuConfig } from '@/types';
 
-// Tenant data
+// Tenant data (file-backed fallback)
 import siteData from '@/data/config/site.json';
 import themeData from '@/data/config/theme.json';
 import menuData from '@/data/config/menu.json';
@@ -19,15 +21,21 @@ import homeData from '@/data/pages/home.json';
 // Tenant CSS
 import tenantCss from './index.css?inline';
 
-const siteConfig = siteData as unknown as SiteConfig;
 const themeConfig = themeData as unknown as ThemeConfig;
 const menuConfig = menuData as unknown as MenuConfig;
 
-const pages: Record<string, PageConfig> = {
+const TENANT_ID = 'alpha';
+const filePages: Record<string, PageConfig> = {
   home: homeData as unknown as PageConfig,
 };
+const fileSiteConfig = siteData as unknown as SiteConfig;
+
+function getInitialData() {
+  return getHydratedData(TENANT_ID, filePages, fileSiteConfig);
+}
 
 function App() {
+  const [{ pages, siteConfig }] = useState(getInitialData);
   const [assetsManifest, setAssetsManifest] = useState<LibraryImageEntry[]>([]);
 
   // #region agent log
@@ -49,7 +57,7 @@ function App() {
   }, []);
 
   const config: JsonPagesConfig = {
-    tenantId: 'alpha',
+    tenantId: TENANT_ID,
     registry: ComponentRegistry as JsonPagesConfig['registry'],
     schemas: SECTION_SCHEMAS as unknown as JsonPagesConfig['schemas'],
     pages,

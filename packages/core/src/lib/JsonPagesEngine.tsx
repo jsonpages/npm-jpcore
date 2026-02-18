@@ -290,7 +290,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
         } catch {
           // quota or disabled
         }
-      }, 10_000);
+      }, 3_000);
       return () => clearTimeout(t);
     }, [autosaveEnabled, draft, globalDraft, storageKey]);
 
