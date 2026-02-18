@@ -51,6 +51,10 @@ interface AdminSidebarProps {
   onExportHTML?: () => void;
   /** Trigger Export JSON (same as ControlBar). */
   onExportJSON?: () => void;
+  /** Restore page from file (clears localStorage draft for current slug). Hidden by default; set showResetToFile to display. */
+  onResetToFile?: () => void;
+  /** When true, shows the "Ripristina da file" button (default false = hidden). */
+  showResetToFile?: boolean;
 }
 
 const SETTINGS_KEYS = new Set(['anchorId', 'paddingTop', 'paddingBottom', 'theme', 'container']);
@@ -72,6 +76,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   hasChanges = false,
   onExportHTML,
   onExportJSON,
+  onResetToFile,
+  showResetToFile = false,
 }) => {
   const { schemas } = useConfig();
   const [layersOpen, setLayersOpen] = useState(true);
@@ -510,8 +516,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </div>
       </div>
 
-      <div className="px-4 py-2.5 border-t border-zinc-800 bg-zinc-900/50 flex items-center gap-3 opacity-100">
-        {(onExportHTML != null || onExportJSON != null) && (
+      <div className="px-4 py-2.5 border-t border-zinc-800 bg-zinc-900/50 flex items-center gap-3 opacity-100 flex-wrap">
+        {(onExportHTML != null || onExportJSON != null || onResetToFile != null) && (
           <>
             <div className={cn(
               'w-2 h-2 rounded-full transition-colors duration-300 shrink-0',
@@ -547,6 +553,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               >
                 <FileJson size={12} className="shrink-0" />
                 <span>Export JSON</span>
+              </button>
+            )}
+            {onResetToFile != null && showResetToFile && (
+              <button
+                type="button"
+                onClick={onResetToFile}
+                className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-all border border-zinc-700 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:border-zinc-600 hover:text-zinc-300"
+                title="Ripristina la pagina dal file (elimina le modifiche in memoria)"
+              >
+                <span>Ripristina da file</span>
               </button>
             )}
           </>

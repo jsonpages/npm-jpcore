@@ -9,17 +9,17 @@ export const resolveAssetUrl = (path: string, tenantId: string = 'default'): str
       return path;
     }
   
-    // 2. Detect if it's a Route or an Asset
-    // If it starts with / and not /assets, it's a page route.
-    const isExplicitAsset = path.includes('assets/') || path.startsWith('assets/');
-    const hasFileExtension = /\.(jpg|jpeg|png|gif|svg|pdf|webp|mp4|webm|ogg)$/i.test(path);
-  
-    if (!isExplicitAsset && !hasFileExtension) {
-      // It's a route (e.g., "/about" or "contact")
-      return path.startsWith('/') ? path : `/${path}`;
-    }
-  
-    // 3. It's an asset: Normalize and prepend tenant path
-    const cleanPath = path.replace(/^\//, '').replace(/^assets\//, '');
-    return `/assets/${tenantId}/${cleanPath}`;
-  };
+  // 2. Path already points at tenant root assets (e.g. /assets/filename from upload): return as-is
+  if (path.startsWith('/assets/')) return path;
+  if (path.startsWith('assets/')) return `/${path}`;
+
+  // 3. Detect route vs asset by extension
+  const hasFileExtension = /\.(jpg|jpeg|png|gif|svg|pdf|webp|mp4|webm|ogg)$/i.test(path);
+  if (!hasFileExtension) {
+    return path.startsWith('/') ? path : `/${path}`;
+  }
+
+  // 4. Relative asset path: prepend tenant segment
+  const cleanPath = path.replace(/^\//, '');
+  return `/assets/${tenantId}/${cleanPath}`;
+};

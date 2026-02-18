@@ -16,10 +16,12 @@ const program = new Command();
 program
   .name('jsonpages')
   .description('JsonPages CLI - Sovereign Projection Engine')
-  .version('2.0.6'); // Bump version
+  .version('2.0.2'); // Bump version
 
 /**
  * 🧠 THE UNIVERSAL INTERPRETER
+ * Legge lo script bash "DNA" e lo esegue usando le API di Node.js.
+ * Rende la CLI compatibile con Windows (PowerShell/CMD) senza bisogno di Bash.
  */
 async function processScriptInNode(scriptPath, targetDir) {
   const content = await fs.readFile(scriptPath, 'utf-8');
@@ -33,26 +35,35 @@ async function processScriptInNode(scriptPath, targetDir) {
   for (const line of lines) {
     const trimmed = line.trim();
 
+    // 1. Modalità Cattura (Siamo dentro un cat << 'DELIMITER')
     if (captureMode) {
       if (trimmed === delimiter) {
+        // Fine del blocco: Scriviamo su disco
         const filePath = path.join(targetDir, currentFile);
         await fs.outputFile(filePath, fileBuffer.join('\n'));
         captureMode = false;
         fileBuffer = [];
       } else {
-        fileBuffer.push(line);
+        fileBuffer.push(line); // Preserva l'indentazione originale
       }
       continue;
     }
 
+    // 2. Parsing Comandi Bash -> Node Operations
+    
+    // Rileva: mkdir -p "path"
     if (trimmed.startsWith('mkdir -p')) {
       const match = trimmed.match(/"([^"]+)"/) || trimmed.match(/\s+([^\s]+)/); 
+      // Supporta sia mkdir -p "foo/bar" che mkdir -p foo/bar
       const dirPath = match ? match[1].replace(/"/g, '') : null;
       if (dirPath) {
         await fs.ensureDir(path.join(targetDir, dirPath));
       }
     }
+    
+    // Rileva: cat << 'DELIMITER' > "path"
     else if (trimmed.startsWith('cat <<')) {
+      // Regex robusta per catturare il delimitatore e il path del file
       const match = trimmed.match(/<<\s*'([^']+)'\s*>\s*"([^"]+)"/);
       if (match) {
         delimiter = match[1];
@@ -60,6 +71,7 @@ async function processScriptInNode(scriptPath, targetDir) {
         captureMode = true;
       }
     }
+    // Ignora echo, set -e, commenti #, ecc.
   }
 }
 
@@ -75,11 +87,15 @@ program
     }
 
     const targetDir = path.join(process.cwd(), name);
+    
+    // 🔍 Asset Resolution
+    // Cerca lo script nella cartella assets installata col pacchetto
     const defaultScriptPath = path.resolve(__dirname, '../assets/src_tenant_alpha.sh');
     const scriptPath = options.script ? path.resolve(process.cwd(), options.script) : defaultScriptPath;
 
     if (!fs.existsSync(scriptPath)) {
       console.log(chalk.red(`❌ Error: DNA script not found at ${scriptPath}`));
+      console.log(chalk.yellow(`Debug info: __dirname is ${__dirname}`));
       return;
     }
 
@@ -87,9 +103,11 @@ program
     const spinner = ora();
 
     try {
-      // 1. SCAFFOLDING
+      // 1. SCAFFOLDING INFRA
       spinner.start('Setting up environment (Vite + TS)...');
       await fs.ensureDir(targetDir);
+      
+      // Windows fix: npm.cmd invece di npm
       const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
       
       await execa(npmCmd, ['create', 'vite@latest', '.', '--', '--template', 'react-ts'], { cwd: targetDir });
@@ -98,7 +116,7 @@ program
       // 2. CLEANUP
       spinner.start('Wiping default boilerplate...');
       await fs.emptyDir(path.join(targetDir, 'src'));
-      const junk = ['App.css', 'App.tsx', 'main.tsx', 'vite-env.d.ts', 'favicon.ico', 'index.html', 'package.json', 'package-lock.json'];
+      const junk = ['App.css', 'App.tsx', 'main.tsx', 'vite-env.d.ts', 'favicon.ico', 'index.html'];
       for (const file of junk) {
         await fs.remove(path.join(targetDir, file)).catch(() => {});
         await fs.remove(path.join(targetDir, 'src', file)).catch(() => {});
@@ -110,14 +128,31 @@ program
       await injectInfraFiles(targetDir, name);
       spinner.succeed('Infrastructure configured.');
 
-      // 4. DETERMINISTIC PROJECTION
+      // 4. DETERMINISTIC PROJECTION (Node-based Interpreter)
       spinner.start('Executing deterministic src projection...');
+      // Invece di execa('./script.sh'), usiamo il nostro interprete
       await processScriptInNode(scriptPath, targetDir);
       spinner.succeed('Source code and assets projected successfully.');
 
-      // 5. INSTALLATION
+      // 5. DEPENDENCY RESOLUTION
       spinner.start('Installing dependencies (this may take a minute)...');
-      await execa(npmCmd, ['install'], { cwd: targetDir });
+      
+      const deps = [
+        'react', 'react-dom', 'zod', 'react-router-dom', 
+        'lucide-react', 'radix-ui', 
+        'tailwind-merge', 'clsx', 
+        'file-saver', 'jszip',
+        '@jsonpages/core' // Scarica dal registry pubblico
+      ];
+      
+      const devDeps = [
+        'vite', '@vitejs/plugin-react', 'typescript', 
+        '@tailwindcss/vite', 'tailwindcss', 
+        '@types/node', '@types/react', '@types/react-dom', '@types/file-saver'
+      ];
+
+      await execa(npmCmd, ['install', ...deps], { cwd: targetDir });
+      await execa(npmCmd, ['install', '-D', ...devDeps], { cwd: targetDir });
       
       spinner.succeed(chalk.green.bold('✨ Tenant Ready!'));
 
@@ -143,33 +178,6 @@ async function injectInfraFiles(targetDir, name) {
       "dev": "vite",
       "build": "tsc && vite build",
       "preview": "vite preview"
-    },
-    dependencies: {
-      "react": "^19.0.0",
-      "react-dom": "^19.0.0",
-      "react-router-dom": "^6.30.0",
-      "zod": "^3.24.1",
-      "lucide-react": "^0.474.0",
-      "radix-ui": "^1.0.1",
-      "@base-ui/react": "^1.0.0-alpha.1",
-      "class-variance-authority": "^0.7.0",
-      "tailwind-merge": "^2.2.0",
-      "clsx": "^2.1.0",
-      "tailwindcss-animate": "^1.0.7", // 👈 FIX: Pacchetto corretto
-      "file-saver": "^2.0.5",
-      "jszip": "^3.10.1",
-      "@jsonpages/core": "latest"
-    },
-    devDependencies: {
-      "vite": "^6.0.0",
-      "@vitejs/plugin-react": "^4.2.1",
-      "typescript": "^5.7.3",
-      "@tailwindcss/vite": "^4.0.0",
-      "tailwindcss": "^4.0.0",
-      "@types/node": "^20.0.0",
-      "@types/react": "^19.0.0",
-      "@types/react-dom": "^19.0.0",
-      "@types/file-saver": "^2.0.7"
     }
   };
   await fs.writeJson(path.join(targetDir, 'package.json'), pkg, { spaces: 2 });

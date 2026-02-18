@@ -11,6 +11,7 @@ import { ProductTriad } from '@/components/product-triad';
 import { PaSection } from '@/components/pa-section';
 import { Philosophy } from '@/components/philosophy';
 import { CtaBanner } from '@/components/cta-banner';
+import { ImageBreak } from '@/components/image-break';
 
 import type { SectionType } from '@jsonpages/core';
 import type { SectionComponentPropsMap } from '@/types';
@@ -30,4 +31,5 @@ export const ComponentRegistry: {
   'pa-section': PaSection,
   'philosophy': Philosophy,
   'cta-banner': CtaBanner,
+  'image-break': ImageBreak,
 };

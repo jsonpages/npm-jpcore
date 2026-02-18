@@ -29,6 +29,24 @@ export interface AddSectionConfig {
   getDefaultSectionData?: (sectionType: string) => Record<string, unknown>;
 }
 
+/** Image entry for the Image Picker Library tab (from tenant assets or manifest). */
+export interface LibraryImageEntry {
+  id: string;
+  url: string;
+  alt: string;
+  tags?: string[];
+}
+
+/** Optional config for the Image Picker (gallery from assets, save to assets). */
+export interface AssetsConfig {
+  /** Base URL for assets (e.g. "/assets"). Used to resolve library image URLs and display gallery. */
+  assetsBaseUrl?: string;
+  /** Library images for the picker "Libreria" tab. Tenant can build from public/assets or provide a static list. */
+  assetsManifest?: LibraryImageEntry[];
+  /** Optional: upload file to tenant assets and return the public URL. If omitted, upload tab uses data URL. */
+  onAssetUpload?: (file: File) => Promise<string>;
+}
+
 /** Single entry point configuration for the JsonPages Engine. */
 export interface JsonPagesConfig {
   /** Unique identifier for the tenant (used for asset resolution) */
@@ -50,4 +68,6 @@ export interface JsonPagesConfig {
   NotFoundComponent?: React.ComponentType;
   /** Optional "Add section" library config (labels, addable types, default data). */
   addSection?: AddSectionConfig;
+  /** Optional assets config for Image Picker (gallery, upload target). */
+  assets?: AssetsConfig;
 }

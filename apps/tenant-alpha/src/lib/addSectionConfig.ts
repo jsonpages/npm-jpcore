@@ -16,6 +16,7 @@ const addableSectionTypes = [
   'pa-section',
   'philosophy',
   'cta-banner',
+  'image-break',
 ] as const;
 
 const sectionTypeLabels: Record<string, string> = {
@@ -29,6 +30,7 @@ const sectionTypeLabels: Record<string, string> = {
   'pa-section': 'PA Section',
   'philosophy': 'Philosophy',
   'cta-banner': 'CTA Banner',
+  'image-break': 'Image Break',
 };
 
 function getDefaultSectionData(sectionType: string): Record<string, unknown> {
@@ -53,6 +55,8 @@ function getDefaultSectionData(sectionType: string): Record<string, unknown> {
       return { title: 'Philosophy', quote: 'Your quote here.' };
     case 'cta-banner':
       return { title: 'Call to Action', description: '' };
+    case 'image-break':
+      return { image: { url: '', alt: '' }, caption: '' };
     default:
       return {};
   }

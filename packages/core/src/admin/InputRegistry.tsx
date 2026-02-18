@@ -53,6 +53,7 @@ import { BaseWidgetProps } from '../lib/shared-types';
 import { useConfig } from '../lib/ConfigContext';
 import { cn } from '../lib/utils';
 import { resolveAssetUrl } from '../utils/asset-resolver';
+import { ImagePreviewField } from './image-picker';
 
 export const InputWidgets = {
   'ui:text': ({ label, value, onChange }: BaseWidgetProps<string>) => (
@@ -118,80 +119,26 @@ export const InputWidgets = {
     </div>
   ),
 
-  'ui:image-picker': ({ label, value, onChange }: BaseWidgetProps<string>) => {
-    const { tenantId = 'default' } = useConfig();
-    const [open, setOpen] = useState(false);
-    const [pathInput, setPathInput] = useState(value || '');
-    const resolvedUrl = value ? resolveAssetUrl(value, tenantId) : '';
+  'ui:image-picker': ({ label, value, onChange }: BaseWidgetProps<unknown>) => {
+    const selection: { url: string; alt: string } =
+      value != null && typeof value === 'object' && 'url' in value
+        ? {
+            url: String((value as { url?: unknown }).url ?? ''),
+            alt: String((value as { alt?: unknown }).alt ?? ''),
+          }
+        : { url: typeof value === 'string' ? value : '', alt: '' };
 
-    const handleOpenChange = (next: boolean) => {
-      setOpen(next);
-      if (next) setPathInput(value || '');
-    };
-
-    const handleApply = () => {
-      const trimmed = pathInput.trim();
-      onChange(trimmed || '');
-      setOpen(false);
+    const handleChange = (next: { url: string; alt: string }) => {
+      onChange(next);
     };
 
     return (
-      <div className="grid w-full gap-1.5 mb-4">
-        <Label className="text-[9px] uppercase font-black tracking-widest text-zinc-500">
-          {label}
-        </Label>
-        <Dialog open={open} onOpenChange={handleOpenChange}>
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full h-20 rounded-md border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800/50 flex flex-col items-center justify-center gap-1 text-zinc-500"
-            >
-              {resolvedUrl ? (
-                <img
-                  src={resolvedUrl}
-                  alt=""
-                  className="max-h-14 max-w-full object-contain rounded"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <ImageIcon className="h-8 w-8" />
-              )}
-              <span className="text-[10px] font-medium">Choose image</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Image path</DialogTitle>
-              <DialogDescription>
-                Enter the asset path (e.g. images/hero.jpg). It will be resolved via resolveAssetUrl.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-2 py-2">
-              <Label htmlFor="image-path" className="text-xs">
-                Path
-              </Label>
-              <Input
-                id="image-path"
-                value={pathInput}
-                onChange={(e) => setPathInput(e.target.value)}
-                placeholder="images/photo.jpg"
-                className="h-8 text-xs bg-zinc-900/50 border-zinc-800"
-              />
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" type="button">
-                  Cancel
-                </Button>
-              </DialogClose>
-              <Button type="button" onClick={handleApply}>
-                Apply
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      <div className="mb-4">
+        <ImagePreviewField
+          label={label}
+          value={selection}
+          onChange={handleChange}
+        />
       </div>
     );
   },

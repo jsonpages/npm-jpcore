@@ -167,6 +167,8 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
     );
   };
 
+  const tenantId = config.tenantId ?? 'default';
+
   const StudioView: React.FC = () => {
     const { slug = 'home' } = useParams<{ slug: string }>();
     const [draft, setDraft] = useState<PageConfig | null>(null);
@@ -237,13 +239,51 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
         ]
       : [];
 
+    const storageKey = `jsonpages-draft-${tenantId}-${slug}`;
+
     useEffect(() => {
       const data = pageRegistry[slug];
+      try {
+        const raw = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
+        const stored = raw ? (JSON.parse(raw) as { page?: PageConfig; site?: SiteConfig }) : null;
+        if (stored?.page && stored?.site) {
+          setDraft(JSON.parse(JSON.stringify(stored.page)));
+          setGlobalDraft(JSON.parse(JSON.stringify(stored.site)));
+        } else if (data) {
+          setDraft(JSON.parse(JSON.stringify(data)));
+        }
+      } catch {
+        if (data) setDraft(JSON.parse(JSON.stringify(data)));
+      }
+      setSelected(null);
+      setExpandedItemPath(null);
+      setHasChanges(false);
+    }, [slug, pageRegistry, storageKey]);
+
+    useEffect(() => {
+      if (!draft || typeof window === 'undefined') return;
+      const t = setTimeout(() => {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify({ page: draft, site: globalDraft }));
+        } catch {
+          // quota or disabled
+        }
+      }, 500);
+      return () => clearTimeout(t);
+    }, [draft, globalDraft, storageKey]);
+
+    const handleResetToFile = useCallback(() => {
+      const data = pageRegistry[slug];
+      try {
+        if (typeof window !== 'undefined') localStorage.removeItem(storageKey);
+      } catch {
+        // ignore
+      }
       if (data) setDraft(JSON.parse(JSON.stringify(data)));
       setSelected(null);
       setExpandedItemPath(null);
       setHasChanges(false);
-    }, [slug, pageRegistry]);
+    }, [slug, pageRegistry, storageKey]);
 
     const handleReorderSection = useCallback(
       (sectionId: string, newIndex: number, currentDraft: PageConfig) => {
@@ -473,6 +513,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   hasChanges={hasChanges}
                   onExportHTML={triggerBake}
                   onExportJSON={handleExportJSON}
+                  onResetToFile={handleResetToFile}
                 />
               </div>
             </div>
@@ -516,7 +557,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
 
   return (
     <EngineErrorBoundary>
-      <ConfigProvider config={{ registry, schemas, tenantId: config.tenantId ?? 'default' }}>
+      <ConfigProvider config={{ registry, schemas, tenantId: config.tenantId ?? 'default', assets: config.assets }}>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<VisitorView />} />

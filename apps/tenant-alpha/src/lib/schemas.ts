@@ -21,6 +21,7 @@ import { ProductTriadSchema } from '@/components/product-triad';
 import { PaSectionSchema } from '@/components/pa-section';
 import { PhilosophySchema } from '@/components/philosophy';
 import { CtaBannerSchema } from '@/components/cta-banner';
+import { ImageBreakSchema } from '@/components/image-break';
 
 export const SECTION_SCHEMAS = {
   'header': HeaderSchema,
@@ -35,6 +36,7 @@ export const SECTION_SCHEMAS = {
   'pa-section': PaSectionSchema,
   'philosophy': PhilosophySchema,
   'cta-banner': CtaBannerSchema,
+  'image-break': ImageBreakSchema,
 } as const;
 
 export type SectionType = keyof typeof SECTION_SCHEMAS;

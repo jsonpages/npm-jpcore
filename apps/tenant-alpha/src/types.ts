@@ -11,6 +11,7 @@ import type { ProductTriadData, ProductTriadSettings } from '@/components/produc
 import type { PaSectionData, PaSectionSettings } from '@/components/pa-section';
 import type { PhilosophyData, PhilosophySettings } from '@/components/philosophy';
 import type { CtaBannerData, CtaBannerSettings } from '@/components/cta-banner';
+import type { ImageBreakData, ImageBreakSettings } from '@/components/image-break';
 
 export type SectionComponentPropsMap = {
   'header': { data: HeaderData; settings?: HeaderSettings; menu: MenuItem[] };
@@ -25,6 +26,7 @@ export type SectionComponentPropsMap = {
   'pa-section': { data: PaSectionData; settings?: PaSectionSettings };
   'philosophy': { data: PhilosophyData; settings?: PhilosophySettings };
   'cta-banner': { data: CtaBannerData; settings?: CtaBannerSettings };
+  'image-break': { data: ImageBreakData; settings?: ImageBreakSettings };
 };
 
 declare module '@jsonpages/core' {
@@ -41,6 +43,7 @@ declare module '@jsonpages/core' {
     'pa-section': PaSectionData;
     'philosophy': PhilosophyData;
     'cta-banner': CtaBannerData;
+    'image-break': ImageBreakData;
   }
 
   export interface SectionSettingsRegistry {
@@ -56,6 +59,7 @@ declare module '@jsonpages/core' {
     'pa-section': PaSectionSettings;
     'philosophy': PhilosophySettings;
     'cta-banner': CtaBannerSettings;
+    'image-break': ImageBreakSettings;
   }
 }
 

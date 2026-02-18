@@ -44,6 +44,18 @@
       "settings": {}
     },
     {
+      "id": "image-break-1",
+      "type": "image-break",
+      "data": {
+        "image": {
+          "url": "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800",
+          "alt": "Verdure fresche dall'orto"
+        },
+        "caption": "Il nostro orto a pochi passi dalla cucina — raccolto ogni mattina all'alba"
+      },
+      "settings": {}
+    },
+    {
       "id": "problem-statement",
       "type": "problem-statement",
       "data": {

@@ -67,9 +67,11 @@ function DialogTrigger({ asChild, children }: DialogTriggerProps) {
 interface DialogContentProps extends React.ComponentProps<'div'> {
   className?: string;
   children?: React.ReactNode;
+  /** When true, clicking the backdrop does not close the dialog (e.g. during upload flow). */
+  preventCloseOnBackdropClick?: boolean;
 }
 
-function DialogContent({ className, children, ...props }: DialogContentProps) {
+function DialogContent({ className, children, preventCloseOnBackdropClick, ...props }: DialogContentProps) {
   const { open, onOpenChange } = useDialogContext();
 
   React.useEffect(() => {
@@ -93,7 +95,7 @@ function DialogContent({ className, children, ...props }: DialogContentProps) {
       <div
         className="fixed inset-0 z-[9998] bg-black/60"
         aria-hidden
-        onClick={() => onOpenChange(false)}
+        onClick={() => !preventCloseOnBackdropClick && onOpenChange(false)}
       />
       <div
         role="dialog"

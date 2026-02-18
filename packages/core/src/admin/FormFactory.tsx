@@ -102,6 +102,25 @@ export const FormFactory: React.FC<FormFactoryProps> = ({ schema, data, onChange
         const uiHint = (fieldSchema.description as WidgetType) || 'ui:text';
         const value = data[key];
 
+        // 0. IMAGE PICKER: object value but single widget (no nested form)
+        if (uiHint === 'ui:image-picker' && effectiveSchema instanceof z.ZodObject) {
+          const isFocusedField = fieldKeyMatches(effectiveFocusedFieldKey, key);
+          const Widget = (InputWidgets['ui:image-picker'] || InputWidgets['ui:text']) as React.ComponentType<BaseWidgetProps<unknown>>;
+          return (
+            <div
+              key={key}
+              className={`transition-opacity duration-200 ${fadeWhenUnfocused(inItemScope, isFocusedField)}`}
+              {...(isFocusedField ? { 'data-jp-focused-field': key } : {})}
+            >
+              <Widget
+                label={key}
+                value={value}
+                onChange={(val) => onChange({ ...data, [key]: val })}
+              />
+            </div>
+          );
+        }
+
         // 1. OBJECT HANDLING
         if (effectiveSchema instanceof z.ZodObject) {
           const objectData = (value as Record<string, unknown>) || {};
