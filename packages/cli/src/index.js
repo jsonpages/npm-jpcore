@@ -7,7 +7,7 @@ import { execa } from 'execa';
 import ora from 'ora';
 import { fileURLToPath } from 'url';
 
-// 🛡️ Risoluzione path per rendere la CLI shippable
+// 🛡️ Risoluzione path ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -16,7 +16,52 @@ const program = new Command();
 program
   .name('jsonpages')
   .description('JsonPages CLI - Sovereign Projection Engine')
-  .version('2.2.0');
+  .version('2.0.6'); // Bump version
+
+/**
+ * 🧠 THE UNIVERSAL INTERPRETER
+ */
+async function processScriptInNode(scriptPath, targetDir) {
+  const content = await fs.readFile(scriptPath, 'utf-8');
+  const lines = content.split('\n');
+  
+  let captureMode = false;
+  let delimiter = '';
+  let currentFile = '';
+  let fileBuffer = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (captureMode) {
+      if (trimmed === delimiter) {
+        const filePath = path.join(targetDir, currentFile);
+        await fs.outputFile(filePath, fileBuffer.join('\n'));
+        captureMode = false;
+        fileBuffer = [];
+      } else {
+        fileBuffer.push(line);
+      }
+      continue;
+    }
+
+    if (trimmed.startsWith('mkdir -p')) {
+      const match = trimmed.match(/"([^"]+)"/) || trimmed.match(/\s+([^\s]+)/); 
+      const dirPath = match ? match[1].replace(/"/g, '') : null;
+      if (dirPath) {
+        await fs.ensureDir(path.join(targetDir, dirPath));
+      }
+    }
+    else if (trimmed.startsWith('cat <<')) {
+      const match = trimmed.match(/<<\s*'([^']+)'\s*>\s*"([^"]+)"/);
+      if (match) {
+        delimiter = match[1];
+        currentFile = match[2];
+        captureMode = true;
+      }
+    }
+  }
+}
 
 program
   .command('new')
@@ -30,15 +75,11 @@ program
     }
 
     const targetDir = path.join(process.cwd(), name);
-    
-    // 🔍 Logica Asset Interno: 
-    // Se l'utente non fornisce uno script, usa quello dentro packages/cli/assets/
     const defaultScriptPath = path.resolve(__dirname, '../assets/src_tenant_alpha.sh');
     const scriptPath = options.script ? path.resolve(process.cwd(), options.script) : defaultScriptPath;
 
     if (!fs.existsSync(scriptPath)) {
-      console.log(chalk.red(`❌ Error: Deterministic script not found at ${scriptPath}`));
-      console.log(chalk.yellow(`Expected internal asset at: ${defaultScriptPath}`));
+      console.log(chalk.red(`❌ Error: DNA script not found at ${scriptPath}`));
       return;
     }
 
@@ -46,16 +87,18 @@ program
     const spinner = ora();
 
     try {
-      // 1. SCAFFOLDING INFRA
+      // 1. SCAFFOLDING
       spinner.start('Setting up environment (Vite + TS)...');
       await fs.ensureDir(targetDir);
-      await execa('npm', ['create', 'vite@latest', '.', '--', '--template', 'react-ts'], { cwd: targetDir });
+      const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+      
+      await execa(npmCmd, ['create', 'vite@latest', '.', '--', '--template', 'react-ts'], { cwd: targetDir });
       spinner.succeed('Environment scaffolded.');
 
-      // 2. CLEANUP (Piazza pulita per il determinismo)
+      // 2. CLEANUP
       spinner.start('Wiping default boilerplate...');
       await fs.emptyDir(path.join(targetDir, 'src'));
-      const junk = ['App.css', 'App.tsx', 'main.tsx', 'vite-env.d.ts', 'favicon.ico', 'index.html'];
+      const junk = ['App.css', 'App.tsx', 'main.tsx', 'vite-env.d.ts', 'favicon.ico', 'index.html', 'package.json', 'package-lock.json'];
       for (const file of junk) {
         await fs.remove(path.join(targetDir, file)).catch(() => {});
         await fs.remove(path.join(targetDir, 'src', file)).catch(() => {});
@@ -67,57 +110,14 @@ program
       await injectInfraFiles(targetDir, name);
       spinner.succeed('Infrastructure configured.');
 
-      // 4. DETERMINISTIC SRC (Proiezione dal DNA interno)
+      // 4. DETERMINISTIC PROJECTION
       spinner.start('Executing deterministic src projection...');
-      const localScript = path.join(targetDir, 'setup_src.sh');
-      await fs.copy(scriptPath, localScript);
-      await fs.chmod(localScript, '755');
-      
-      // Esecuzione dello script (che ora crea anche index.html se incluso)
-      await execa('./setup_src.sh', [], { cwd: targetDir, shell: true });
-      await fs.remove(localScript);
+      await processScriptInNode(scriptPath, targetDir);
       spinner.succeed('Source code and assets projected successfully.');
 
-      // 5. DEPENDENCY RESOLUTION (Green Build Enforcement)
+      // 5. INSTALLATION
       spinner.start('Installing dependencies (this may take a minute)...');
-      
-      // 5a. Runtime Dependencies (Risolve Radix, CVA e Animations)
-      await execa('npm', ['install', 
-        'react', 
-        'react-dom', 
-        'zod', 
-        'react-router-dom', 
-        'lucide-react', 
-        'radix-ui',                 // 🛡️ Risolve TS2307
-        '@base-ui/react',           // Supporto componenti headless
-        'class-variance-authority', // Supporto varianti componenti
-        'tailwind-merge', 
-        'clsx', 
-        'tw-animate-css',           // Supporto animazioni tenant
-        'file-saver', 
-        'jszip'
-      ], { cwd: targetDir });
-      
-      // 5b. Dev Dependencies
-      await execa('npm', ['install', '-D', 
-        'vite', 
-        '@vitejs/plugin-react', 
-        'typescript', 
-        '@tailwindcss/vite', 
-        'tailwindcss', 
-        '@types/node', 
-        '@types/react', 
-        '@types/react-dom', 
-        '@types/file-saver'
-      ], { cwd: targetDir });
-
-      // 5c. Linking Core via yalc
-      spinner.text = 'Linking @jsonpages/core via yalc...';
-      try {
-        await execa('yalc', ['add', '@jsonpages/core'], { cwd: targetDir });
-      } catch (e) {
-        spinner.warn(chalk.yellow('Yalc link failed. Ensure "@jsonpages/core" is published in yalc.'));
-      }
+      await execa(npmCmd, ['install'], { cwd: targetDir });
       
       spinner.succeed(chalk.green.bold('✨ Tenant Ready!'));
 
@@ -143,6 +143,33 @@ async function injectInfraFiles(targetDir, name) {
       "dev": "vite",
       "build": "tsc && vite build",
       "preview": "vite preview"
+    },
+    dependencies: {
+      "react": "^19.0.0",
+      "react-dom": "^19.0.0",
+      "react-router-dom": "^6.30.0",
+      "zod": "^3.24.1",
+      "lucide-react": "^0.474.0",
+      "radix-ui": "^1.0.1",
+      "@base-ui/react": "^1.0.0-alpha.1",
+      "class-variance-authority": "^0.7.0",
+      "tailwind-merge": "^2.2.0",
+      "clsx": "^2.1.0",
+      "tailwindcss-animate": "^1.0.7", // 👈 FIX: Pacchetto corretto
+      "file-saver": "^2.0.5",
+      "jszip": "^3.10.1",
+      "@jsonpages/core": "latest"
+    },
+    devDependencies: {
+      "vite": "^6.0.0",
+      "@vitejs/plugin-react": "^4.2.1",
+      "typescript": "^5.7.3",
+      "@tailwindcss/vite": "^4.0.0",
+      "tailwindcss": "^4.0.0",
+      "@types/node": "^20.0.0",
+      "@types/react": "^19.0.0",
+      "@types/react-dom": "^19.0.0",
+      "@types/file-saver": "^2.0.7"
     }
   };
   await fs.writeJson(path.join(targetDir, 'package.json'), pkg, { spaces: 2 });

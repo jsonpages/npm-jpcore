@@ -1,11 +1,15 @@
 {
   "name": "@jsonpages/cli",
-  "version": "2.0.0",
+  "version": "3.0.14",
   "description": "JsonPages CLI - Sovereign Projection Engine",
   "type": "module",
   "bin": {
     "jsonpages": "./src/index.js"
   },
+  "files": [
+    "src",
+    "assets/src_tenant_alpha.sh"
+  ],
   "scripts": {
     "build": "tsc -p ."
   },
