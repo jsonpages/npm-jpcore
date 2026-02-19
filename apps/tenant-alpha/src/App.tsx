@@ -9,7 +9,7 @@ import { ComponentRegistry } from '@/lib/ComponentRegistry';
 import { SECTION_SCHEMAS } from '@/lib/schemas';
 import { addSectionConfig } from '@/lib/addSectionConfig';
 import { getHydratedData } from '@/lib/draftStorage';
-import type { JsonPagesConfig } from '@jsonpages/core';
+import type { JsonPagesConfig, ProjectState } from '@jsonpages/core';
 import type { PageConfig, SiteConfig, ThemeConfig, MenuConfig } from '@/types';
 
 import siteData from '@/data/config/site.json';
@@ -55,6 +55,19 @@ function App() {
     menuConfig,
     themeCss: { tenant: tenantCss },
     addSection: addSectionConfig,
+    persistence: {
+      async saveToFile(state: ProjectState, slug: string): Promise<void> {
+        const res = await fetch('/api/save-to-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectState: state, slug }),
+        });
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) {
+          throw new Error(body.error ?? `Save to file failed: ${res.status}`);
+        }
+      },
+    },
     assets: {
       assetsBaseUrl: '/assets',
       assetsManifest,

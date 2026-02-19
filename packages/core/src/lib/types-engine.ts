@@ -9,6 +9,11 @@ export interface PersistenceConfig {
   exportJSON: (state: ProjectState, slug: string) => Promise<void>;
   exportHTML: (state: ProjectState, slug: string, cleanHtml: string) => void;
   /**
+   * Optional. Save current state to repo files (e.g. POST to /api/save-to-file); server writes
+   * src/data/config/*.json and src/data/pages/<slug>.json. No git push.
+   */
+  saveToFile?: (state: ProjectState, slug: string) => Promise<void>;
+  /**
    * Optional. If provided, flushes in-memory /uploaded-assets/ blobs to disk and returns oldUrl -> newUrl map.
    * Omit when uploads write directly to disk (e.g. public/assets/images) and section data already stores final URLs.
    */

@@ -3,9 +3,15 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** Directory for uploaded images: written to disk immediately. Served at /assets/images/. */
 const ASSETS_IMAGES_DIR = path.resolve(__dirname, 'public', 'assets', 'images');
+/** JSON data paths (save-to-file API). Resolved from config file so writes land where Vite serves from. */
+const DATA_CONFIG_DIR = path.resolve(__dirname, 'src', 'data', 'config');
+const DATA_PAGES_DIR = path.resolve(__dirname, 'src', 'data', 'pages');
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif']);
 const IMAGE_MIMES = new Set([
   'image/jpeg',
@@ -73,6 +79,66 @@ export default defineConfig({
                 error: e instanceof Error ? e.message : 'List failed',
               });
             }
+            return;
+          }
+
+          const pathname = (req.url ?? '').split('?')[0];
+          if (req.method === 'POST' && pathname === '/api/save-to-file') {
+            const chunks: Buffer[] = [];
+            req.on('data', (chunk: Buffer) => chunks.push(chunk));
+            req.on('end', () => {
+              try {
+                const raw = Buffer.concat(chunks).toString('utf8');
+                if (!raw.trim()) {
+                  sendJson(res, 400, { error: 'Empty body' });
+                  return;
+                }
+                const body = JSON.parse(raw) as {
+                  projectState?: { site?: object; theme?: object; menu?: object; page?: object };
+                  slug?: string;
+                };
+                const { projectState, slug } = body;
+                if (!projectState || typeof slug !== 'string') {
+                  sendJson(res, 400, { error: 'Missing projectState or slug' });
+                  return;
+                }
+                if (!fs.existsSync(DATA_CONFIG_DIR)) fs.mkdirSync(DATA_CONFIG_DIR, { recursive: true });
+                if (!fs.existsSync(DATA_PAGES_DIR)) fs.mkdirSync(DATA_PAGES_DIR, { recursive: true });
+                const writtenPaths: string[] = [];
+                if (projectState.site != null) {
+                  const p = path.join(DATA_CONFIG_DIR, 'site.json');
+                  fs.writeFileSync(p, JSON.stringify(projectState.site, null, 2), 'utf8');
+                  writtenPaths.push(p);
+                }
+                if (projectState.theme != null) {
+                  const p = path.join(DATA_CONFIG_DIR, 'theme.json');
+                  fs.writeFileSync(p, JSON.stringify(projectState.theme, null, 2), 'utf8');
+                  writtenPaths.push(p);
+                }
+                if (projectState.menu != null) {
+                  const p = path.join(DATA_CONFIG_DIR, 'menu.json');
+                  fs.writeFileSync(p, JSON.stringify(projectState.menu, null, 2), 'utf8');
+                  writtenPaths.push(p);
+                }
+                if (projectState.page != null) {
+                  const safeSlug = slug.replace(/[^a-zA-Z0-9-_]/g, '_') || 'page';
+                  const p = path.join(DATA_PAGES_DIR, `${safeSlug}.json`);
+                  fs.writeFileSync(p, JSON.stringify(projectState.page, null, 2), 'utf8');
+                  writtenPaths.push(p);
+                }
+                for (const filePath of writtenPaths) {
+                  const fd = fs.openSync(filePath, 'r');
+                  fs.fsyncSync(fd);
+                  fs.closeSync(fd);
+                }
+                sendJson(res, 200, { ok: true });
+              } catch (e) {
+                sendJson(res, 500, {
+                  error: e instanceof Error ? e.message : 'Save to file failed',
+                });
+              }
+            });
+            req.on('error', () => sendJson(res, 500, { error: 'Request error' }));
             return;
           }
 

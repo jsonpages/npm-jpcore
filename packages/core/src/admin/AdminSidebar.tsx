@@ -4,7 +4,7 @@ import { useConfig } from '../lib/ConfigContext';
 import { cn } from '../lib/utils';
 import { FormFactory } from './FormFactory';
 import type { PageConfig, Section } from '../lib/kernel';
-import { Layers, ChevronUp, ChevronDown, GripVertical, Settings, Trash2, AlertCircle, X, Plus, FileCode, FileJson } from 'lucide-react';
+import { Layers, ChevronUp, ChevronDown, GripVertical, Settings, Trash2, AlertCircle, X, Plus, FileCode, Save } from 'lucide-react';
 
 interface SelectedSectionInfo {
   id: string;
@@ -49,8 +49,10 @@ interface AdminSidebarProps {
   hasChanges?: boolean;
   /** Trigger Bake HTML (same as ControlBar). */
   onExportHTML?: () => void;
-  /** Trigger Export JSON (same as ControlBar). */
-  onExportJSON?: () => void;
+  /** Save to file (writes JSON to repo via server). Replaces Export JSON in sidebar when provided. */
+  onSaveToFile?: () => void;
+  /** When true, show "Salvato" in the status bar (e.g. for 2s after save-to-file succeeds). */
+  saveSuccessFeedback?: boolean;
   /** Restore page from file (resets in-memory draft for current slug). Hidden by default; set showResetToFile to display. */
   onResetToFile?: () => void;
   /** When true, shows the "Ripristina da file" button (default false = hidden). */
@@ -75,7 +77,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   onAddSection,
   hasChanges = false,
   onExportHTML,
-  onExportJSON,
+  onSaveToFile,
+  saveSuccessFeedback = false,
   onResetToFile,
   showResetToFile = false,
 }) => {
@@ -517,7 +520,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </div>
 
       <div className="px-4 py-2.5 border-t border-zinc-800 bg-zinc-900/50 flex items-center gap-3 opacity-100 flex-wrap">
-        {(onExportHTML != null || onExportJSON != null || onResetToFile != null) && (
+        {(onExportHTML != null || onSaveToFile != null || onResetToFile != null) && (
           <>
             <div className={cn(
               'w-2 h-2 rounded-full transition-colors duration-300 shrink-0',
@@ -525,9 +528,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             )} />
             <span className={cn(
               'text-xs font-medium transition-colors duration-300 shrink-0',
-              hasChanges ? 'text-amber-500' : 'text-zinc-500'
+              saveSuccessFeedback ? 'text-emerald-400' : hasChanges ? 'text-amber-500' : 'text-zinc-500'
             )}>
-              {hasChanges ? 'Unsaved Changes' : 'All Changes Saved'}
+              {saveSuccessFeedback ? 'Salvato' : hasChanges ? 'Unsaved Changes' : 'All Changes Saved'}
             </span>
             {onExportHTML != null && (
               <button
@@ -539,10 +542,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 <span>HTML</span>
               </button>
             )}
-            {onExportJSON != null && (
+            {onSaveToFile != null && (
               <button
                 type="button"
-                onClick={onExportJSON}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onSaveToFile();
+                }}
                 disabled={!hasChanges}
                 className={cn(
                   'shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-all',
@@ -550,9 +557,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                     ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-900/20'
                     : 'bg-zinc-900 text-zinc-600 cursor-not-allowed'
                 )}
+                title="Salva le modifiche sui file JSON del repo"
               >
-                <FileJson size={12} className="shrink-0" />
-                <span>JSON</span>
+                <Save size={12} className="shrink-0" />
+                <span>Save</span>
               </button>
             )}
             {onResetToFile != null && showResetToFile && (

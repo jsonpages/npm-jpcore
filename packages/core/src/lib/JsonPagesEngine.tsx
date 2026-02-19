@@ -171,6 +171,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
     const { slug = 'home' } = useParams<{ slug: string }>();
     const [draft, setDraft] = useState<PageConfig | null>(null);
     const [hasChanges, setHasChanges] = useState(false);
+    const [saveSuccessFeedback, setSaveSuccessFeedback] = useState(false);
     const [globalDraft, setGlobalDraft] = useState<SiteConfig>(() => {
       try {
         const base = JSON.parse(JSON.stringify(siteConfig ?? {})) as SiteConfig;
@@ -385,8 +386,8 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       iframe?.contentWindow?.postMessage({ type: STUDIO_EVENTS.REQUEST_CLEAN_HTML }, '*');
     };
 
-    const handleExportJSON = () => {
-      if (!draft) return;
+    const handleSaveToFile = () => {
+      if (!draft || !config.persistence?.saveToFile) return;
       const headerData = globalDraft.header?.data as { links?: MenuItem[] } | undefined;
       const projectState: ProjectState = {
         page: draft,
@@ -394,8 +395,15 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
         menu: { main: headerData?.links ?? [] },
         theme: themeConfig,
       };
-      persistence.exportJSON(projectState, slug);
-      setHasChanges(false);
+      config.persistence.saveToFile(projectState, slug).then(() => {
+        setHasChanges(false);
+        setSaveSuccessFeedback(true);
+        window.setTimeout(() => window.location.reload(), 1000);
+      }).catch((err) => {
+        console.error('[JsonPages] saveToFile failed', err);
+        const msg = err instanceof Error ? err.message : String(err);
+        alert(`Save to file failed: ${msg}`);
+      });
     };
 
     const handleAddSection = (sectionType: string) => {
@@ -480,7 +488,8 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   }
                   hasChanges={hasChanges}
                   onExportHTML={triggerBake}
-                  onExportJSON={handleExportJSON}
+                  onSaveToFile={config.persistence?.saveToFile != null ? handleSaveToFile : undefined}
+                  saveSuccessFeedback={saveSuccessFeedback}
                   onResetToFile={handleResetToFile}
                 />
               </div>
