@@ -1,6 +1,6 @@
 /**
  * Thin Entry Point (Tenant).
- * Loads from localStorage draft when present (same key as Core autosave), else from file.
+ * Data from getHydratedData (file-backed or draft); assets from public/assets/images.
  */
 import { useState, useEffect } from 'react';
 import { JsonPagesEngine } from '@jsonpages/core';
@@ -12,13 +12,11 @@ import { getHydratedData } from '@/lib/draftStorage';
 import type { JsonPagesConfig } from '@jsonpages/core';
 import type { PageConfig, SiteConfig, ThemeConfig, MenuConfig } from '@/types';
 
-// Tenant data (file-backed fallback)
 import siteData from '@/data/config/site.json';
 import themeData from '@/data/config/theme.json';
 import menuData from '@/data/config/menu.json';
 import homeData from '@/data/pages/home.json';
 
-// Tenant CSS
 import tenantCss from './index.css?inline';
 
 const themeConfig = themeData as unknown as ThemeConfig;
@@ -30,6 +28,8 @@ const filePages: Record<string, PageConfig> = {
 };
 const fileSiteConfig = siteData as unknown as SiteConfig;
 
+const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024; // 5MB, must match server
+
 function getInitialData() {
   return getHydratedData(TENANT_ID, filePages, fileSiteConfig);
 }
@@ -37,17 +37,6 @@ function getInitialData() {
 function App() {
   const [{ pages, siteConfig }] = useState(getInitialData);
   const [assetsManifest, setAssetsManifest] = useState<LibraryImageEntry[]>([]);
-
-  // #region agent log
-  useEffect(() => {
-    fetch('http://127.0.0.1:7588/ingest/86d71502-47e1-433c-9b6d-5a1390d00813',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'34bba5'},body:JSON.stringify({sessionId:'34bba5',location:'App.tsx',message:'App mounted',data:{},timestamp:Date.now(),hypothesisId:'H1,H3'})}).catch(()=>{});
-    const onSubmit = (e: Event) => {
-      fetch('http://127.0.0.1:7588/ingest/86d71502-47e1-433c-9b6d-5a1390d00813',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'34bba5'},body:JSON.stringify({sessionId:'34bba5',location:'App.tsx:submit',message:'form submit captured',data:{targetTag:(e.target as HTMLElement)?.tagName},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
-    };
-    document.addEventListener('submit', onSubmit, true);
-    return () => document.removeEventListener('submit', onSubmit, true);
-  }, []);
-  // #endregion
 
   useEffect(() => {
     fetch('/api/list-assets')
@@ -66,51 +55,45 @@ function App() {
     menuConfig,
     themeCss: { tenant: tenantCss },
     addSection: addSectionConfig,
-    persistence: {
-      async flushUploadedAssets(urls: string[]): Promise<Record<string, string>> {
-        const res = await fetch('/api/flush-uploaded-assets', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ urls }),
-        });
-        if (!res.ok) throw new Error(`Flush failed: ${res.status}`);
-        const { urlMap } = (await res.json()) as { urlMap?: Record<string, string> };
-        return urlMap ?? {};
-      },
-    },
     assets: {
       assetsBaseUrl: '/assets',
       assetsManifest,
       async onAssetUpload(file: File): Promise<string> {
-      // #region agent log
-      fetch('http://127.0.0.1:7588/ingest/86d71502-47e1-433c-9b6d-5a1390d00813',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'34bba5'},body:JSON.stringify({sessionId:'34bba5',location:'App.tsx:onAssetUpload',message:'onAssetUpload entry',data:{fileName:file.name},timestamp:Date.now(),hypothesisId:'H2,H5'})}).catch(()=>{});
-      // #endregion
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : '';
-          resolve(base64 || '');
-        };
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
-      });
-      const res = await fetch('/api/upload-asset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: file.name, mimeType: file.type || undefined, data: base64 }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error((err as { error?: string }).error || `Upload failed: ${res.status}`);
-      }
-      const { url } = (await res.json()) as { url: string };
-      // In-memory upload only: do not update assetsManifest here to avoid reload.
-      // Preview in Upload tab uses this URL; Library tab will get new items on next list-assets load.
-      // Disk write can be added later on Save.
-      return url;
+        if (!file.type.startsWith('image/')) {
+          throw new Error('Invalid file type. Allowed: JPEG, PNG, WebP, GIF, SVG, AVIF.');
+        }
+        if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+          throw new Error(`File too large. Maximum size is ${MAX_UPLOAD_SIZE_BYTES / 1024 / 1024}MB.`);
+        }
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            const b64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : '';
+            resolve(b64 || '');
+          };
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+        const res = await fetch('/api/upload-asset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: file.name,
+            mimeType: file.type || undefined,
+            data: base64,
+          }),
+        });
+        const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+        if (!res.ok) {
+          throw new Error(body.error || `Upload failed: ${res.status}`);
+        }
+        if (typeof body.url !== 'string') {
+          throw new Error('Invalid server response: missing url');
+        }
+        return body.url;
+      },
     },
-  },
   };
 
   return <JsonPagesEngine config={config} />;

@@ -1,6 +1,17 @@
 import { z } from 'zod';
 
 /**
+ * Image picker field: object { url, alt? } with ui:image-picker for Form Factory.
+ * Use in section data and resolve with resolveAssetUrl(url, tenantId) in View.
+ */
+export const ImageSelectionSchema = z
+  .object({
+    url: z.string(),
+    alt: z.string().optional(),
+  }) 
+  .describe('ui:image-picker');
+
+/**
  * Base schemas shared by section capsules (CIP governance).
  * Capsules extend these for consistent anchorId, array items, and settings.
  */

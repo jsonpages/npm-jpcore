@@ -167,8 +167,6 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
     );
   };
 
-  const tenantId = config.tenantId ?? 'default';
-
   const StudioView: React.FC = () => {
     const { slug = 'home' } = useParams<{ slug: string }>();
     const [draft, setDraft] = useState<PageConfig | null>(null);
@@ -239,73 +237,21 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
         ]
       : [];
 
-    const storageKey = `jsonpages-draft-${tenantId}-${slug}`;
-    const autosaveStorageKey = `jsonpages-autosave-enabled-${tenantId}`;
-
-    const [autosaveEnabled, setAutosaveEnabled] = useState(() => {
-      if (typeof window === 'undefined') return true;
-      try {
-        const stored = localStorage.getItem(autosaveStorageKey);
-        return stored !== 'false';
-      } catch {
-        return true;
-      }
-    });
-
     useEffect(() => {
       const data = pageRegistry[slug];
-      try {
-        const raw = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
-        const stored = raw ? (JSON.parse(raw) as { page?: PageConfig; site?: SiteConfig }) : null;
-        if (stored?.page && stored?.site) {
-          setDraft(JSON.parse(JSON.stringify(stored.page)));
-          setGlobalDraft(JSON.parse(JSON.stringify(stored.site)));
-        } else if (data) {
-          setDraft(JSON.parse(JSON.stringify(data)));
-        }
-      } catch {
-        if (data) setDraft(JSON.parse(JSON.stringify(data)));
-      }
-      setSelected(null);
-      setExpandedItemPath(null);
-      setHasChanges(false);
-    }, [slug, pageRegistry, storageKey]);
-
-    useEffect(() => {
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(autosaveStorageKey, String(autosaveEnabled));
-        } catch {
-          // ignore
-        }
-      }
-    }, [autosaveEnabled, autosaveStorageKey]);
-
-    useEffect(() => {
-      if (!autosaveEnabled || !draft || typeof window === 'undefined') return;
-      const t = setTimeout(() => {
-        try {
-          localStorage.setItem(storageKey, JSON.stringify({ page: draft, site: globalDraft }));
-          setHasChanges(false);
-        } catch {
-          // quota or disabled
-        }
-      }, 3_000);
-      return () => clearTimeout(t);
-    }, [autosaveEnabled, draft, globalDraft, storageKey]);
-
-    const handleResetToFile = useCallback(() => {
-      const data = pageRegistry[slug];
-      try {
-        if (typeof window !== 'undefined') localStorage.removeItem(storageKey);
-      } catch {
-        // ignore
-      }
       if (data) setDraft(JSON.parse(JSON.stringify(data)));
       setSelected(null);
       setExpandedItemPath(null);
       setHasChanges(false);
-    }, [slug, pageRegistry, storageKey]);
+    }, [slug, pageRegistry]);
+
+    const handleResetToFile = useCallback(() => {
+      const data = pageRegistry[slug];
+      if (data) setDraft(JSON.parse(JSON.stringify(data)));
+      setSelected(null);
+      setExpandedItemPath(null);
+      setHasChanges(false);
+    }, [slug, pageRegistry]);
 
     const handleReorderSection = useCallback(
       (sectionId: string, newIndex: number, currentDraft: PageConfig) => {
@@ -533,8 +479,6 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                       : undefined
                   }
                   hasChanges={hasChanges}
-                  autosaveEnabled={autosaveEnabled}
-                  onAutosaveChange={setAutosaveEnabled}
                   onExportHTML={triggerBake}
                   onExportJSON={handleExportJSON}
                   onResetToFile={handleResetToFile}

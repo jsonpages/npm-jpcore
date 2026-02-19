@@ -1,13 +1,11 @@
 import { z } from 'zod';
-import { BaseSectionData } from '@/lib/base-schemas';
-
-const ImageSelectionSchema = z.object({
-  url: z.string(),
-  alt: z.string().optional(),
-}).describe('ui:image-picker');
+import { BaseSectionData, ImageSelectionSchema } from '@/lib/base-schemas';
 
 export const ImageBreakSchema = BaseSectionData.extend({
-  label: z.string().optional().describe('ui:text'),
   image: ImageSelectionSchema.default({ url: '', alt: '' }),
-  caption: z.string().optional().describe('ui:textarea'),
+  caption: z.string().optional().describe('ui:text'),
+});
+
+export const ImageBreakSettingsSchema = z.object({
+  height: z.enum(['sm', 'md', 'lg', 'full']).default('md').describe('ui:select'),
 });

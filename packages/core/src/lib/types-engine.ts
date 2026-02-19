@@ -8,7 +8,10 @@ import type { PageConfig, SiteConfig, ThemeConfig, MenuConfig, ProjectState } fr
 export interface PersistenceConfig {
   exportJSON: (state: ProjectState, slug: string) => Promise<void>;
   exportHTML: (state: ProjectState, slug: string, cleanHtml: string) => void;
-  /** If provided, flushes in-memory /uploaded-assets/ blobs to disk and returns oldUrl -> newUrl map. Used before persisting to localStorage so reload shows images from disk. */
+  /**
+   * Optional. If provided, flushes in-memory /uploaded-assets/ blobs to disk and returns oldUrl -> newUrl map.
+   * Omit when uploads write directly to disk (e.g. public/assets/images) and section data already stores final URLs.
+   */
   flushUploadedAssets?: (urls: string[]) => Promise<Record<string, string>>;
 }
 

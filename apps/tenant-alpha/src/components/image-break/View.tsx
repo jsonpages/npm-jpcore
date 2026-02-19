@@ -33,11 +33,6 @@ export const ImageBreak: React.FC<{ data: ImageBreakData; settings?: ImageBreakS
               </div>
             )}
           </div>
-          {data.label && (
-            <div className="jp-section-label sr-only" data-jp-field="label">
-              {data.label}
-            </div>
-          )}
         </>
       ) : (
         <div className="flex flex-col items-center justify-center py-24 text-[var(--local-text-muted)]">
