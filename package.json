@@ -1,6 +1,7 @@
 {
   "name": "jsonpages-monorepo",
   "private": true,
+  "type": "module",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -8,7 +9,8 @@
   "scripts": {
     "dev": "npm run dev -w tenant-alpha",
     "build": "npm run build -w tenant-alpha",
-    "build:all": "npm run build --workspaces --if-present"
+    "build:all": "npm run build --workspaces --if-present",
+    "release": "node scripts/release.js"
   },
   "devDependencies": {
     "@types/file-saver": "^2.0.7",
