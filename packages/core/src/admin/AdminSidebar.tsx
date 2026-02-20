@@ -111,9 +111,9 @@ function renderLayerRow(
       key={layer.id}
       draggable={canReorder}
       onDragStart={canReorder ? onDragStart : undefined}
-      onDragOver={canReorder ? onDragOver : undefined}
+      onDragOver={onDragOver}
       onDragLeave={onDragLeave}
-      onDrop={canReorder ? onDrop : undefined}
+      onDrop={onDrop}
       onDragEnd={onDragEnd}
       className={cn(
         'group flex items-center gap-2 pl-1 pr-2 py-2.5 rounded-lg text-left transition-all duration-100 cursor-pointer border-l-2',
@@ -323,11 +323,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     setDraggedId(null);
     setDragOverId(null);
     if (!draggedId || draggedId === targetId || !onReorderSection) return;
-    const list = allLayers.filter((l) => l.scope === 'local');
-    const draggedIndex = list.findIndex((l) => l.id === draggedId);
-    const targetIndex = list.findIndex((l) => l.id === targetId);
-    if (draggedIndex === -1 || targetIndex === -1) return;
-    onReorderSection(draggedId, targetIndex);
+    const draggedLayer = allLayers.find((l) => l.id === draggedId);
+    if (!draggedLayer || draggedLayer.scope !== 'local') return;
+    const from = allLayers.findIndex((l) => l.id === draggedId);
+    const to = allLayers.findIndex((l) => l.id === targetId);
+    if (from === -1 || to === -1) return;
+    onReorderSection(draggedId, to);
   };
 
   const section = selectedSection
@@ -355,16 +356,25 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     if (from === -1 || to === -1) return allLayers;
     const next = [...allLayers];
     const [item] = next.splice(from, 1);
-    next.splice(to, 0, item);
+    const insertAt = from < to ? to - 1 : to;
+    next.splice(insertAt, 0, item);
     return next;
   }, [allLayers, draggedId, dragOverId]);
 
-  /** Group layers for display: header, content, footer. */
-  const { header: headerLayers, content: contentLayers, footer: footerLayers } = useMemo(() => {
-    const header = displayOrder.filter((l) => l.type.toUpperCase() === 'HEADER');
-    const footer = displayOrder.filter((l) => l.type.toUpperCase() === 'FOOTER');
-    const content = displayOrder.filter((l) => l.type.toUpperCase() !== 'HEADER' && l.type.toUpperCase() !== 'FOOTER');
-    return { header, content, footer };
+  /** Render list in displayOrder with separators only when type changes (header→content, content→footer). Single list = drag preview works across all positions. */
+  const layerRowsWithSeparators = useMemo(() => {
+    const rows: Array<{ layer: LayerItem; showSeparatorAbove: boolean }> = [];
+    let prevType: string | null = null;
+    for (const layer of displayOrder) {
+      const type = layer.type.toUpperCase();
+      const showSeparatorAbove =
+        prevType !== null &&
+        ((prevType === 'HEADER' && type !== 'HEADER') ||
+          (prevType !== 'HEADER' && prevType !== 'FOOTER' && type === 'FOOTER'));
+      rows.push({ layer, showSeparatorAbove });
+      prevType = type;
+    }
+    return rows;
   }, [displayOrder]);
 
   return (
@@ -400,7 +410,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               <button
                 type="button"
                 className={cn(
-                  'flex items-center gap-2 w-full mx-3 mt-2 mb-1 px-3 py-2 rounded-lg border text-left transition-all duration-150 cursor-pointer',
+                  'flex items-center gap-2 w-full mx-3 mt-2 mb-1 pl-3 pr-4 py-2 rounded-lg border text-left transition-all duration-150 cursor-pointer',
                   'bg-transparent border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 hover:border-zinc-700',
                   'data-[state=open]:bg-zinc-950 data-[state=open]:border-zinc-800 data-[state=open]:text-zinc-100'
                 )}
@@ -481,78 +491,27 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         {showLayersList && (
           <div className="py-1">
             <div className="px-2 space-y-0.5">
-              {headerLayers.length > 0 && (
-                <div className="space-y-0.5">
-                  {headerLayers.map((layer) =>
-                    renderLayerRow(layer, {
-                      isSelected: selectedSection?.id === layer.id,
-                      isActive: activeSectionId === layer.id,
-                      isDragging: draggedId === layer.id,
-                      canReorder: layer.scope === 'local' && !!onReorderSection,
-                      canDelete: layer.scope === 'local' && !!onDeleteSection,
-                      deleteConfirm: deleteConfirm === layer.id,
-                      onSelect: () => handleLayerClick(layer.id),
-                      onDragStart: (e) => handleDragStart(e, layer.id),
-                      onDragOver: (e) => handleDragOver(e, layer.id),
-                      onDragLeave: () => setDragOverId(null),
-                      onDrop: (e) => handleDrop(e, layer.id),
-                      onDragEnd: () => { setDraggedId(null); setDragOverId(null); },
-                      onDelete: () => handleDelete(layer.id),
-                      onOpenSettings: (e) => handleOpenSectionSettings(layer.id, e),
-                    })
-                  )}
-                </div>
-              )}
-              {contentLayers.length > 0 && (
-                <>
-                  {headerLayers.length > 0 && <div className="mx-3 border-t border-zinc-800/60 my-1" />}
-                  <div className="space-y-0.5">
-                    {contentLayers.map((layer) =>
-                      renderLayerRow(layer, {
-                        isSelected: selectedSection?.id === layer.id,
-                        isActive: activeSectionId === layer.id,
-                        isDragging: draggedId === layer.id,
-                        canReorder: layer.scope === 'local' && !!onReorderSection,
-                        canDelete: layer.scope === 'local' && !!onDeleteSection,
-                        deleteConfirm: deleteConfirm === layer.id,
-                        onSelect: () => handleLayerClick(layer.id),
-                        onDragStart: (e) => handleDragStart(e, layer.id),
-                        onDragOver: (e) => handleDragOver(e, layer.id),
-                        onDragLeave: () => setDragOverId(null),
-                        onDrop: (e) => handleDrop(e, layer.id),
-                        onDragEnd: () => { setDraggedId(null); setDragOverId(null); },
-                        onDelete: () => handleDelete(layer.id),
-                        onOpenSettings: (e) => handleOpenSectionSettings(layer.id, e),
-                      })
-                    )}
-                  </div>
-                </>
-              )}
-              {footerLayers.length > 0 && (
-                <>
-                  <div className="mx-3 border-t border-zinc-800/60 my-1" />
-                  <div className="space-y-0.5">
-                    {footerLayers.map((layer) =>
-                      renderLayerRow(layer, {
-                        isSelected: selectedSection?.id === layer.id,
-                        isActive: activeSectionId === layer.id,
-                        isDragging: draggedId === layer.id,
-                        canReorder: layer.scope === 'local' && !!onReorderSection,
-                        canDelete: layer.scope === 'local' && !!onDeleteSection,
-                        deleteConfirm: deleteConfirm === layer.id,
-                        onSelect: () => handleLayerClick(layer.id),
-                        onDragStart: (e) => handleDragStart(e, layer.id),
-                        onDragOver: (e) => handleDragOver(e, layer.id),
-                        onDragLeave: () => setDragOverId(null),
-                        onDrop: (e) => handleDrop(e, layer.id),
-                        onDragEnd: () => { setDraggedId(null); setDragOverId(null); },
-                        onDelete: () => handleDelete(layer.id),
-                        onOpenSettings: (e) => handleOpenSectionSettings(layer.id, e),
-                      })
-                    )}
-                  </div>
-                </>
-              )}
+              {layerRowsWithSeparators.map(({ layer, showSeparatorAbove }) => (
+                <React.Fragment key={layer.id}>
+                  {showSeparatorAbove && <div className="mx-3 border-t border-zinc-800/60 my-1" />}
+                  {renderLayerRow(layer, {
+                    isSelected: selectedSection?.id === layer.id,
+                    isActive: activeSectionId === layer.id,
+                    isDragging: draggedId === layer.id,
+                    canReorder: layer.scope === 'local' && !!onReorderSection,
+                    canDelete: layer.scope === 'local' && !!onDeleteSection,
+                    deleteConfirm: deleteConfirm === layer.id,
+                    onSelect: () => handleLayerClick(layer.id),
+                    onDragStart: (e) => handleDragStart(e, layer.id),
+                    onDragOver: (e) => handleDragOver(e, layer.id),
+                    onDragLeave: () => setDragOverId(null),
+                    onDrop: (e) => handleDrop(e, layer.id),
+                    onDragEnd: () => { setDraggedId(null); setDragOverId(null); },
+                    onDelete: () => handleDelete(layer.id),
+                    onOpenSettings: (e) => handleOpenSectionSettings(layer.id, e),
+                  })}
+                </React.Fragment>
+              ))}
             </div>
             {deleteConfirm && (
               <div className="flex items-center gap-2 py-2 px-3 mt-1 mx-2 rounded-md bg-amber-500/10 border border-amber-500/30">
