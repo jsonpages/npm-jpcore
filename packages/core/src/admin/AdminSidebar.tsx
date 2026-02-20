@@ -1,13 +1,33 @@
 import React, { useState, useEffect, useRef, useDeferredValue, useMemo } from 'react';
 import { z } from 'zod';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useConfig } from '../lib/ConfigContext';
 import { cn } from '../lib/utils';
 import { FormFactory } from './FormFactory';
 import type { PageConfig, Section } from '../lib/kernel';
-import { Layers, ChevronUp, ChevronDown, GripVertical, Settings, Trash2, AlertCircle, X, Plus, FileCode, Save, FileText } from 'lucide-react';
+import { Layers, ChevronUp, GripVertical, Settings, Trash2, AlertCircle, X, Plus, FileCode, Save } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../components/ui/tooltip';
-import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
+import { PageSelector } from './PageSelector';
 import { ScrollArea } from '../components/ui/scroll-area';
 
 interface SelectedSectionInfo {
@@ -71,60 +91,55 @@ interface AdminSidebarProps {
 
 const SETTINGS_KEYS = new Set(['anchorId', 'paddingTop', 'paddingBottom', 'theme', 'container']);
 
-function renderLayerRow(
-  layer: LayerItem,
-  opts: {
-    isSelected: boolean;
-    isActive: boolean;
-    isDragging: boolean;
-    canReorder: boolean;
-    canDelete: boolean;
-    deleteConfirm: boolean;
-    onSelect: () => void;
-    onDragStart: (e: React.DragEvent) => void;
-    onDragOver: (e: React.DragEvent) => void;
-    onDragLeave: () => void;
-    onDrop: (e: React.DragEvent) => void;
-    onDragEnd: () => void;
-    onDelete: () => void;
-    onOpenSettings: (e: React.MouseEvent) => void;
-  }
-) {
-  const {
-    isSelected,
-    isActive,
-    isDragging,
-    canReorder,
-    canDelete,
-    deleteConfirm,
-    onSelect,
-    onDragStart,
-    onDragOver,
-    onDragLeave,
-    onDrop,
-    onDragEnd,
-    onDelete,
-    onOpenSettings,
-  } = opts;
+/** Activation: 8px movement to start drag (avoids accidental drag on click). Touch: 200ms delay so scroll works. */
+const pointerSensor = { activationConstraint: { distance: 8 } };
+const touchSensor = { activationConstraint: { delay: 200, tolerance: 5 } };
+
+interface LayerRowOpts {
+  isSelected: boolean;
+  isActive: boolean;
+  isDragging: boolean;
+  canDelete: boolean;
+  deleteConfirm: boolean;
+  onSelect: () => void;
+  onDelete: () => void;
+  onOpenSettings: (e: React.MouseEvent) => void;
+}
+
+/** Shared row UI (used by both sortable and overlay). */
+function LayerRowContent({
+  layer,
+  opts,
+  dragHandleProps,
+}: {
+  layer: LayerItem;
+  opts: LayerRowOpts;
+  dragHandleProps?: { 'aria-pressed'?: boolean; 'aria-roledescription'?: string } & Record<string, unknown>;
+}) {
+  const { isSelected, isActive, isDragging, canDelete, onSelect, onOpenSettings, onDelete } = opts;
+  const canReorder = !!dragHandleProps;
   return (
     <div
-      key={layer.id}
-      draggable={canReorder}
-      onDragStart={canReorder ? onDragStart : undefined}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-      onDragEnd={onDragEnd}
       className={cn(
-        'group flex items-center gap-2 pl-1 pr-2 py-2.5 rounded-lg text-left transition-all duration-100 cursor-pointer border-l-2',
+        'group flex items-center gap-2 pl-1 pr-2 py-2.5 rounded-lg text-left transition-all duration-200 cursor-pointer border-l-2',
         isSelected ? 'bg-primary/[0.08] border-primary' : isActive ? 'bg-zinc-800/30 border-emerald-500/60' : 'border-transparent hover:bg-zinc-800/40',
-        isDragging && 'opacity-40',
+        isDragging && 'opacity-50 shadow-lg',
         canReorder ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
       )}
     >
-      <span className="shrink-0 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-grab">
-        <GripVertical size={12} className="text-zinc-600" />
-      </span>
+      {canReorder ? (
+        <span
+          className="shrink-0 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-grab touch-none"
+          aria-label="Trascina per riordinare"
+          {...dragHandleProps}
+        >
+          <GripVertical size={12} className="text-zinc-600" />
+        </span>
+      ) : (
+        <span className="shrink-0 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
+          <GripVertical size={12} className="text-zinc-600/50" />
+        </span>
+      )}
       <button type="button" onClick={onSelect} className="flex-1 min-w-0 text-left">
         <div className="flex items-center gap-1.5">
           <span className={cn('text-xs font-bold uppercase tracking-[0.06em] truncate', isSelected ? 'text-primary' : 'text-zinc-500')}>
@@ -160,6 +175,33 @@ function renderLayerRow(
   );
 }
 
+/** Sortable row: drag handle only, smooth transform/transition from @dnd-kit. */
+function SortableLayerRow({
+  layer,
+  opts,
+}: {
+  layer: LayerItem;
+  opts: LayerRowOpts & { canReorder: boolean };
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: layer.id,
+    disabled: !opts.canReorder,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className={cn(isDragging && 'z-10')}>
+      <LayerRowContent
+        layer={layer}
+        opts={{ ...opts, isDragging }}
+        dragHandleProps={opts.canReorder ? { ...attributes, ...listeners, 'aria-roledescription': 'elemento trascinabile' } : undefined}
+      />
+    </div>
+  );
+}
+
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   selectedSection,
   pageData,
@@ -187,13 +229,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   const { schemas } = useConfig();
   const [layersOpen, setLayersOpen] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [sidebarExpandedItem, setSidebarExpandedItem] = useState<{ fieldKey: string; itemId?: string } | null>(null);
   /** When set, the section-settings modal is open for this section id (avoids Inspector tab/selection state freeze). */
   const [settingsModalSectionId, setSettingsModalSectionId] = useState<string | null>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, pointerSensor),
+    useSensor(TouchSensor, touchSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   /** Defer heavy form render so first-time open + edit doesn't freeze the UI (enterprise-grade UX). */
   const deferredSection = useDeferredValue(selectedSection);
@@ -307,28 +354,25 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, sectionId: string) => {
-    setDraggedId(sectionId);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('application/json', JSON.stringify({ sectionId }));
+  const sortableIds = useMemo(
+    () => allLayers.filter((l) => l.scope === 'local').map((l) => l.id),
+    [allLayers]
+  );
+  const canReorder = !!onReorderSection && sortableIds.length > 0;
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
   };
 
-  const handleDragOver = (e: React.DragEvent, sectionId: string) => {
-    e.preventDefault();
-    if (draggedId !== sectionId) setDragOverId(sectionId);
-  };
-
-  const handleDrop = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    setDraggedId(null);
-    setDragOverId(null);
-    if (!draggedId || draggedId === targetId || !onReorderSection) return;
-    const draggedLayer = allLayers.find((l) => l.id === draggedId);
-    if (!draggedLayer || draggedLayer.scope !== 'local') return;
-    const from = allLayers.findIndex((l) => l.id === draggedId);
-    const to = allLayers.findIndex((l) => l.id === targetId);
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id || !onReorderSection) return;
+    const from = allLayers.findIndex((l) => l.id === active.id);
+    const to = allLayers.findIndex((l) => l.id === over.id);
     if (from === -1 || to === -1) return;
-    onReorderSection(draggedId, to);
+    const newIndex = from < to ? to : to - 1;
+    onReorderSection(active.id as string, newIndex);
   };
 
   const section = selectedSection
@@ -348,24 +392,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   /** Page switcher: current page label (slug if no labels map). */
   const currentPageLabel = currentSlug ? currentSlug.charAt(0).toUpperCase() + currentSlug.slice(1) : 'Select page';
 
-  /** Live reorder: during drag, show list in the order it would be after drop. */
-  const displayOrder = useMemo(() => {
-    if (!draggedId || !dragOverId || draggedId === dragOverId) return allLayers;
-    const from = allLayers.findIndex((l) => l.id === draggedId);
-    const to = allLayers.findIndex((l) => l.id === dragOverId);
-    if (from === -1 || to === -1) return allLayers;
-    const next = [...allLayers];
-    const [item] = next.splice(from, 1);
-    const insertAt = from < to ? to - 1 : to;
-    next.splice(insertAt, 0, item);
-    return next;
-  }, [allLayers, draggedId, dragOverId]);
-
-  /** Render list in displayOrder with separators only when type changes (header→content, content→footer). Single list = drag preview works across all positions. */
+  /** Rows with separators (header→content, content→footer). Order is controlled by parent via allLayers. */
   const layerRowsWithSeparators = useMemo(() => {
     const rows: Array<{ layer: LayerItem; showSeparatorAbove: boolean }> = [];
     let prevType: string | null = null;
-    for (const layer of displayOrder) {
+    for (const layer of allLayers) {
       const type = layer.type.toUpperCase();
       const showSeparatorAbove =
         prevType !== null &&
@@ -375,7 +406,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       prevType = type;
     }
     return rows;
-  }, [displayOrder]);
+  }, [allLayers]);
 
   return (
     <TooltipProvider>
@@ -403,56 +434,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </Button>
         </div>
 
-        {/* Page Switcher: rounded, transparent when closed; open dropdown = sidebar bg */}
+        {/* Page Switcher: encapsulated in PageSelector (styling, a11y, single source of truth) */}
         {pageSlugs.length > 0 && onPageChange && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  'flex items-center gap-2 w-full mx-3 mt-2 mb-1 pl-3 pr-4 py-2 rounded-lg border text-left transition-all duration-150 cursor-pointer',
-                  'bg-transparent border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 hover:border-zinc-700',
-                  'data-[state=open]:bg-zinc-950 data-[state=open]:border-zinc-800 data-[state=open]:text-zinc-100'
-                )}
-              >
-                <FileText size={14} className="shrink-0 text-zinc-500" aria-hidden />
-                <span className="text-xs font-medium flex-1 truncate">{currentPageLabel}</span>
-                <ChevronDown size={13} className="shrink-0 text-zinc-500" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" sideOffset={4} className="min-w-[var(--radix-popover-trigger-width)] bg-zinc-950 border-zinc-800">
-              {pageSlugs.map((slug) => {
-                const isActive = slug === currentSlug;
-                const label = slug.charAt(0).toUpperCase() + slug.slice(1);
-                return (
-                  <button
-                    key={slug}
-                    type="button"
-                    onClick={() => {
-                      onPageChange(slug);
-                    }}
-                    className={cn(
-                      'flex items-center justify-between w-full px-2.5 py-2 rounded-md text-xs transition-colors cursor-pointer',
-                      isActive ? 'bg-primary/10 text-primary font-semibold' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
-                    )}
-                  >
-                    <span>{label}</span>
-                    <span className="text-[10px] text-zinc-600 tabular-nums">{allLayers.length}s</span>
-                  </button>
-                );
-              })}
-              <div className="border-t border-zinc-800 mt-1 pt-1">
-                <button
-                  type="button"
-                  className="flex items-center gap-1.5 w-full px-2.5 py-2 rounded-md text-[11px] text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
-                  aria-label="New page (not implemented)"
-                >
-                  <Plus size={12} />
-                  <span>New page</span>
-                </button>
-              </div>
-            </PopoverContent>
-          </Popover>
+          <PageSelector
+            pageSlugs={pageSlugs}
+            currentSlug={currentSlug}
+            onPageChange={onPageChange}
+            sectionCount={allLayers.length}
+            currentPageLabel={currentPageLabel}
+          />
         )}
 
         {/* Page Layers header */}
@@ -490,29 +480,87 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <div ref={contentScrollRef} className="flex flex-col min-h-0">
         {showLayersList && (
           <div className="py-1">
-            <div className="px-2 space-y-0.5">
-              {layerRowsWithSeparators.map(({ layer, showSeparatorAbove }) => (
-                <React.Fragment key={layer.id}>
-                  {showSeparatorAbove && <div className="mx-3 border-t border-zinc-800/60 my-1" />}
-                  {renderLayerRow(layer, {
-                    isSelected: selectedSection?.id === layer.id,
-                    isActive: activeSectionId === layer.id,
-                    isDragging: draggedId === layer.id,
-                    canReorder: layer.scope === 'local' && !!onReorderSection,
-                    canDelete: layer.scope === 'local' && !!onDeleteSection,
-                    deleteConfirm: deleteConfirm === layer.id,
-                    onSelect: () => handleLayerClick(layer.id),
-                    onDragStart: (e) => handleDragStart(e, layer.id),
-                    onDragOver: (e) => handleDragOver(e, layer.id),
-                    onDragLeave: () => setDragOverId(null),
-                    onDrop: (e) => handleDrop(e, layer.id),
-                    onDragEnd: () => { setDraggedId(null); setDragOverId(null); },
-                    onDelete: () => handleDelete(layer.id),
-                    onOpenSettings: (e) => handleOpenSectionSettings(layer.id, e),
-                  })}
-                </React.Fragment>
-              ))}
-            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis]}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              accessibility={{
+                announcements: {
+                  onDragStart: () => `Sezione presa in carico. Usa i tasti freccia per spostare, Spazio per rilasciare.`,
+                  onDragOver: ({ over }) => over ? `Posizione ${sortableIds.indexOf(String(over.id)) + 1} di ${sortableIds.length}.` : undefined,
+                  onDragEnd: ({ over }) => over ? `Sezione rilasciata in nuova posizione.` : `Riposizionamento annullato.`,
+                  onDragCancel: () => `Riposizionamento annullato.`,
+                },
+              }}
+            >
+              <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                <div className="px-2 space-y-0.5">
+                  {layerRowsWithSeparators.map(({ layer, showSeparatorAbove }) => (
+                    <React.Fragment key={layer.id}>
+                      {showSeparatorAbove && <div className="mx-3 border-t border-zinc-800/60 my-1" />}
+                      {layer.scope === 'local' && canReorder ? (
+                        <SortableLayerRow
+                          layer={layer}
+                          opts={{
+                            isSelected: selectedSection?.id === layer.id,
+                            isActive: activeSectionId === layer.id,
+                            isDragging: false,
+                            canReorder: true,
+                            canDelete: !!onDeleteSection,
+                            deleteConfirm: deleteConfirm === layer.id,
+                            onSelect: () => handleLayerClick(layer.id),
+                            onDelete: () => handleDelete(layer.id),
+                            onOpenSettings: (e) => handleOpenSectionSettings(layer.id, e),
+                          }}
+                        />
+                      ) : (
+                        <div>
+                          <LayerRowContent
+                            layer={layer}
+                            opts={{
+                              isSelected: selectedSection?.id === layer.id,
+                              isActive: activeSectionId === layer.id,
+                              isDragging: false,
+                              canDelete: layer.scope === 'local' && !!onDeleteSection,
+                              deleteConfirm: deleteConfirm === layer.id,
+                              onSelect: () => handleLayerClick(layer.id),
+                              onDelete: () => handleDelete(layer.id),
+                              onOpenSettings: (e) => handleOpenSectionSettings(layer.id, e),
+                            }}
+                          />
+                        </div>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </SortableContext>
+              <DragOverlay dropAnimation={{ duration: 200, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
+                {activeDragId ? (() => {
+                  const layer = allLayers.find((l) => l.id === activeDragId);
+                  if (!layer) return null;
+                  return (
+                    <div className="px-2 w-full max-w-[var(--inspector-width,280px)]">
+                      <LayerRowContent
+                        layer={layer}
+                        opts={{
+                          isSelected: false,
+                          isActive: false,
+                          isDragging: true,
+                          canDelete: false,
+                          deleteConfirm: false,
+                          onSelect: () => {},
+                          onDelete: () => {},
+                          onOpenSettings: () => {},
+                        }}
+                        dragHandleProps={{ 'aria-hidden': true }}
+                      />
+                    </div>
+                  );
+                })() : null}
+              </DragOverlay>
+            </DndContext>
             {deleteConfirm && (
               <div className="flex items-center gap-2 py-2 px-3 mt-1 mx-2 rounded-md bg-amber-500/10 border border-amber-500/30">
                 <AlertCircle size={12} className="text-amber-500 shrink-0" />
