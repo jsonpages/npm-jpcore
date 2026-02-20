@@ -1,21 +1,10 @@
 {
-  "identity": {
-    "title": "JsonPages",
-    "logoUrl": "/logo.svg"
-  },
+  "identity": { "title": "JsonPages", "logoUrl": "/logo.svg" },
   "pages": [
-    {
-      "slug": "home",
-      "label": "Home"
-    },
-    {
-      "slug": "architecture",
-      "label": "Architecture"
-    },
-    {
-      "slug": "usage",
-      "label": "Usage"
-    }
+    { "slug": "home",         "label": "Home" },
+    { "slug": "docs",         "label": "Docs" },
+    { "slug": "architecture", "label": "Architecture" },
+    { "slug": "usage",        "label": "Usage" }
   ],
   "header": {
     "id": "global-header",
@@ -25,27 +14,14 @@
       "logoHighlight": "Pages",
       "logoIconText": "{ }",
       "links": [
-        {
-          "label": "Architecture",
-          "href": "#architecture"
-        },
-        {
-          "label": "Products",
-          "href": "#products"
-        },
-        {
-          "label": "PA Ready",
-          "href": "#pa-ready"
-        },
-        {
-          "label": "Philosophy",
-          "href": "#philosophy"
-        }
+        { "label": "Architecture", "href": "#architecture" },
+        { "label": "CMS",          "href": "#cms" },
+        { "label": "Versioning",   "href": "#git" },
+        { "label": "Developer",    "href": "#devex" },
+        { "label": "Docs",         "href": "/docs" }
       ]
     },
-    "settings": {
-      "sticky": true
-    }
+    "settings": { "sticky": true }
   },
   "footer": {
     "id": "global-footer",
@@ -53,28 +29,14 @@
     "data": {
       "brandText": "Json",
       "brandHighlight": "Pages",
-      "copyright": "© 2026 JsonPages Ecosystem. Architected by Guido Filippo Serio.",
+      "copyright": "© 2026 JsonPages. Source-available · Free to use.",
       "links": [
-        {
-          "label": "Documentation",
-          "href": "#"
-        },
-        {
-          "label": "API Reference",
-          "href": "#"
-        },
-        {
-          "label": "Changelog",
-          "href": "#"
-        },
-        {
-          "label": "Privacy",
-          "href": "#"
-        }
+        { "label": "Docs",      "href": "/docs" },
+        { "label": "NPM",       "href": "#" },
+        { "label": "GitHub",    "href": "#" },
+        { "label": "Changelog", "href": "#" }
       ]
     },
-    "settings": {
-      "showLogo": true
-    }
+    "settings": { "showLogo": true }
   }
 }

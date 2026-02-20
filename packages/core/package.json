@@ -1,6 +1,6 @@
 {
   "name": "@jsonpages/core",
-  "version": "1.0.14",
+  "version": "1.0.17",
   "private": false,
   "type": "module",
   "main": "./dist/jsonpages-core.umd.cjs",

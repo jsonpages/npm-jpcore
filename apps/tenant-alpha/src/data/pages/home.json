@@ -2,402 +2,144 @@
   "id": "home-page",
   "slug": "home",
   "meta": {
-    "title": "JsonPages — Global Authoring. Global Governance.",
-    "description": "A high-fidelity Site Factory that solves the scalability bottleneck of traditional CMS systems."
+    "title": "JsonPages — The Sovereign Shell. Zero Runtime Overhead.",
+    "description": "The @jsonpages/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface, leaving your Tenant code pure and framework-agnostic."
   },
   "sections": [
     {
       "id": "hero-main",
       "type": "hero",
       "data": {
-        "badge": "V1.3",
-        "title": "Local Authoring.",
-        "titleHighlight": "Global Governance.",
-        "description": "JsonPages is a high-fidelity Site Factory that solves the scalability bottleneck of traditional CMS systems. Distribute, govern, and render UI components across hundreds of independent sites — without technical drift.",
+        "badge": "Architecture v1.2",
+        "title": "The Sovereign Shell.",
+        "titleHighlight": "Zero Runtime Overhead.",
+        "description": "The @jsonpages/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface, leaving your Tenant code pure and framework-agnostic.",
         "ctas": [
-          {
-            "label": "Explore Products →",
-            "href": "#products",
-            "variant": "primary"
-          },
-          {
-            "label": "Read the Spec",
-            "href": "#architecture",
-            "variant": "secondary"
-          }
+          { "id": "cta-1", "label": "Read the Docs",  "href": "#devex",    "variant": "primary" },
+          { "id": "cta-2", "label": "View on NPM",    "href": "#",         "variant": "secondary" }
         ],
         "metrics": [
-          {
-            "val": "100+",
-            "label": "Pages per tenant"
-          },
-          {
-            "val": "0ms",
-            "label": "Runtime overhead"
-          },
-          {
-            "val": "∞",
-            "label": "Scalable blocks"
-          }
+          { "id": "m-1", "val": "3KB",  "label": "Core Overhead" },
+          { "id": "m-2", "val": "100%", "label": "Type Safety" },
+          { "id": "m-3", "val": "MIT",  "label": "License" }
         ]
       },
       "settings": {}
     },
     {
-      "id": "problem-statement",
-      "type": "problem-statement",
-      "data": {
-        "siloGroups": [
-          {
-            "blocks": [
-              {
-                "label": "Agency A Stack",
-                "variant": "red"
-              },
-              {
-                "label": "Custom CMS",
-                "variant": "red"
-              },
-              {
-                "label": "PHP Backend",
-                "variant": "red"
-              }
-            ],
-            "label": "Silo #1"
-          },
-          {
-            "blocks": [
-              {
-                "label": "Agency B Tools",
-                "variant": "amber"
-              },
-              {
-                "label": "WordPress",
-                "variant": "amber"
-              },
-              {
-                "label": "LAMP Stack",
-                "variant": "amber"
-              }
-            ],
-            "label": "Silo #2"
-          },
-          {
-            "blocks": [
-              {
-                "label": "Agency C Kit",
-                "variant": "green"
-              },
-              {
-                "label": "React App",
-                "variant": "green"
-              },
-              {
-                "label": "Node.js",
-                "variant": "green"
-              }
-            ],
-            "label": "Silo #3"
-          }
-        ],
-        "title": "Traditional CMS systems create closed silos.",
-        "paragraphs": [
-          {
-            "text": "When global brands delegate web projects to multiple agencies, each agency picks its own stack, its own conventions, its own deployment pipeline. The result is a portfolio of ungovernable sites with inconsistent quality and unpredictable maintenance costs.",
-            "isBold": false
-          },
-          {
-            "text": "JsonPages eliminates this by providing a centralized protocol to distribute, govern, and render UI components — ensuring every site, regardless of who builds it, conforms to a single typed ontology.",
-            "isBold": true
-          }
-        ],
-        "anchorId": "aa"
-      },
-      "settings": {}
-    },
-    {
-      "id": "architecture-pillars",
-      "type": "pillars-grid",
-      "data": {
-        "anchorId": "architecture",
-        "label": "Core Architecture",
-        "title": "Three Pillars of Composability",
-        "description": "A contract-first architecture designed to scale without core refactoring.",
-        "pillars": [
-          {
-            "icon": "box",
-            "iconVariant": "split",
-            "title": "The Machine-Readable Blueprint. 📐",
-            "description": "We enforce a strict file-system ontology that physically separates Global Governance from Local Content. By utilizing \"Dumb Components\" (CIP), we create a deterministic environment where the UI is a predictable function of data. This protocol allows AI agents to understand your site structure instantly, eliminating the \"guessing game\" of traditional web development.",
-            "tag": "The Foundation",
-            "tagVariant": "core"
-          },
-          {
-            "icon": "sparkles",
-            "iconVariant": "registry",
-            "title": "The Semantic Brain. 🧠",
-            "description": "We reject hardcoded Union Types. The Kernel defines an open registry where independent modules inject their DNA via Zod schemas. This provides the AI with a precise, type-safe vocabulary to build brand-compliant interfaces. Because the registry is the Single Source of Truth, the AI knows exactly which components exist and how to configure them without ever touching the core code.",
-            "tag": "The Vocabulary",
-            "tagVariant": "pattern"
-          },
-          {
-            "icon": "zap",
-            "iconVariant": "federation",
-            "title": "The 5-Minute Tenant. 🤖",
-            "description": "AI doesn't guess; it follows the Protocol. Because our ecosystem is governed by 5 deterministic standards, agents like Claude can project a complex, multi-page, brand-compliant tenant in under 5 minutes. The result is 100% Type-Safe JSON that perfectly matches your schemas, delivering a production-ready site with zero technical drift and an instant polymorphic CMS.",
-            "tag": "The Multiplier",
-            "tagVariant": "enterprise"
-          }
-        ]
-      },
-      "settings": {}
-    },
-    {
-      "id": "layered-architecture",
+      "id": "soc-section",
       "type": "arch-layers",
       "data": {
-        "anchorId": "layers",
-        "label": "Engineering Layers",
-        "title": "Strict Boundaries. Clean Contracts.",
-        "description": "Three architectural layers maintain the separation between engine and implementation.",
+        "anchorId": "architecture",
+        "label": "Architecture",
+        "title": "Separation of Concerns",
+        "description": "We enforce a strict boundary between the Engine (us) and the Tenant (you). This prevents vendor lock-in.",
         "layers": [
           {
-            "number": "0",
-            "layerLevel": "l0",
-            "title": "The Immutable Kernel",
-            "description": "Defines the base structure of a Section — ID, Type, Payload, Settings — and exports the computed union. Zero knowledge of UI implementation or business logic."
-          },
-          {
-            "number": "1",
-            "layerLevel": "l1",
-            "title": "The Standard Library",
-            "description": "Fundamental components (Hero, Text, Grid) used across 90% of projects. Augments the Kernel's registry while remaining part of the internal ecosystem."
-          },
-          {
-            "number": "2",
+            "id": "layer-3",
+            "number": "3",
             "layerLevel": "l2",
-            "title": "User-Land Extensions",
-            "description": "The enabling layer. Third-party developers define specialized blocks — StockTickers, CRM Forms — in their own repositories. These extensions plug into the Kernel at compile-time."
+            "title": "The Form Factory",
+            "description": "The Admin UI is not hardcoded. It is generated at runtime by analyzing your Zod schemas. Change the schema, change the UI."
+          },
+          {
+            "id": "layer-2",
+            "number": "2",
+            "layerLevel": "l1",
+            "title": "The Tenant Protocol (TBP)",
+            "description": "Your components live here. They receive pure JSON data. They do not know they are being edited. They just render."
+          },
+          {
+            "id": "layer-1",
+            "number": "1",
+            "layerLevel": "l0",
+            "title": "The Core Engine (@jsonpages/core)",
+            "description": "Handles the React rendering loop, routing, and the Studio iframe injection. It is completely agnostic of your design system."
           }
         ],
-        "codeFilename": "libs/shared-data/src/lib/core.ts",
-        "codeLines": [
+        "codeLines": []
+      },
+      "settings": {}
+    },
+    {
+      "id": "cms-ice-section",
+      "type": "cms-ice",
+      "data": {
+        "anchorId": "cms",
+        "label": "In-Context Editing",
+        "title": "The Inspector that only shows what you need.",
+        "description": "Traditional CMS sidebars dump every field at once. ICE binds to the section you click in the live canvas and shows only the fields for that block. Zero cognitive overhead. The Form Factory generates every input widget automatically from your Zod schema — change the schema, change the UI.",
+        "callouts": [
           {
-            "content": "// 🛡️ KERNEL — Single Source of Truth",
-            "tokenType": "comment"
+            "id": "cl-1",
+            "icon": "🎯",
+            "title": "Context-bound Inspector",
+            "description": "Click any section in the canvas. The Inspector shows exactly — and only — the fields for that block. No sidebar overload."
           },
           {
-            "content": "",
-            "tokenType": "plain"
+            "id": "cl-2",
+            "icon": "⚡",
+            "title": "Schema → UI, automatically",
+            "description": "The Admin UI is not hardcoded. It is generated at runtime by analyzing your Zod schemas. Change the schema, change the UI."
           },
           {
-            "content": "export interface SectionDataRegistry {",
-            "tokenType": "keyword"
-          },
-          {
-            "content": "  // Open Registry: modules inject here",
-            "tokenType": "comment"
-          },
-          {
-            "content": "}",
-            "tokenType": "plain"
-          },
-          {
-            "content": "",
-            "tokenType": "plain"
-          },
-          {
-            "content": "export interface BaseSection<K extends keyof SectionDataRegistry> {",
-            "tokenType": "keyword"
-          },
-          {
-            "content": "  id: string;",
-            "tokenType": "type"
-          },
-          {
-            "content": "  type: K;",
-            "tokenType": "type"
-          },
-          {
-            "content": "  data: SectionDataRegistry[K];",
-            "tokenType": "type"
-          },
-          {
-            "content": "  settings?: SectionSettings;",
-            "tokenType": "type"
-          },
-          {
-            "content": "}",
-            "tokenType": "plain"
-          },
-          {
-            "content": "",
-            "tokenType": "plain"
-          },
-          {
-            "content": "// Computed Union — built automatically from registry",
-            "tokenType": "comment"
-          },
-          {
-            "content": "export type Section =",
-            "tokenType": "keyword"
-          },
-          {
-            "content": "  { [K in keyof SectionDataRegistry]: BaseSection<K> }",
-            "tokenType": "type"
-          },
-          {
-            "content": "  [keyof SectionDataRegistry];",
-            "tokenType": "operator"
+            "id": "cl-3",
+            "icon": "📤",
+            "title": "Bake to Zero-Runtime HTML",
+            "description": "Hit Bake. The engine exports pure HTML/CSS with no JavaScript runtime — CDN-ready, infinitely cacheable, fully portable."
           }
         ]
       },
       "settings": {}
     },
     {
-      "id": "product-triad",
-      "type": "product-triad",
+      "id": "git-section",
+      "type": "git-section",
       "data": {
-        "anchorId": "products",
-        "label": "Product Triad",
-        "title": "One Protocol. Three Products.",
-        "description": "From solo developers to global enterprises — the same underlying ontology powers every tier.",
-        "products": [
-          {
-            "tier": "Starter",
-            "name": "JsonPage",
-            "price": "NPM",
-            "priceSuffix": "Local Install",
-            "delivery": "Static Export · Zero Runtime",
-            "features": [
-              {
-                "text": "Local Authoring SDK"
-              },
-              {
-                "text": "Zero-Runtime HTML Bake"
-              },
-              {
-                "text": "Pure HTML/CSS Export"
-              },
-              {
-                "text": "CDN-Ready Delivery"
-              },
-              {
-                "text": "Full Code Ownership"
-              }
-            ],
-            "featured": false
-          },
-          {
-            "tier": "Professional",
-            "name": "JsonPages",
-            "price": "SaaS",
-            "priceSuffix": "/month",
-            "delivery": "Managed Cloud · Multi-Tenant",
-            "features": [
-              {
-                "text": "Multi-Tenant Hosting"
-              },
-              {
-                "text": "Premium Block Library"
-              },
-              {
-                "text": "SchemaUI Components"
-              },
-              {
-                "text": "In-Context Editing"
-              },
-              {
-                "text": "AI-Native Protocol"
-              },
-              {
-                "text": "Tailwind v4 & BI Engine"
-              }
-            ],
-            "featured": false
-          },
-          {
-            "tier": "Enterprise",
-            "name": "The Platform",
-            "price": "Custom",
-            "delivery": "Private Cloud · Enterprise Governance",
-            "features": [
-              {
-                "text": "Private Federated Registry"
-              },
-              {
-                "text": "Module Federation"
-              },
-              {
-                "text": "Runtime Component Injection"
-              },
-              {
-                "text": "Custom Brand Guidelines"
-              },
-              {
-                "text": "Dedicated SLA & Support"
-              },
-              {
-                "text": "SSO & RBAC"
-              }
-            ],
-            "featured": false
-          }
+        "anchorId": "git",
+        "label": "Versioning",
+        "title": "Your content is code.",
+        "titleHighlight": "Branch it. Diff it. Roll it back.",
+        "description": "Because every page is a plain JSON file, your content workflow is identical to your code workflow. No database exports, no CMS snapshots, no proprietary backups. Just git.",
+        "points": [
+          { "id": "p-1", "text": "Content changes appear in pull requests like any code change" },
+          { "id": "p-2", "text": "Branch a page, preview it, merge when approved" },
+          { "id": "p-3", "text": "Full diff history on every field of every section" },
+          { "id": "p-4", "text": "Roll back any page to any commit in seconds" },
+          { "id": "p-5", "text": "CI/CD pipelines trigger on content changes, not just code" }
         ]
       },
       "settings": {}
     },
     {
-      "id": "pa-ready",
-      "type": "pa-section",
+      "id": "devex-section",
+      "type": "devex",
       "data": {
-        "anchorId": "pa-ready",
-        "label": "Public Sector",
-        "title": "PA Ready — One Platform, Two Markets",
-        "subtitle": "The Only Builder with Native Bootstrap Italia.",
-        "paragraphs": [
-          {
-            "text": "By switching the rendering engine to Bootstrap Italia, System Integrators use the same high-efficiency workflow to deliver WCAG-compliant sites for Municipalities and Government bodies — without rewriting backend logic."
-          },
-          {
-            "text": "The same JSON ontology drives both the Tailwind-powered private sector and the Bootstrap Italia public sector pipeline. This is not flexibility — this is Business Continuity."
-          }
-        ],
-        "badges": [
-          {
-            "label": "PNRR Ready"
-          },
-          {
-            "label": "WCAG 2.1 AA"
-          },
-          {
-            "label": "AgID Compliant"
-          }
-        ],
-        "engines": [
-          {
-            "label": "Tailwind v4",
-            "variant": "tailwind"
-          },
-          {
-            "label": "Bootstrap Italia",
-            "variant": "bootstrap"
-          }
-        ],
-        "codeSnippet": "{\n  \"type\": \"hero\",\n  \"data\": { \"title\": \"...\" },\n  \"settings\": { \"engine\": \"auto\" }\n}"
+        "anchorId": "devex",
+        "label": "Developer Experience",
+        "title": "Your App.tsx is incredibly thin.",
+        "description": "You don't write routing logic. You don't write admin panels. You just import the Engine and pass your configuration.",
+        "features": [
+          { "id": "f-1", "text": "Automatic Routing based on JSON files" },
+          { "id": "f-2", "text": "Hot Module Replacement (HMR)" },
+          { "id": "f-3", "text": "Full TypeScript support" }
+        ]
       },
       "settings": {}
     },
     {
-      "id": "philosophy",
-      "type": "philosophy",
+      "id": "cli-section",
+      "type": "cli-section",
       "data": {
-        "anchorId": "philosophy",
-        "label": "Our Philosophy",
-        "title": "Governance Over Captivity",
-        "quote": "We sell the infrastructure to manage UI — not the right to access the code.",
-        "quoteHighlightWord": "manage",
-        "description": "Unlike closed-garden platforms, JsonPages provides an Eject Button by design. The Bake Engine exports your site as pure HTML/CSS with zero backend requirements. If you leave the SaaS, the shared ontology and SDK ensure you remain fully operational and independent. We earn your loyalty through value — not lock-in."
+        "anchorId": "cli",
+        "label": "CLI Tool",
+        "title": "A new tenant in under 5 minutes.",
+        "description": "Install the CLI once. From there, scaffolding a fully-typed, production-ready tenant — with all capsules, registry, schemas, and config wired up — is a single command.",
+        "steps": [
+          { "id": "s-1", "num": "1", "title": "Install the CLI globally",   "description": "One-time install. The CLI lives alongside your other dev tools." },
+          { "id": "s-2", "num": "2", "title": "Scaffold a new tenant",      "description": "Generates the full TBP structure: capsules, registry, schemas, config, and data files — all typed and ready." },
+          { "id": "s-3", "num": "3", "title": "Start building",             "description": "Run npm run dev and your tenant is live with Studio, HMR, and full CMS editing." }
+        ]
       },
       "settings": {}
     },
@@ -406,9 +148,13 @@
       "type": "cta-banner",
       "data": {
         "anchorId": "start",
-        "label": "Local Authoring Global Governance",
-        "title": "Ready to Govern at Scale?",
-        "description": "Whether you're building a single site or managing a portfolio of hundreds — JsonPages scales with your ambition."
+        "title": "Trust the Architecture.",
+        "description": "Stop building page builders. Start building Systems.",
+        "cliCommand": "npx @jsonpages/cli@latest new tenant",
+        "ctas": [
+          { "id": "cta-docs", "label": "Read the Docs", "href": "#devex", "variant": "primary" },
+          { "id": "cta-npm",  "label": "View on NPM",   "href": "#",      "variant": "secondary" }
+        ]
       },
       "settings": {}
     }

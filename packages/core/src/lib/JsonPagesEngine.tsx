@@ -3,7 +3,7 @@
  * Enterprise: error boundary, defensive config, and safe init to avoid black screen.
  */
 import React, { useEffect, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import { PageRenderer } from './PageRenderer';
 import { StudioProvider } from './StudioContext';
 import { ConfigProvider } from './ConfigContext';
@@ -169,6 +169,11 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
 
   const StudioView: React.FC = () => {
     const { slug = 'home' } = useParams<{ slug: string }>();
+    const navigate = useNavigate();
+    const pageSlugs = React.useMemo(
+      () => Object.keys(pageRegistry).sort((a, b) => (a === 'home' ? -1 : b === 'home' ? 1 : a.localeCompare(b))),
+      [pageRegistry]
+    );
     const [draft, setDraft] = useState<PageConfig | null>(null);
     const [hasChanges, setHasChanges] = useState(false);
     const [saveSuccessFeedback, setSaveSuccessFeedback] = useState(false);
@@ -491,6 +496,9 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   onSaveToFile={config.persistence?.saveToFile != null ? handleSaveToFile : undefined}
                   saveSuccessFeedback={saveSuccessFeedback}
                   onResetToFile={handleResetToFile}
+                  pageSlugs={pageSlugs}
+                  currentSlug={slug}
+                  onPageChange={pageSlugs.length > 1 ? (s) => navigate(`/admin/${s}`) : undefined}
                 />
               </div>
             </div>

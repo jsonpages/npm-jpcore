@@ -1,20 +1,8 @@
 {
   "main": [
-    {
-      "label": "Architecture",
-      "href": "#architecture"
-    },
-    {
-      "label": "Products",
-      "href": "#products"
-    },
-    {
-      "label": "PA Ready",
-      "href": "#pa-ready"
-    },
-    {
-      "label": "Philosophy",
-      "href": "#philosophy"
-    }
+    { "label": "Architecture", "href": "#architecture" },
+    { "label": "CMS",          "href": "#cms" },
+    { "label": "Versioning",   "href": "#git" },
+    { "label": "Developer",    "href": "#devex" }
   ]
 }

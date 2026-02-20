@@ -72,6 +72,8 @@ function Select({
   );
 }
 
+const CHEVRON_SVG = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23717171' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")";
+
 function SelectTrigger({ className, children, ...props }: React.ComponentProps<'div'>) {
   const { value, onValueChange, options, placeholder } = useSelectContext();
   return (
@@ -79,9 +81,16 @@ function SelectTrigger({ className, children, ...props }: React.ComponentProps<'
       <select
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
-        className="w-full h-7 rounded border border-zinc-800 bg-zinc-900/50 text-[11px] text-left px-2 pr-6 appearance-none bg-no-repeat bg-[length:12px] bg-[right_0.25rem_center] focus:ring-2 focus:ring-blue-600 focus:outline-none"
+        className={cn(
+          'w-full h-7 rounded-md text-left text-[11px] px-2 pr-6',
+          'appearance-none bg-no-repeat bg-[length:12px] bg-[right_0.25rem_center]',
+          'border border-zinc-700 bg-zinc-800/80 text-white',
+          'outline-none shadow-none',
+          'focus-visible:ring-2 focus-visible:ring-blue-500/80 focus-visible:ring-inset focus-visible:border-zinc-600',
+          'hover:bg-zinc-800/90'
+        )}
         style={{
-          backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23717171' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+          backgroundImage: CHEVRON_SVG,
         }}
       >
         {placeholder ? <option value="">{placeholder}</option> : null}

@@ -4,7 +4,8 @@ import { useConfig } from '../lib/ConfigContext';
 import { cn } from '../lib/utils';
 import { FormFactory } from './FormFactory';
 import type { PageConfig, Section } from '../lib/kernel';
-import { Layers, ChevronUp, ChevronDown, GripVertical, Settings, Trash2, AlertCircle, X, Plus, FileCode, Save } from 'lucide-react';
+import { Layers, ChevronUp, ChevronDown, GripVertical, Settings, Trash2, AlertCircle, X, Plus, FileCode, Save, FileText } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 
 interface SelectedSectionInfo {
   id: string;
@@ -57,6 +58,12 @@ interface AdminSidebarProps {
   onResetToFile?: () => void;
   /** When true, shows the "Ripristina da file" button (default false = hidden). */
   showResetToFile?: boolean;
+  /** Available page slugs. When length > 0 and onPageChange set, shows page selector under Inspector header. */
+  pageSlugs?: string[];
+  /** Current page slug. */
+  currentSlug?: string;
+  /** Called when user selects another page; engine should navigate to /admin/:slug. */
+  onPageChange?: (slug: string) => void;
 }
 
 const SETTINGS_KEYS = new Set(['anchorId', 'paddingTop', 'paddingBottom', 'theme', 'container']);
@@ -81,6 +88,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   saveSuccessFeedback = false,
   onResetToFile,
   showResetToFile = false,
+  pageSlugs = [],
+  currentSlug = 'home',
+  onPageChange,
 }) => {
   const { schemas } = useConfig();
   const [layersOpen, setLayersOpen] = useState(true);
@@ -269,18 +279,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {onAddSection != null && (
-              <button
-                type="button"
-                onClick={onAddSection}
-                className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors p-1 hover:bg-zinc-800 rounded"
-                title="Add section"
-                aria-label="Add section"
-              >
-                <Plus size={16} />
-                <span className="text-xs font-medium">Add section</span>
-              </button>
-            )}
             <button
               type="button"
               onClick={onClose}
@@ -292,24 +290,60 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             </button>
           </div>
         </div>
+        {pageSlugs.length > 0 && onPageChange && (
+          <div className="py-2 px-3 border-b border-zinc-800/80 bg-zinc-900/30">
+            <div className="flex items-center gap-2 min-w-0">
+              <FileText size={14} className="shrink-0 text-zinc-400" aria-hidden />
+              <Select value={currentSlug} onValueChange={onPageChange}>
+                <SelectTrigger className="h-8 text-xs font-medium text-white border-zinc-700 bg-zinc-800/60 hover:bg-zinc-800 flex-1 min-w-0">
+                  <SelectValue placeholder="Page" />
+                </SelectTrigger>
+                <SelectContent className="dark min-w-[12rem]">
+                  {pageSlugs.map((slug) => (
+                    <SelectItem key={slug} value={slug} className="text-xs capitalize">
+                      {slug}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-zinc-500 text-xs shrink-0 tabular-nums">
+                {allLayers.length} section{allLayers.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+        )}
         {allLayers.length > 0 && (
           <div className="bg-zinc-900/20 opacity-100">
-            <button
-              type="button"
-              onClick={handlePageLayersToggle}
-              className="w-full flex items-center justify-between py-3 px-4 hover:bg-zinc-800/30 transition-colors cursor-pointer text-left rounded-none border-0 bg-transparent"
-              aria-expanded={showLayersList}
-              aria-label={showLayersList ? 'Collapse Page Layers' : 'Expand Page Layers'}
-            >
-              <span className="flex items-center gap-2 min-w-0">
-                <Layers size={14} className="text-primary shrink-0" />
-                <span className="text-xs font-bold text-white">Page Layers</span>
-                <span className="text-[10px] text-zinc-500">({allLayers.length})</span>
-              </span>
-              <span className="text-zinc-500 shrink-0 pointer-events-none" aria-hidden>
-                {showLayersList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              </span>
-            </button>
+            <div className="flex items-center justify-between gap-2 py-3 px-4">
+              <button
+                type="button"
+                onClick={handlePageLayersToggle}
+                className="flex-1 flex items-center justify-between min-w-0 hover:bg-zinc-800/30 transition-colors cursor-pointer text-left rounded py-1 pr-1 border-0 bg-transparent"
+                aria-expanded={showLayersList}
+                aria-label={showLayersList ? 'Collapse Page Layers' : 'Expand Page Layers'}
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <Layers size={14} className="text-primary shrink-0" />
+                  <span className="text-xs font-bold text-white">Page Layers</span>
+                  <span className="text-[10px] text-zinc-500">({allLayers.length})</span>
+                </span>
+                <span className="text-zinc-500 shrink-0 pointer-events-none" aria-hidden>
+                  {showLayersList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </span>
+              </button>
+              {onAddSection != null && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onAddSection(); }}
+                  className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors p-1.5 hover:bg-zinc-800 rounded shrink-0"
+                  title="Add section"
+                  aria-label="Add section"
+                >
+                  <Plus size={14} />
+                  <span className="text-xs font-medium">Add</span>
+                </button>
+              )}
+            </div>
             {!showLayersList && selectedSection && (() => {
               const activeLayer = allLayers.find((l) => l.id === selectedSection.id);
               if (!activeLayer) return null;
