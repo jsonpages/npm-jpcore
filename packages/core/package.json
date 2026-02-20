@@ -1,6 +1,6 @@
 {
   "name": "@jsonpages/core",
-  "version": "1.0.18",
+  "version": "1.0.17",
   "private": false,
   "type": "module",
   "main": "./dist/jsonpages-core.umd.cjs",
@@ -27,7 +27,11 @@
     "zod": "^3.24.1"
   },
   "dependencies": {
+    "@radix-ui/react-popover": "^1.1.4",
+    "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-scroll-area": "^1.2.2",
     "@radix-ui/react-select": "^2.1.6",
+    "@radix-ui/react-tooltip": "^1.1.6",
     "lucide-react": "^0.474.0",
     "radix-ui": "^1.4.3",
     "file-saver": "^2.0.5",

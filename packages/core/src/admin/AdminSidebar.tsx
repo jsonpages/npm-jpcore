@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useRef, useDeferredValue } from 'react';
+import React, { useState, useEffect, useRef, useDeferredValue, useMemo } from 'react';
 import { z } from 'zod';
 import { useConfig } from '../lib/ConfigContext';
 import { cn } from '../lib/utils';
 import { FormFactory } from './FormFactory';
 import type { PageConfig, Section } from '../lib/kernel';
 import { Layers, ChevronUp, ChevronDown, GripVertical, Settings, Trash2, AlertCircle, X, Plus, FileCode, Save, FileText } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Button } from '../components/ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../components/ui/tooltip';
+import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
+import { ScrollArea } from '../components/ui/scroll-area';
 
 interface SelectedSectionInfo {
   id: string;
@@ -67,6 +70,95 @@ interface AdminSidebarProps {
 }
 
 const SETTINGS_KEYS = new Set(['anchorId', 'paddingTop', 'paddingBottom', 'theme', 'container']);
+
+function renderLayerRow(
+  layer: LayerItem,
+  opts: {
+    isSelected: boolean;
+    isActive: boolean;
+    isDragging: boolean;
+    canReorder: boolean;
+    canDelete: boolean;
+    deleteConfirm: boolean;
+    onSelect: () => void;
+    onDragStart: (e: React.DragEvent) => void;
+    onDragOver: (e: React.DragEvent) => void;
+    onDragLeave: () => void;
+    onDrop: (e: React.DragEvent) => void;
+    onDragEnd: () => void;
+    onDelete: () => void;
+    onOpenSettings: (e: React.MouseEvent) => void;
+  }
+) {
+  const {
+    isSelected,
+    isActive,
+    isDragging,
+    canReorder,
+    canDelete,
+    deleteConfirm,
+    onSelect,
+    onDragStart,
+    onDragOver,
+    onDragLeave,
+    onDrop,
+    onDragEnd,
+    onDelete,
+    onOpenSettings,
+  } = opts;
+  return (
+    <div
+      key={layer.id}
+      draggable={canReorder}
+      onDragStart={canReorder ? onDragStart : undefined}
+      onDragOver={canReorder ? onDragOver : undefined}
+      onDragLeave={onDragLeave}
+      onDrop={canReorder ? onDrop : undefined}
+      onDragEnd={onDragEnd}
+      className={cn(
+        'group flex items-center gap-2 pl-1 pr-2 py-2.5 rounded-lg text-left transition-all duration-100 cursor-pointer border-l-2',
+        isSelected ? 'bg-primary/[0.08] border-primary' : isActive ? 'bg-zinc-800/30 border-emerald-500/60' : 'border-transparent hover:bg-zinc-800/40',
+        isDragging && 'opacity-40',
+        canReorder ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+      )}
+    >
+      <span className="shrink-0 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-grab">
+        <GripVertical size={12} className="text-zinc-600" />
+      </span>
+      <button type="button" onClick={onSelect} className="flex-1 min-w-0 text-left">
+        <div className="flex items-center gap-1.5">
+          <span className={cn('text-xs font-bold uppercase tracking-[0.06em] truncate', isSelected ? 'text-primary' : 'text-zinc-500')}>
+            {layer.type}
+          </span>
+          {isActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden />}
+        </div>
+        <span className="text-[11px] text-zinc-600 block truncate leading-snug mt-0.5">
+          {layer.title ?? `${layer.type} section`}
+        </span>
+      </button>
+      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon-xs" className="text-zinc-600 hover:text-zinc-300" onClick={(e) => { e.stopPropagation(); onOpenSettings(e); }}>
+              <Settings size={12} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Settings</TooltipContent>
+        </Tooltip>
+        {canDelete && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon-xs" className="text-zinc-600 hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+                <Trash2 size={12} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete section</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   selectedSection,
@@ -252,201 +344,218 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   /** When no section is selected, Page Layers list is always shown (open); otherwise use accordion state. */
   const showLayersList = allLayers.length > 0 && (layersOpen || !selectedSection);
 
+  /** Page switcher: current page label (slug if no labels map). */
+  const currentPageLabel = currentSlug ? currentSlug.charAt(0).toUpperCase() + currentSlug.slice(1) : 'Select page';
+
+  /** Live reorder: during drag, show list in the order it would be after drop. */
+  const displayOrder = useMemo(() => {
+    if (!draggedId || !dragOverId || draggedId === dragOverId) return allLayers;
+    const from = allLayers.findIndex((l) => l.id === draggedId);
+    const to = allLayers.findIndex((l) => l.id === dragOverId);
+    if (from === -1 || to === -1) return allLayers;
+    const next = [...allLayers];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    return next;
+  }, [allLayers, draggedId, dragOverId]);
+
+  /** Group layers for display: header, content, footer. */
+  const { header: headerLayers, content: contentLayers, footer: footerLayers } = useMemo(() => {
+    const header = displayOrder.filter((l) => l.type.toUpperCase() === 'HEADER');
+    const footer = displayOrder.filter((l) => l.type.toUpperCase() === 'FOOTER');
+    const content = displayOrder.filter((l) => l.type.toUpperCase() !== 'HEADER' && l.type.toUpperCase() !== 'FOOTER');
+    return { header, content, footer };
+  }, [displayOrder]);
+
   return (
-    <aside className="relative w-full h-full bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 min-w-0 animate-in slide-in-from-right duration-300">
-      {/* Sticky: Section header (Inspector + type) + Page Layers header (and section summary when collapsed). */}
-      <div className="sticky top-0 z-10 flex flex-col shrink-0 bg-zinc-950 border-b border-zinc-800">
-        <div className="py-2 px-3 flex justify-between items-center bg-zinc-900/50">
-          <div className="flex items-center gap-2 min-w-0">
-            <div>
-              <h3 className="text-sm font-bold text-white leading-tight">Inspector</h3>
-              <p className="text-[10px] font-mono uppercase tracking-wider flex items-center gap-1.5 leading-tight mt-0.5">
-                {selectedSection ? (
-                  <>
-                    {onReorderSection && selectedSection.scope === 'local' && (
-                      <span className="text-zinc-500 shrink-0" title="Reorder section on page">
-                        <GripVertical size={12} strokeWidth={2} />
-                      </span>
-                    )}
-                    <span className="text-blue-400">{selectedSection.type}</span>
-                    <span className="text-zinc-600">|</span>
-                    <span className="text-zinc-500">{selectedSection.scope}</span>
-                  </>
-                ) : (
-                  <span className="text-zinc-500">Waiting for Selection...</span>
-                )}
-              </p>
-            </div>
+    <TooltipProvider>
+      <aside className="relative w-full h-full bg-zinc-950 border-l border-zinc-800 flex flex-col shadow-2xl shrink-0 min-w-0 animate-in slide-in-from-right duration-300">
+        {/* Header: Inspector + page context or type|scope */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-white">Inspector</h2>
+            <p className="text-[10px] tracking-[0.06em] text-zinc-600 mt-0.5">
+              {selectedSection ? (
+                <>
+                  <span className="text-primary font-bold">{selectedSection.type}</span>
+                  <span className="text-zinc-700 mx-1.5">|</span>
+                  <span className="uppercase">{selectedSection.scope}</span>
+                </>
+              ) : (
+                <span className="text-zinc-600">
+                  {currentPageLabel} · {allLayers.length} sections
+                </span>
+              )}
+            </p>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1 rounded text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
-              title="Close Inspector"
-              aria-label="Close Inspector"
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close Inspector">
+            <X size={14} />
+          </Button>
         </div>
+
+        {/* Page Switcher: rounded, transparent when closed; open dropdown = sidebar bg */}
         {pageSlugs.length > 0 && onPageChange && (
-          <div className="py-2 px-3 border-b border-zinc-800/80 bg-zinc-900/30">
-            <div className="flex items-center gap-2 min-w-0">
-              <FileText size={14} className="shrink-0 text-zinc-400" aria-hidden />
-              <Select value={currentSlug} onValueChange={onPageChange}>
-                <SelectTrigger className="h-8 text-xs font-medium text-white border-zinc-700 bg-zinc-800/60 hover:bg-zinc-800 flex-1 min-w-0">
-                  <SelectValue placeholder="Page" />
-                </SelectTrigger>
-                <SelectContent className="dark min-w-[12rem]">
-                  {pageSlugs.map((slug) => (
-                    <SelectItem key={slug} value={slug} className="text-xs capitalize">
-                      {slug}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="text-zinc-500 text-xs shrink-0 tabular-nums">
-                {allLayers.length} section{allLayers.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-          </div>
-        )}
-        {allLayers.length > 0 && (
-          <div className="bg-zinc-900/20 opacity-100">
-            <div className="flex items-center justify-between gap-2 py-3 px-4">
+          <Popover>
+            <PopoverTrigger asChild>
               <button
                 type="button"
-                onClick={handlePageLayersToggle}
-                className="flex-1 flex items-center justify-between min-w-0 hover:bg-zinc-800/30 transition-colors cursor-pointer text-left rounded py-1 pr-1 border-0 bg-transparent"
-                aria-expanded={showLayersList}
-                aria-label={showLayersList ? 'Collapse Page Layers' : 'Expand Page Layers'}
+                className={cn(
+                  'flex items-center gap-2 w-full mx-3 mt-2 mb-1 px-3 py-2 rounded-lg border text-left transition-all duration-150 cursor-pointer',
+                  'bg-transparent border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 hover:border-zinc-700',
+                  'data-[state=open]:bg-zinc-950 data-[state=open]:border-zinc-800 data-[state=open]:text-zinc-100'
+                )}
               >
-                <span className="flex items-center gap-2 min-w-0">
-                  <Layers size={14} className="text-primary shrink-0" />
-                  <span className="text-xs font-bold text-white">Page Layers</span>
-                  <span className="text-[10px] text-zinc-500">({allLayers.length})</span>
-                </span>
-                <span className="text-zinc-500 shrink-0 pointer-events-none" aria-hidden>
-                  {showLayersList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </span>
+                <FileText size={14} className="shrink-0 text-zinc-500" aria-hidden />
+                <span className="text-xs font-medium flex-1 truncate">{currentPageLabel}</span>
+                <ChevronDown size={13} className="shrink-0 text-zinc-500" />
               </button>
-              {onAddSection != null && (
+            </PopoverTrigger>
+            <PopoverContent align="start" sideOffset={4} className="min-w-[var(--radix-popover-trigger-width)] bg-zinc-950 border-zinc-800">
+              {pageSlugs.map((slug) => {
+                const isActive = slug === currentSlug;
+                const label = slug.charAt(0).toUpperCase() + slug.slice(1);
+                return (
+                  <button
+                    key={slug}
+                    type="button"
+                    onClick={() => {
+                      onPageChange(slug);
+                    }}
+                    className={cn(
+                      'flex items-center justify-between w-full px-2.5 py-2 rounded-md text-xs transition-colors cursor-pointer',
+                      isActive ? 'bg-primary/10 text-primary font-semibold' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                    )}
+                  >
+                    <span>{label}</span>
+                    <span className="text-[10px] text-zinc-600 tabular-nums">{allLayers.length}s</span>
+                  </button>
+                );
+              })}
+              <div className="border-t border-zinc-800 mt-1 pt-1">
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); onAddSection(); }}
-                  className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors p-1.5 hover:bg-zinc-800 rounded shrink-0"
-                  title="Add section"
-                  aria-label="Add section"
+                  className="flex items-center gap-1.5 w-full px-2.5 py-2 rounded-md text-[11px] text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 transition-colors cursor-pointer"
+                  aria-label="New page (not implemented)"
                 >
-                  <Plus size={14} />
-                  <span className="text-xs font-medium">Add</span>
+                  <Plus size={12} />
+                  <span>New page</span>
                 </button>
-              )}
-            </div>
-            {!showLayersList && selectedSection && (() => {
-              const activeLayer = allLayers.find((l) => l.id === selectedSection.id);
-              if (!activeLayer) return null;
-              const isActive = activeSectionId === selectedSection.id;
-              return (
-                <div className="px-3 py-2 flex items-center gap-2 bg-primary/10 border-t border-zinc-800/50">
-                  <GripVertical size={12} className="text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-mono uppercase tracking-wider text-primary truncate flex items-center gap-1">
-                      {activeLayer.type}
-                      {isActive && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden />
-                      )}
-                    </p>
-                    <p className="text-xs text-white font-medium truncate">
-                      {activeLayer.title ?? `${activeLayer.type} section`}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => handleOpenSectionSettings(activeLayer.id, e)}
-                    className="p-1 rounded shrink-0 text-zinc-500 hover:text-primary transition-colors"
-                    title={`Open settings for ${activeLayer.type}`}
-                    aria-label={`Open settings for ${activeLayer.type} section`}
-                  >
-                    <Settings size={12} />
-                  </button>
-                </div>
-              );
-            })()}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
+
+        {/* Page Layers header */}
+        {allLayers.length > 0 && (
+          <div className="flex items-center gap-2 px-4 py-2 border-t border-zinc-800/50">
+            <button
+              type="button"
+              onClick={handlePageLayersToggle}
+              className="flex items-center gap-2 flex-1 cursor-pointer min-w-0 text-left"
+              aria-expanded={showLayersList}
+              aria-label={showLayersList ? 'Collapse Page Layers' : 'Expand Page Layers'}
+            >
+              <Layers size={14} className="text-zinc-500 shrink-0" />
+              <span className="text-[11px] font-semibold tracking-[0.04em] text-zinc-400">Page Layers</span>
+              <span className="text-[10px] text-zinc-600">({allLayers.length})</span>
+              <ChevronUp
+                size={13}
+                className={cn('ml-auto text-zinc-600 transition-transform duration-200 shrink-0', !layersOpen && 'rotate-180')}
+              />
+            </button>
+            {onAddSection != null && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" className="text-zinc-500 hover:text-primary" onClick={onAddSection}>
+                    <Plus size={14} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add section</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         )}
-      </div>
 
-      <div ref={contentScrollRef} className="flex-1 min-h-0 overflow-y-auto flex flex-col custom-scrollbar">
+      <ScrollArea className="flex-1 min-h-0 flex flex-col">
+        <div ref={contentScrollRef} className="flex flex-col min-h-0">
         {showLayersList && (
-          <div className="border-b border-zinc-800 bg-zinc-900/20 px-3 pb-3 pt-1">
-            {allLayers.map((layer) => {
-                  const isSelected = selectedSection?.id === layer.id;
-                  const isActive = activeSectionId === layer.id;
-                  const isDragging = draggedId === layer.id;
-                  const isDragOver = dragOverId === layer.id;
-                  const canDelete = layer.scope === 'local' && onDeleteSection;
-                  const isLocal = layer.scope === 'local';
-                  const canReorder = isLocal && !!onReorderSection;
-                  return (
-                    <div
-                      key={layer.id}
-                      draggable={canReorder}
-                      onDragStart={(e) => canReorder && handleDragStart(e, layer.id)}
-                      onDragOver={(e) => canReorder && handleDragOver(e, layer.id)}
-                      onDragLeave={() => setDragOverId(null)}
-                      onDrop={(e) => canReorder && handleDrop(e, layer.id)}
-                      onDragEnd={() => { setDraggedId(null); setDragOverId(null); }}
-                      className={cn(
-                        'flex items-center gap-2 py-2.5 px-2 rounded-sm border-t transition-colors',
-                        isDragOver && 'border-t-2 border-dashed border-primary bg-primary/5',
-                        !isDragOver && isSelected && 'border-primary/30 bg-primary/10',
-                        !isDragOver && !isSelected && 'border-zinc-800/90 hover:bg-zinc-800/40',
-                        isDragging && 'opacity-40',
-                        canReorder ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
-                      )}
-                    >
-                      <GripVertical size={12} className={`shrink-0 ${isSelected ? 'text-primary' : 'text-zinc-500'}`} />
-                      <button
-                        type="button"
-                        onClick={() => handleLayerClick(layer.id)}
-                        className="flex-1 min-w-0 text-left"
-                      >
-                        <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 truncate flex items-center gap-1">
-                          {layer.type}
-                          {isActive && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden />
-                          )}
-                        </p>
-                        <p className={`text-xs truncate ${isSelected ? 'text-white font-medium' : 'text-zinc-500'}`}>
-                          {layer.title ?? `${layer.type} section`}
-                        </p>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => handleOpenSectionSettings(layer.id, e)}
-                        className="p-1 rounded shrink-0 text-zinc-500 hover:text-primary transition-colors"
-                        title={`Open settings for ${layer.type}`}
-                        aria-label={`Open settings for ${layer.type} section`}
-                      >
-                        <Settings size={12} />
-                      </button>
-                      {canDelete && (
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); handleDelete(layer.id); }}
-                          className={`p-1 rounded shrink-0 ${deleteConfirm === layer.id ? 'bg-red-500/20 text-red-400' : 'text-zinc-500 hover:text-red-400'}`}
-                          title="Delete section"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+          <div className="py-1">
+            <div className="px-2 space-y-0.5">
+              {headerLayers.length > 0 && (
+                <div className="space-y-0.5">
+                  {headerLayers.map((layer) =>
+                    renderLayerRow(layer, {
+                      isSelected: selectedSection?.id === layer.id,
+                      isActive: activeSectionId === layer.id,
+                      isDragging: draggedId === layer.id,
+                      canReorder: layer.scope === 'local' && !!onReorderSection,
+                      canDelete: layer.scope === 'local' && !!onDeleteSection,
+                      deleteConfirm: deleteConfirm === layer.id,
+                      onSelect: () => handleLayerClick(layer.id),
+                      onDragStart: (e) => handleDragStart(e, layer.id),
+                      onDragOver: (e) => handleDragOver(e, layer.id),
+                      onDragLeave: () => setDragOverId(null),
+                      onDrop: (e) => handleDrop(e, layer.id),
+                      onDragEnd: () => { setDraggedId(null); setDragOverId(null); },
+                      onDelete: () => handleDelete(layer.id),
+                      onOpenSettings: (e) => handleOpenSectionSettings(layer.id, e),
+                    })
+                  )}
+                </div>
+              )}
+              {contentLayers.length > 0 && (
+                <>
+                  {headerLayers.length > 0 && <div className="mx-3 border-t border-zinc-800/60 my-1" />}
+                  <div className="space-y-0.5">
+                    {contentLayers.map((layer) =>
+                      renderLayerRow(layer, {
+                        isSelected: selectedSection?.id === layer.id,
+                        isActive: activeSectionId === layer.id,
+                        isDragging: draggedId === layer.id,
+                        canReorder: layer.scope === 'local' && !!onReorderSection,
+                        canDelete: layer.scope === 'local' && !!onDeleteSection,
+                        deleteConfirm: deleteConfirm === layer.id,
+                        onSelect: () => handleLayerClick(layer.id),
+                        onDragStart: (e) => handleDragStart(e, layer.id),
+                        onDragOver: (e) => handleDragOver(e, layer.id),
+                        onDragLeave: () => setDragOverId(null),
+                        onDrop: (e) => handleDrop(e, layer.id),
+                        onDragEnd: () => { setDraggedId(null); setDragOverId(null); },
+                        onDelete: () => handleDelete(layer.id),
+                        onOpenSettings: (e) => handleOpenSectionSettings(layer.id, e),
+                      })
+                    )}
+                  </div>
+                </>
+              )}
+              {footerLayers.length > 0 && (
+                <>
+                  <div className="mx-3 border-t border-zinc-800/60 my-1" />
+                  <div className="space-y-0.5">
+                    {footerLayers.map((layer) =>
+                      renderLayerRow(layer, {
+                        isSelected: selectedSection?.id === layer.id,
+                        isActive: activeSectionId === layer.id,
+                        isDragging: draggedId === layer.id,
+                        canReorder: layer.scope === 'local' && !!onReorderSection,
+                        canDelete: layer.scope === 'local' && !!onDeleteSection,
+                        deleteConfirm: deleteConfirm === layer.id,
+                        onSelect: () => handleLayerClick(layer.id),
+                        onDragStart: (e) => handleDragStart(e, layer.id),
+                        onDragOver: (e) => handleDragOver(e, layer.id),
+                        onDragLeave: () => setDragOverId(null),
+                        onDrop: (e) => handleDrop(e, layer.id),
+                        onDragEnd: () => { setDraggedId(null); setDragOverId(null); },
+                        onDelete: () => handleDelete(layer.id),
+                        onOpenSettings: (e) => handleOpenSectionSettings(layer.id, e),
+                      })
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
             {deleteConfirm && (
-              <div className="flex items-center gap-2 py-2 px-3 mt-1 rounded-md bg-amber-500/10 border border-amber-500/30">
+              <div className="flex items-center gap-2 py-2 px-3 mt-1 mx-2 rounded-md bg-amber-500/10 border border-amber-500/30">
                 <AlertCircle size={12} className="text-amber-500 shrink-0" />
                 <p className="text-[10px] text-amber-500 font-medium">Click delete again to confirm</p>
               </div>
@@ -454,6 +563,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </div>
         )}
 
+        </div>
         {effectiveExpandedItem && section && (() => {
           const data = (section.data as Record<string, unknown>) || {};
           let label: string;
@@ -505,7 +615,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           onFocusCapture={() => selectedSection != null && setLayersOpen(false)}
         >
           {!selectedSection ? (
-            <p className="text-xs text-zinc-500 text-center py-8">
+            <p className="text-xs text-zinc-600 text-center py-10">
               Select a layer above or on the stage to edit.
             </p>
           ) : isFormPending ? (
@@ -551,9 +661,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             );
           })()}
         </div>
-      </div>
+      </ScrollArea>
 
-      <div className="px-4 py-2.5 border-t border-zinc-800 bg-zinc-900/50 flex items-center gap-3 opacity-100 flex-wrap">
+      <div className="px-4 py-2.5 border-t border-zinc-800 bg-zinc-900/50 flex items-center gap-3 opacity-100 flex-wrap shrink-0">
         {(onExportHTML != null || onSaveToFile != null || onResetToFile != null) && (
           <>
             <div className={cn(
@@ -567,35 +677,35 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               {saveSuccessFeedback ? 'Salvato' : hasChanges ? 'Unsaved Changes' : 'All Changes Saved'}
             </span>
             {onExportHTML != null && (
-              <button
-                type="button"
-                onClick={onExportHTML}
-                className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-all border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:border-zinc-600"
-              >
-                <FileCode size={12} className="shrink-0" />
-                <span>HTML</span>
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={onExportHTML}>
+                    <FileCode size={12} />
+                    <span>Bake HTML</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Generate static HTML output</TooltipContent>
+              </Tooltip>
             )}
             {onSaveToFile != null && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onSaveToFile();
-                }}
-                disabled={!hasChanges}
-                className={cn(
-                  'shrink-0 flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-all',
-                  hasChanges
-                    ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-900/20'
-                    : 'bg-zinc-900 text-zinc-600 cursor-not-allowed'
-                )}
-                title="Salva le modifiche sui file JSON del repo"
-              >
-                <Save size={12} className="shrink-0" />
-                <span>Save</span>
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    disabled={!hasChanges}
+                    className="gap-1.5"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onSaveToFile();
+                    }}
+                  >
+                    <Save size={12} />
+                    <span>Save</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Save (export JSON)</TooltipContent>
+              </Tooltip>
             )}
             {onResetToFile != null && showResetToFile && (
               <button
@@ -700,5 +810,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         );
       })()}
     </aside>
+    </TooltipProvider>
   );
 };
