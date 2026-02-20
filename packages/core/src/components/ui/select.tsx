@@ -1,125 +1,90 @@
 import * as React from 'react';
+import * as SelectPrimitive from '@radix-ui/react-select';
+import { ChevronDown, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-type SelectContextValue = {
-  value: string;
-  onValueChange: (v: string) => void;
-  options: Array<{ value: string; label: React.ReactNode }>;
-  placeholder?: string;
-};
+const Select = SelectPrimitive.Root;
 
-const SelectContext = React.createContext<SelectContextValue | null>(null);
+const SelectGroup = SelectPrimitive.Group;
 
-function useSelectContext() {
-  const ctx = React.useContext(SelectContext);
-  if (!ctx) throw new Error('Select components must be used within Select');
-  return ctx;
-}
+const SelectValue = SelectPrimitive.Value;
 
-function Select({
-  value,
-  onValueChange,
-  children,
-}: {
-  value?: string;
-  onValueChange?: (v: string) => void;
-  children: React.ReactNode;
-}) {
-  const resolvedValue = value ?? '';
+const SelectTrigger = React.forwardRef<
+  React.ComponentRef<typeof SelectPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
+>(({ className, children, ...props }, ref) => (
+  <SelectPrimitive.Trigger
+    ref={ref}
+    className={cn(
+      'flex h-8 w-full items-center justify-between gap-2 rounded-md border border-zinc-800 bg-black px-3 py-1.5 text-left text-xs font-medium text-white outline-none',
+      'hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-blue-500/80 focus-visible:ring-inset focus-visible:border-zinc-600',
+      'disabled:pointer-events-none disabled:opacity-50 [&>span]:line-clamp-1 [&>span]:flex [&>span]:items-center [&>span]:gap-2',
+      className
+    )}
+    style={{ boxShadow: 'none', WebkitBoxShadow: 'none', MozBoxShadow: 'none' }}
+    {...props}
+  >
+    {children}
+    <SelectPrimitive.Icon asChild>
+      <ChevronDown className="h-3 w-3 shrink-0 text-zinc-400" strokeWidth={2} />
+    </SelectPrimitive.Icon>
+  </SelectPrimitive.Trigger>
+));
+SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
 
-  type ContentElement = React.ReactElement<{ children?: React.ReactNode }>;
-  type TriggerElement = React.ReactElement<{ children?: React.ReactNode }>;
-
-  const content = React.Children.toArray(children).find(
-    (c): c is ContentElement => React.isValidElement(c) && (c.type as unknown) === SelectContent
-  );
-  const trigger = React.Children.toArray(children).find(
-    (c): c is TriggerElement => React.isValidElement(c) && (c.type as unknown) === SelectTrigger
-  );
-
-  const contentChildren = content && React.isValidElement(content) ? content.props.children : undefined;
-  const triggerChildren = trigger && React.isValidElement(trigger) ? trigger.props.children : undefined;
-
-  const options = React.useMemo(() => {
-    if (!content || !React.isValidElement(content)) return [];
-    return React.Children.toArray(content.props.children)
-      .filter((child): child is React.ReactElement<{ value: string; children?: React.ReactNode }> => React.isValidElement(child) && (child.props as { value?: string }).value !== undefined)
-      .map((child) => ({ value: (child.props as { value: string; children?: React.ReactNode }).value, label: (child.props as { value: string; children?: React.ReactNode }).children ?? (child.props as { value: string }).value }));
-  }, [content, contentChildren]);
-
-  const placeholder = React.useMemo(() => {
-    if (!trigger || !React.isValidElement(trigger)) return '';
-    const valueChild = React.Children.toArray(trigger.props.children).find(
-      (c): c is React.ReactElement<{ placeholder?: string }> => React.isValidElement(c) && (c.type as unknown) === SelectValue
-    );
-    return valueChild && React.isValidElement(valueChild) ? (valueChild.props as { placeholder?: string }).placeholder ?? '' : '';
-  }, [trigger, triggerChildren]);
-
-  const contextValue = React.useMemo<SelectContextValue>(
-    () => ({
-      value: resolvedValue,
-      onValueChange: (v: string) => onValueChange?.(v),
-      options,
-      placeholder,
-    }),
-    [resolvedValue, onValueChange, options, placeholder]
-  );
-
-  return (
-    <SelectContext.Provider value={contextValue}>
-      {trigger}
-    </SelectContext.Provider>
-  );
-}
-
-const CHEVRON_SVG = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23717171' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")";
-
-function SelectTrigger({ className, children, ...props }: React.ComponentProps<'div'>) {
-  const { value, onValueChange, options, placeholder } = useSelectContext();
-  return (
-    <div className={cn('relative', className)} {...props}>
-      <select
-        value={value}
-        onChange={(e) => onValueChange(e.target.value)}
+const SelectContent = React.forwardRef<
+  React.ComponentRef<typeof SelectPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
+>(({ className, children, position = 'popper', ...props }, ref) => (
+  <SelectPrimitive.Portal>
+    <SelectPrimitive.Content
+      ref={ref}
+      className={cn(
+        'relative z-[9999] max-h-96 min-w-[8rem] overflow-hidden rounded-md border border-zinc-800 bg-zinc-950 text-white shadow-lg',
+        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+        'data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
+        position === 'popper' &&
+          'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
+        className
+      )}
+      position={position}
+      {...props}
+    >
+      <SelectPrimitive.Viewport
         className={cn(
-          'w-full h-7 rounded-md text-left text-[11px] px-2 pr-6',
-          'appearance-none bg-no-repeat bg-[length:12px] bg-[right_0.25rem_center]',
-          'border border-zinc-700 bg-zinc-800/80 text-white',
-          'outline-none shadow-none',
-          'focus-visible:ring-2 focus-visible:ring-blue-500/80 focus-visible:ring-inset focus-visible:border-zinc-600',
-          'hover:bg-zinc-800/90'
+          'p-1',
+          position === 'popper' &&
+            'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]'
         )}
-        style={{
-          backgroundImage: CHEVRON_SVG,
-        }}
       >
-        {placeholder ? <option value="">{placeholder}</option> : null}
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {String(o.label)}
-          </option>
-        ))}
-      </select>
-      {children}
-    </div>
-  );
-}
+        {children}
+      </SelectPrimitive.Viewport>
+    </SelectPrimitive.Content>
+  </SelectPrimitive.Portal>
+));
+SelectContent.displayName = SelectPrimitive.Content.displayName;
 
-function SelectValue(_props: { placeholder?: string }) {
-  return null;
-}
+const SelectItem = React.forwardRef<
+  React.ComponentRef<typeof SelectPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
+>(({ className, children, ...props }, ref) => (
+  <SelectPrimitive.Item
+    ref={ref}
+    className={cn(
+      'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-xs outline-none',
+      'focus:bg-zinc-800 focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      className
+    )}
+    {...props}
+  >
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <SelectPrimitive.ItemIndicator>
+        <Check className="h-3 w-3" strokeWidth={2} />
+      </SelectPrimitive.ItemIndicator>
+    </span>
+    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+  </SelectPrimitive.Item>
+));
+SelectItem.displayName = SelectPrimitive.Item.displayName;
 
-function SelectContent({ className, children }: React.ComponentProps<'div'>) {
-  return <div className={cn('hidden', className)} aria-hidden>{children}</div>;
-}
-
-function SelectItem({ className, value, children }: React.ComponentProps<'div'> & { value: string }) {
-  return <div data-value={value} className={className} aria-hidden>{children}</div>;
-}
-
-SelectTrigger.displayName = 'SelectTrigger';
-SelectValue.displayName = 'SelectValue';
-SelectContent.displayName = 'SelectContent';
-SelectItem.displayName = 'SelectItem';
-
-export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem };
+export { Select, SelectGroup, SelectValue, SelectTrigger, SelectContent, SelectItem };

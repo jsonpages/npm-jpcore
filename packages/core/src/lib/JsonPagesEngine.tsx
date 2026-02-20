@@ -170,9 +170,8 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
   const StudioView: React.FC = () => {
     const { slug = 'home' } = useParams<{ slug: string }>();
     const navigate = useNavigate();
-    const pageSlugs = React.useMemo(
-      () => Object.keys(pageRegistry).sort((a, b) => (a === 'home' ? -1 : b === 'home' ? 1 : a.localeCompare(b))),
-      [pageRegistry]
+    const pageSlugs = Object.keys(pageRegistry).sort((a, b) =>
+      a === 'home' ? -1 : b === 'home' ? 1 : a.localeCompare(b)
     );
     const [draft, setDraft] = useState<PageConfig | null>(null);
     const [hasChanges, setHasChanges] = useState(false);

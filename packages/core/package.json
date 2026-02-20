@@ -1,6 +1,6 @@
 {
   "name": "@jsonpages/core",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "private": false,
   "type": "module",
   "main": "./dist/jsonpages-core.umd.cjs",
@@ -27,6 +27,7 @@
     "zod": "^3.24.1"
   },
   "dependencies": {
+    "@radix-ui/react-select": "^2.1.6",
     "lucide-react": "^0.474.0",
     "radix-ui": "^1.4.3",
     "file-saver": "^2.0.5",
