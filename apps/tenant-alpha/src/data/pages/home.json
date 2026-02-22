@@ -15,13 +15,35 @@
         "titleHighlight": "Zero Runtime Overhead.",
         "description": "The @jsonpages/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface, leaving your Tenant code pure and framework-agnostic.",
         "ctas": [
-          { "id": "cta-1", "label": "Read the Docs",  "href": "#devex",    "variant": "primary" },
-          { "id": "cta-2", "label": "View on NPM",    "href": "#",         "variant": "secondary" }
+          {
+            "id": "cta-1",
+            "label": "Read the Docs",
+            "href": "#devex",
+            "variant": "primary"
+          },
+          {
+            "id": "cta-2",
+            "label": "View on NPM",
+            "href": "#",
+            "variant": "secondary"
+          }
         ],
         "metrics": [
-          { "id": "m-1", "val": "3KB",  "label": "Core Overhead" },
-          { "id": "m-2", "val": "100%", "label": "Type Safety" },
-          { "id": "m-3", "val": "MIT",  "label": "License" }
+          {
+            "id": "m-1",
+            "val": "3KB",
+            "label": "Core Overhead"
+          },
+          {
+            "id": "m-2",
+            "val": "100%",
+            "label": "Type Safety"
+          },
+          {
+            "id": "m-3",
+            "val": "MIT",
+            "label": "License"
+          }
         ]
       },
       "settings": {}
@@ -102,11 +124,26 @@
         "titleHighlight": "Branch it. Diff it. Roll it back.",
         "description": "Because every page is a plain JSON file, your content workflow is identical to your code workflow. No database exports, no CMS snapshots, no proprietary backups. Just git.",
         "points": [
-          { "id": "p-1", "text": "Content changes appear in pull requests like any code change" },
-          { "id": "p-2", "text": "Branch a page, preview it, merge when approved" },
-          { "id": "p-3", "text": "Full diff history on every field of every section" },
-          { "id": "p-4", "text": "Roll back any page to any commit in seconds" },
-          { "id": "p-5", "text": "CI/CD pipelines trigger on content changes, not just code" }
+          {
+            "id": "p-1",
+            "text": "Content changes appear in pull requests like any code change"
+          },
+          {
+            "id": "p-2",
+            "text": "Branch a page, preview it, merge when approved"
+          },
+          {
+            "id": "p-3",
+            "text": "Full diff history on every field of every section"
+          },
+          {
+            "id": "p-4",
+            "text": "Roll back any page to any commit in seconds"
+          },
+          {
+            "id": "p-5",
+            "text": "CI/CD pipelines trigger on content changes, not just code"
+          }
         ]
       },
       "settings": {}
@@ -120,9 +157,18 @@
         "title": "Your App.tsx is incredibly thin.",
         "description": "You don't write routing logic. You don't write admin panels. You just import the Engine and pass your configuration.",
         "features": [
-          { "id": "f-1", "text": "Automatic Routing based on JSON files" },
-          { "id": "f-2", "text": "Hot Module Replacement (HMR)" },
-          { "id": "f-3", "text": "Full TypeScript support" }
+          {
+            "id": "f-1",
+            "text": "Automatic Routing based on JSON files"
+          },
+          {
+            "id": "f-2",
+            "text": "Hot Module Replacement (HMR)"
+          },
+          {
+            "id": "f-3",
+            "text": "Full TypeScript support"
+          }
         ]
       },
       "settings": {}
@@ -136,9 +182,24 @@
         "title": "A new tenant in under 5 minutes.",
         "description": "Install the CLI once. From there, scaffolding a fully-typed, production-ready tenant — with all capsules, registry, schemas, and config wired up — is a single command.",
         "steps": [
-          { "id": "s-1", "num": "1", "title": "Install the CLI globally",   "description": "One-time install. The CLI lives alongside your other dev tools." },
-          { "id": "s-2", "num": "2", "title": "Scaffold a new tenant",      "description": "Generates the full TBP structure: capsules, registry, schemas, config, and data files — all typed and ready." },
-          { "id": "s-3", "num": "3", "title": "Start building",             "description": "Run npm run dev and your tenant is live with Studio, HMR, and full CMS editing." }
+          {
+            "id": "s-1",
+            "num": "1",
+            "title": "Install the CLI globally",
+            "description": "One-time install. The CLI lives alongside your other dev tools."
+          },
+          {
+            "id": "s-2",
+            "num": "2",
+            "title": "Scaffold a new tenant",
+            "description": "Generates the full TBP structure: capsules, registry, schemas, config, and data files — all typed and ready."
+          },
+          {
+            "id": "s-3",
+            "num": "3",
+            "title": "Start building",
+            "description": "Run npm run dev and your tenant is live with Studio, HMR, and full CMS editing."
+          }
         ]
       },
       "settings": {}
@@ -152,8 +213,18 @@
         "description": "Stop building page builders. Start building Systems.",
         "cliCommand": "npx @jsonpages/cli@latest new tenant",
         "ctas": [
-          { "id": "cta-docs", "label": "Read the Docs", "href": "#devex", "variant": "primary" },
-          { "id": "cta-npm",  "label": "View on NPM",   "href": "#",      "variant": "secondary" }
+          {
+            "id": "cta-docs",
+            "label": "Read the Docs",
+            "href": "#devex",
+            "variant": "primary"
+          },
+          {
+            "id": "cta-npm",
+            "label": "View on NPM",
+            "href": "#",
+            "variant": "secondary"
+          }
         ]
       },
       "settings": {}
