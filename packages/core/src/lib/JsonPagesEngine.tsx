@@ -402,7 +402,9 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       config.persistence.saveToFile(projectState, slug).then(() => {
         setHasChanges(false);
         setSaveSuccessFeedback(true);
-        window.setTimeout(() => window.location.reload(), 1000);
+        if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+          window.setTimeout(() => window.location.reload(), 1000);
+        }
       }).catch((err) => {
         console.error('[JsonPages] saveToFile failed', err);
         const msg = err instanceof Error ? err.message : String(err);
