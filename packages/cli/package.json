@@ -1,7 +1,7 @@
 {
   "name": "@jsonpages/cli",
-  "version": "3.0.43",
-  "description": "JsonPages CLI - Sovereign Projection Engine",
+  "version": "3.0.44",
+  "description": "The Sovereign CLI Engine for JsonPages.",
   "type": "module",
   "bin": {
     "jsonpages": "./src/index.js"
@@ -10,7 +10,6 @@
     "src",
     "assets/src_tenant_alpha.sh"
   ],
-  "description": "The Sovereign CLI Engine for JsonPages.",
   "author": "JsonPages Team",
   "license": "MIT",
   "homepage": "https://github.com/jsonpages/npm-jpcore#readme",
