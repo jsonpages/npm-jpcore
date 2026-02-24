@@ -16,6 +16,21 @@
   "files": [
     "dist"
   ],
+    "description": "The Sovereign Core Engine for JsonPages.",
+  "author": "JsonPages Team",
+  "license": "MIT",
+  "homepage": "https://github.com/jsonpages/npm-jpcore#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jsonpages/npm-jpcore.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/jsonpages/npm-jpcore/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "vite build",
     "prepack": "node scripts/sync-peers-from-stack.js"
