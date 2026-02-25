@@ -11,7 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@jsonpages/core": "^1.0.28",
+    "@jsonpages/core": "^1.0.37",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
     "react": "^19.0.0",
