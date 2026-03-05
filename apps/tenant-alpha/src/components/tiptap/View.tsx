@@ -7,30 +7,20 @@ import type { Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import Underline from '@tiptap/extension-underline';
 import { Markdown } from 'tiptap-markdown';
 import {
-  Undo2,
-  Redo2,
-  Heading,
-  List,
-  ListOrdered,
-  Bold,
-  Italic,
-  Strikethrough,
-  Underline as UnderlineIcon,
-  Code2,
-  Quote,
-  SquareCode,
-  Link2,
-  Unlink2,
-  ImagePlus,
-  Eraser,
+  Undo2, Redo2,
+  List, ListOrdered,
+  Bold, Italic, Strikethrough,
+  Code2, Quote, SquareCode,
+  Link2, Unlink2, ImagePlus, Eraser,
 } from 'lucide-react';
 import { STUDIO_EVENTS, useConfig, useStudio } from '@jsonpages/core';
 import type { TiptapData, TiptapSettings } from './types';
 
-const ToolbarButton: React.FC<{
+// ── UI primitives ─────────────────────────────────────────────────────────────
+
+const Btn: React.FC<{
   active?: boolean;
   title: string;
   onClick: () => void;
@@ -42,171 +32,196 @@ const ToolbarButton: React.FC<{
     onMouseDown={(e) => e.preventDefault()}
     onClick={onClick}
     className={[
-      'inline-flex h-7 min-w-7 items-center justify-center rounded-md border px-2 text-xs transition-colors',
+      'inline-flex h-7 min-w-7 items-center justify-center rounded-md px-2 text-xs transition-colors',
       active
-        ? 'bg-blue-600/25 border-blue-400/60 text-blue-100'
-        : 'bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800',
+        ? 'bg-zinc-700/70 text-zinc-100'
+        : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200',
     ].join(' ')}
   >
     {children}
   </button>
 );
 
-const ToolbarSeparator: React.FC = () => <span className="mx-1 h-5 w-px bg-zinc-700" aria-hidden />;
+const Sep: React.FC = () => (
+  <span className="mx-0.5 h-5 w-px shrink-0 bg-zinc-800" aria-hidden />
+);
+
+// ── Image extension with upload metadata ──────────────────────────────────────
 
 const UploadableImage = Image.extend({
   addAttributes() {
+    const bool = (attr: string) => ({
+      default: false,
+      parseHTML: (el: HTMLElement) => el.getAttribute(attr) === 'true',
+      renderHTML: (attrs: Record<string, unknown>) =>
+        attrs[attr.replace('data-', '').replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())]
+          ? { [attr]: 'true' }
+          : {},
+    });
     return {
       ...this.parent?.(),
       uploadId: {
         default: null,
-        parseHTML: (element: HTMLElement) => element.getAttribute('data-upload-id'),
-        renderHTML: (attributes: Record<string, unknown>) =>
-          attributes.uploadId ? { 'data-upload-id': String(attributes.uploadId) } : {},
+        parseHTML: (el: HTMLElement) => el.getAttribute('data-upload-id'),
+        renderHTML: (attrs: Record<string, unknown>) =>
+          attrs.uploadId ? { 'data-upload-id': String(attrs.uploadId) } : {},
       },
-      uploading: {
-        default: false,
-        parseHTML: (element: HTMLElement) => element.getAttribute('data-uploading') === 'true',
-        renderHTML: (attributes: Record<string, unknown>) =>
-          attributes.uploading ? { 'data-uploading': 'true' } : {},
-      },
-      uploadError: {
-        default: false,
-        parseHTML: (element: HTMLElement) => element.getAttribute('data-upload-error') === 'true',
-        renderHTML: (attributes: Record<string, unknown>) =>
-          attributes.uploadError ? { 'data-upload-error': 'true' } : {},
-      },
-      awaitingUpload: {
-        default: false,
-        parseHTML: (element: HTMLElement) => element.getAttribute('data-awaiting-upload') === 'true',
-        renderHTML: (attributes: Record<string, unknown>) =>
-          attributes.awaitingUpload ? { 'data-awaiting-upload': 'true' } : {},
-      },
+      uploading: bool('data-uploading'),
+      uploadError: bool('data-upload-error'),
+      awaitingUpload: bool('data-awaiting-upload'),
     };
   },
 });
 
-const getEditorMarkdown = (editor: Editor | null | undefined): string => {
-  const storage = editor?.storage as
-    | {
-        markdown?: {
-          getMarkdown?: () => string;
-        };
-      }
-    | undefined;
-  return storage?.markdown?.getMarkdown?.() ?? '';
-};
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-const UPLOAD_PLACEHOLDER_SRC =
-  "data:image/svg+xml;utf8," +
+const getMarkdown = (ed: Editor | null | undefined): string =>
+  (ed?.storage as { markdown?: { getMarkdown?: () => string } } | undefined)
+    ?.markdown?.getMarkdown?.() ?? '';
+
+const svg = (body: string) =>
+  'data:image/svg+xml;utf8,' +
   encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='420' viewBox='0 0 1200 420'>
-      <rect width='1200' height='420' fill='#090B14' stroke='#3F3F46' stroke-width='3' stroke-dasharray='10 10' rx='12' />
-      <g font-family='Inter,Arial,sans-serif' text-anchor='middle' fill='#A1A1AA'>
-        <text x='600' y='190' font-size='30' font-weight='700'>Uploading image...</text>
-        <text x='600' y='235' font-size='22'>Please wait while we process your file</text>
-      </g>
-    </svg>`
+    `<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='420' viewBox='0 0 1200 420'>${body}</svg>`
   );
 
-const UPLOAD_PICKER_PLACEHOLDER_SRC =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='420' viewBox='0 0 1200 420'>
-      <rect width='1200' height='420' fill='#090B14' stroke='#3F3F46' stroke-width='3' stroke-dasharray='10 10' rx='12' />
-      <g font-family='Inter,Arial,sans-serif' text-anchor='middle'>
-        <text x='600' y='210' font-size='34' font-weight='700' fill='#E4E4E7'>Click to upload or drag and drop</text>
-        <text x='600' y='255' font-size='24' font-weight='500' fill='#A1A1AA'>Maximum 3 files, 5MB each.</text>
-      </g>
-    </svg>`
-  );
+const RECT = `<rect width='1200' height='420' fill='#090B14' stroke='#3F3F46' stroke-width='3' stroke-dasharray='10 10' rx='12'/>`;
 
-const updateImageByUploadId = (
-  editor: Editor,
+const UPLOADING_SRC = svg(
+  RECT +
+  `<text x='600' y='215' font-family='Inter,Arial,sans-serif' font-size='28' font-weight='700' fill='#A1A1AA' text-anchor='middle'>Uploading image…</text>`
+);
+
+const PICKER_SRC = svg(
+  RECT +
+  `<text x='600' y='200' font-family='Inter,Arial,sans-serif' font-size='32' font-weight='700' fill='#E4E4E7' text-anchor='middle'>Click to upload or drag &amp; drop</text>` +
+  `<text x='600' y='248' font-family='Inter,Arial,sans-serif' font-size='22' fill='#A1A1AA' text-anchor='middle'>Max 5 MB per file</text>`
+);
+
+const patchImage = (
+  ed: Editor,
   uploadId: string,
   patch: Record<string, unknown>
 ): boolean => {
-  let targetPos: number | null = null;
-  editor.state.doc.descendants((node: { type: { name: string }; attrs?: Record<string, unknown> }, pos: number) => {
-    if (node.type.name === 'image' && node.attrs?.uploadId === uploadId) {
-      targetPos = pos;
-      return false;
+  let pos: number | null = null;
+  ed.state.doc.descendants(
+    (node: { type: { name: string }; attrs?: Record<string, unknown> }, p: number) => {
+      if (node.type.name === 'image' && node.attrs?.uploadId === uploadId) {
+        pos = p;
+        return false;
+      }
+      return true;
     }
-    return true;
-  });
-  if (targetPos == null) return false;
-  const current = editor.state.doc.nodeAt(targetPos);
-  if (!current) return false;
-  const attrs = { ...current.attrs, ...patch };
-  editor.view.dispatch(editor.state.tr.setNodeMarkup(targetPos, undefined, attrs));
+  );
+  if (pos == null) return false;
+  const cur = ed.state.doc.nodeAt(pos);
+  if (!cur) return false;
+  ed.view.dispatch(ed.state.tr.setNodeMarkup(pos, undefined, { ...cur.attrs, ...patch }));
   return true;
 };
 
+// Extensions defined outside component — stable reference, no re-creation on render
+const EXTENSIONS = [
+  StarterKit,
+  Link.configure({ openOnClick: false, autolink: true }),
+  UploadableImage,
+  // NOTE: Underline is intentionally excluded.
+  // tiptap-markdown with html:false cannot round-trip <u> tags, so underline
+  // would be silently dropped on save. Use bold/italic instead.
+  Markdown.configure({ html: false }),
+];
+
+const EDITOR_CLASSES =
+  'min-h-[220px] p-4 outline-none';
+
+// ── Studio editor component ───────────────────────────────────────────────────
+
 const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
   const { assets } = useConfig();
-  const rootRef = React.useRef<HTMLElement | null>(null);
-  const editorHostRef = React.useRef<HTMLDivElement | null>(null);
-  const editorInstanceRef = React.useRef<Editor | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-  const pendingUploadsRef = React.useRef<Map<string, Promise<void>>>(new Map());
-  const pendingPickerUploadIdRef = React.useRef<string | null>(null);
-  const latestMarkdownRef = React.useRef<string>(data.content ?? '');
-  const latestEmittedMarkdownRef = React.useRef<string>(data.content ?? '');
 
-  const resolveSectionId = React.useCallback(() => {
-    const sectionEl =
-      rootRef.current ??
-      (editorHostRef.current?.closest('[data-section-id]') as HTMLElement | null);
-    rootRef.current = sectionEl;
-    return sectionEl?.getAttribute('data-section-id') ?? null;
+  // DOM refs
+  const hostRef = React.useRef<HTMLDivElement | null>(null);
+  const sectionRef = React.useRef<HTMLElement | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  // Editor & upload state
+  const editorRef = React.useRef<Editor | null>(null);
+  const pendingUploads = React.useRef<Map<string, Promise<void>>>(new Map());
+  const pendingPickerId = React.useRef<string | null>(null);
+
+  // Markdown sync refs
+  const latestMd = React.useRef<string>(data.content ?? '');
+  const emittedMd = React.useRef<string>(data.content ?? '');
+
+  // Link popover state
+  const [linkOpen, setLinkOpen] = React.useState(false);
+  const [linkUrl, setLinkUrl] = React.useState('');
+  const linkInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  // ── Core helpers ────────────────────────────────────────────────────────
+
+  const getSectionId = React.useCallback((): string | null => {
+    const el =
+      sectionRef.current ??
+      (hostRef.current?.closest('[data-section-id]') as HTMLElement | null);
+    sectionRef.current = el;
+    return el?.getAttribute('data-section-id') ?? null;
   }, []);
 
-  const emitInlineUpdate = React.useCallback((markdown: string) => {
-    latestMarkdownRef.current = markdown;
-    const sectionId = resolveSectionId();
-    if (!sectionId) return;
-    window.parent.postMessage(
-      {
-        type: STUDIO_EVENTS.INLINE_FIELD_UPDATE,
-        sectionId,
-        fieldKey: 'content',
-        value: markdown,
-      },
-      window.location.origin
-    );
-    latestEmittedMarkdownRef.current = markdown;
-  }, [resolveSectionId]);
+  const emit = React.useCallback(
+    (markdown: string) => {
+      latestMd.current = markdown;
+      const sectionId = getSectionId();
+      if (!sectionId) return;
+      window.parent.postMessage(
+        {
+          type: STUDIO_EVENTS.INLINE_FIELD_UPDATE,
+          sectionId,
+          fieldKey: 'content',
+          value: markdown,
+        },
+        window.location.origin
+      );
+      emittedMd.current = markdown;
+    },
+    [getSectionId]
+  );
 
-  const insertUploadPlaceholder = React.useCallback(
+  const setFocusLock = React.useCallback((on: boolean) => {
+    sectionRef.current?.classList.toggle('jp-editorial-focus', on);
+  }, []);
+
+  // ── Image upload ─────────────────────────────────────────────────────────
+
+  const insertPlaceholder = React.useCallback(
     (uploadId: string, src: string, awaitingUpload: boolean) => {
-      const editor = editorInstanceRef.current;
-      if (!editor) return;
-      editor
-        .chain()
+      const ed = editorRef.current;
+      if (!ed) return;
+      ed.chain()
         .focus()
         .setImage({
           src,
           alt: 'upload-placeholder',
-          title: awaitingUpload ? 'Click to upload' : 'Uploading...',
+          title: awaitingUpload ? 'Click to upload' : 'Uploading…',
           uploadId,
           uploading: !awaitingUpload,
           awaitingUpload,
           uploadError: false,
         } as any)
         .run();
-      emitInlineUpdate(getEditorMarkdown(editor));
+      emit(getMarkdown(ed));
     },
-    [emitInlineUpdate]
+    [emit]
   );
 
-  const startUploadForId = React.useCallback(
+  const doUpload = React.useCallback(
     async (uploadId: string, file: File) => {
-      const uploadAsset = assets?.onAssetUpload;
-      if (!uploadAsset) return;
-      const editor = editorInstanceRef.current;
-      if (!editor) return;
-      updateImageByUploadId(editor, uploadId, {
-        src: UPLOAD_PLACEHOLDER_SRC,
+      const uploadFn = assets?.onAssetUpload;
+      if (!uploadFn) return;
+      const ed = editorRef.current;
+      if (!ed) return;
+      patchImage(ed, uploadId, {
+        src: UPLOADING_SRC,
         alt: file.name,
         title: file.name,
         uploading: true,
@@ -215,10 +230,10 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
       });
       const task = (async () => {
         try {
-          const url = await uploadAsset(file);
-          const currentEditor = editorInstanceRef.current;
-          if (currentEditor) {
-            updateImageByUploadId(currentEditor, uploadId, {
+          const url = await uploadFn(file);
+          const cur = editorRef.current;
+          if (cur) {
+            patchImage(cur, uploadId, {
               src: url,
               alt: file.name,
               title: file.name,
@@ -227,301 +242,432 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
               awaitingUpload: false,
               uploadError: false,
             });
-            emitInlineUpdate(getEditorMarkdown(currentEditor));
+            emit(getMarkdown(cur));
           }
         } catch (err) {
           console.error('[tiptap] upload failed', err);
-          const currentEditor = editorInstanceRef.current;
-          if (currentEditor) {
-            updateImageByUploadId(currentEditor, uploadId, {
+          const cur = editorRef.current;
+          if (cur)
+            patchImage(cur, uploadId, {
               uploading: false,
               awaitingUpload: false,
               uploadError: true,
             });
-          }
         } finally {
-          pendingUploadsRef.current.delete(uploadId);
+          pendingUploads.current.delete(uploadId);
         }
       })();
-      pendingUploadsRef.current.set(uploadId, task);
+      pendingUploads.current.set(uploadId, task);
       await task;
     },
-    [assets, emitInlineUpdate]
+    [assets, emit]
   );
 
-  const uploadImage = React.useCallback(
+  const uploadFile = React.useCallback(
     async (file: File) => {
-      const uploadId = crypto.randomUUID();
-      insertUploadPlaceholder(uploadId, UPLOAD_PLACEHOLDER_SRC, false);
-      await startUploadForId(uploadId, file);
+      const id = crypto.randomUUID();
+      insertPlaceholder(id, UPLOADING_SRC, false);
+      await doUpload(id, file);
     },
-    [insertUploadPlaceholder, startUploadForId]
+    [insertPlaceholder, doUpload]
   );
 
-  const setFocusLock = React.useCallback((enabled: boolean) => {
-    const sectionEl = rootRef.current;
-    if (!sectionEl) return;
-    if (enabled) sectionEl.classList.add('jp-editorial-focus');
-    else sectionEl.classList.remove('jp-editorial-focus');
-  }, []);
+  // ── Stable editorProps via refs (avoids stale closures in useEditor) ─────
+  // Reads refs at call-time so useEditor never needs to rebuild the editor.
 
-  const editor = useEditor(
-    {
-      extensions: [
-        StarterKit,
-        Link.configure({ openOnClick: false, autolink: true }),
-        Underline,
-        UploadableImage,
-        Markdown.configure({ html: false }),
-      ],
-      content: data.content ?? '',
-      autofocus: false,
-      editorProps: {
-        attributes: {
-          class:
-            'prose prose-invert max-w-none min-h-[220px] rounded-lg border border-zinc-800 bg-zinc-950/60 p-4 text-zinc-100 outline-none',
-        },
-        handleDrop: (_view: unknown, event: DragEvent) => {
-          const file = event.dataTransfer?.files?.[0];
-          if (!file || !file.type.startsWith('image/') || !assets?.onAssetUpload) return false;
-          event.preventDefault();
-          void (async () => {
-            try {
-              await uploadImage(file);
-            } catch (err) {
-              console.error('[tiptap] upload failed on drop', err);
-            }
-          })();
-          return true;
-        },
-        handlePaste: (_view: unknown, event: ClipboardEvent) => {
-          const file = Array.from(event.clipboardData?.files ?? []).find((f: File) =>
-            f.type.startsWith('image/')
-          );
-          if (!file || !assets?.onAssetUpload) return false;
-          event.preventDefault();
-          void (async () => {
-            try {
-              await uploadImage(file);
-            } catch (err) {
-              console.error('[tiptap] upload failed on paste', err);
-            }
-          })();
-          return true;
-        },
-        handleClickOn: (_view: unknown, _pos: number, node: { type: { name: string }; attrs?: Record<string, unknown> }) => {
-          if (node.type.name !== 'image') return false;
-          if (node.attrs?.awaitingUpload !== true) return false;
-          const uploadId = typeof node.attrs?.uploadId === 'string' ? node.attrs.uploadId : null;
-          if (!uploadId) return false;
-          pendingPickerUploadIdRef.current = uploadId;
-          fileInputRef.current?.click();
-          return true;
-        },
+  const uploadFileRef = React.useRef(uploadFile);
+  uploadFileRef.current = uploadFile;
+  const assetsRef = React.useRef(assets);
+  assetsRef.current = assets;
+
+  const editorProps = React.useMemo(
+    () => ({
+      attributes: { class: EDITOR_CLASSES },
+      handleDrop: (_v: unknown, event: DragEvent) => {
+        const file = event.dataTransfer?.files?.[0];
+        if (!file?.type.startsWith('image/') || !assetsRef.current?.onAssetUpload) return false;
+        event.preventDefault();
+        void uploadFileRef.current(file).catch((e) =>
+          console.error('[tiptap] drop upload failed', e)
+        );
+        return true;
       },
-      onUpdate: ({ editor: currentEditor }: { editor: Editor }) => {
-        const markdown = getEditorMarkdown(currentEditor);
-        emitInlineUpdate(markdown);
+      handlePaste: (_v: unknown, event: ClipboardEvent) => {
+        const file = Array.from(event.clipboardData?.files ?? []).find((f: File) =>
+          f.type.startsWith('image/')
+        );
+        if (!file || !assetsRef.current?.onAssetUpload) return false;
+        event.preventDefault();
+        void uploadFileRef.current(file).catch((e) =>
+          console.error('[tiptap] paste upload failed', e)
+        );
+        return true;
       },
-      onFocus: () => {
-        setFocusLock(true);
+      handleClickOn: (
+        _v: unknown,
+        _p: number,
+        node: { type: { name: string }; attrs?: Record<string, unknown> }
+      ) => {
+        if (node.type.name !== 'image' || node.attrs?.awaitingUpload !== true) return false;
+        const uploadId =
+          typeof node.attrs?.uploadId === 'string' ? node.attrs.uploadId : null;
+        if (!uploadId) return false;
+        pendingPickerId.current = uploadId;
+        fileInputRef.current?.click();
+        return true;
       },
-      onBlur: ({ editor: currentEditor }: { editor: Editor }) => {
-        const markdown = getEditorMarkdown(currentEditor);
-        if (markdown !== latestEmittedMarkdownRef.current) {
-          emitInlineUpdate(markdown);
-        }
-        setFocusLock(false);
-      },
-    }
+    }),
+    [] // intentionally empty — reads refs at call-time
   );
 
-  React.useEffect(() => {
-    const sectionEl = editorHostRef.current?.closest('[data-section-id]') as HTMLElement | null;
-    rootRef.current = sectionEl;
-  }, []);
+  // ── useEditor ─────────────────────────────────────────────────────────────
 
-  React.useEffect(() => {
-    editorInstanceRef.current = editor ?? null;
-  }, [editor]);
+  const emitRef = React.useRef(emit);
+  emitRef.current = emit;
 
-  React.useEffect(() => {
-    const handleInlineFlushRequest = () => {
-      void (async () => {
-        const pending = Array.from(pendingUploadsRef.current.values());
-        if (pending.length > 0) {
-          await Promise.allSettled(pending);
-        }
-        const markdown = getEditorMarkdown(editorInstanceRef.current);
-        emitInlineUpdate(markdown);
-      })();
-    };
-    window.addEventListener(STUDIO_EVENTS.REQUEST_INLINE_FLUSH, handleInlineFlushRequest as EventListener);
-    return () => {
-      window.removeEventListener(STUDIO_EVENTS.REQUEST_INLINE_FLUSH, handleInlineFlushRequest as EventListener);
-    };
-  }, [emitInlineUpdate]);
-
-  React.useEffect(() => {
-    if (!editor) return;
-    const nextMarkdown = data.content ?? '';
-    if (nextMarkdown === latestMarkdownRef.current) return;
-    editor.commands.setContent(nextMarkdown);
-    latestMarkdownRef.current = nextMarkdown;
-  }, [data.content, editor]);
-
-  React.useEffect(
-    () => () => {
-      const editorInstance = editorInstanceRef.current;
-      const markdown = getEditorMarkdown(editorInstance);
-      if (markdown !== latestEmittedMarkdownRef.current) {
-        emitInlineUpdate(markdown);
-      }
+  const editor = useEditor({
+    extensions: EXTENSIONS,
+    content: data.content ?? '',
+    autofocus: false,
+    editorProps,
+    onUpdate: ({ editor: e }: { editor: Editor }) => emitRef.current(getMarkdown(e)),
+    onFocus: () => setFocusLock(true),
+    onBlur: ({ editor: e }: { editor: Editor }) => {
+      const md = getMarkdown(e);
+      if (md !== emittedMd.current) emitRef.current(md);
       setFocusLock(false);
     },
-    [emitInlineUpdate, setFocusLock]
+  });
+
+  // ── Effects ───────────────────────────────────────────────────────────────
+
+  React.useEffect(() => {
+    sectionRef.current =
+      hostRef.current?.closest('[data-section-id]') as HTMLElement | null;
+  }, []);
+
+  React.useEffect(() => {
+    editorRef.current = editor ?? null;
+  }, [editor]);
+
+  // Sync external content changes into editor (e.g. engine-level undo)
+  React.useEffect(() => {
+    if (!editor) return;
+    const next = data.content ?? '';
+    if (next === latestMd.current) return;
+    editor.commands.setContent(next);
+    latestMd.current = next;
+  }, [data.content, editor]);
+
+  // PreviewEntry receives REQUEST_INLINE_FLUSH via postMessage and re-dispatches
+  // it as a DOM CustomEvent. Listen to the DOM event — do NOT send INLINE_FLUSHED
+  // back (PreviewEntry already handles that acknowledgement).
+  React.useEffect(() => {
+    const handler = () => {
+      void (async () => {
+        if (pendingUploads.current.size > 0) {
+          await Promise.allSettled(Array.from(pendingUploads.current.values()));
+        }
+        emitRef.current(getMarkdown(editorRef.current));
+      })();
+    };
+    window.addEventListener(STUDIO_EVENTS.REQUEST_INLINE_FLUSH, handler);
+    return () => window.removeEventListener(STUDIO_EVENTS.REQUEST_INLINE_FLUSH, handler);
+  }, []);
+
+  // File input cancel: modern browsers fire a 'cancel' event when user
+  // closes the picker without selecting a file.
+  React.useEffect(() => {
+    const input = fileInputRef.current;
+    if (!input) return;
+    const onCancel = () => {
+      const pickId = pendingPickerId.current;
+      if (pickId && editorRef.current) {
+        patchImage(editorRef.current, pickId, {
+          uploading: false,
+          awaitingUpload: false,
+          uploadError: true,
+        });
+      }
+      pendingPickerId.current = null;
+    };
+    input.addEventListener('cancel', onCancel);
+    return () => input.removeEventListener('cancel', onCancel);
+  }, []);
+
+  // Emit on unmount (safety flush)
+  React.useEffect(
+    () => () => {
+      const md = getMarkdown(editorRef.current);
+      if (md !== emittedMd.current) emitRef.current(md);
+      setFocusLock(false);
+    },
+    [setFocusLock]
   );
 
-  const setParagraph = () => editor?.chain().focus().setParagraph().run();
-  const setHeading = (level: 1 | 2 | 3) => editor?.chain().focus().toggleHeading({ level }).run();
-  const setLink = () => {
+  // Focus link input when popover opens
+  React.useEffect(() => {
+    if (linkOpen) {
+      const t = setTimeout(() => linkInputRef.current?.focus(), 0);
+      return () => clearTimeout(t);
+    }
+  }, [linkOpen]);
+
+  // ── Toolbar actions ───────────────────────────────────────────────────────
+
+  const openLink = () => {
     if (!editor) return;
     const prev = editor.getAttributes('link').href as string | undefined;
-    const href = window.prompt('URL', prev ?? 'https://');
-    if (href == null) return;
-    if (href.trim() === '') {
+    setLinkUrl(prev ?? 'https://');
+    setLinkOpen(true);
+  };
+
+  const applyLink = () => {
+    if (!editor) return;
+    const href = linkUrl.trim();
+    if (href === '' || href === 'https://') {
       editor.chain().focus().unsetLink().run();
+    } else {
+      editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
+    }
+    setLinkOpen(false);
+  };
+
+  const onFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const pickId = pendingPickerId.current;
+    e.target.value = '';
+
+    if (!file?.type.startsWith('image/') || !assets?.onAssetUpload) {
+      // File picker opened but no valid file selected — clean up placeholder
+      if (pickId && editorRef.current) {
+        patchImage(editorRef.current, pickId, {
+          uploading: false,
+          awaitingUpload: false,
+          uploadError: true,
+        });
+      }
+      pendingPickerId.current = null;
       return;
     }
-    editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
-  };
-  const clearFormatting = () => {
-    editor?.chain().focus().unsetAllMarks().clearNodes().run();
-  };
-  const onPickImageClick = () => {
-    if (pendingPickerUploadIdRef.current) return;
-    const uploadId = crypto.randomUUID();
-    pendingPickerUploadIdRef.current = uploadId;
-    insertUploadPlaceholder(uploadId, UPLOAD_PICKER_PLACEHOLDER_SRC, true);
-  };
-  const onFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    const pendingUploadId = pendingPickerUploadIdRef.current;
-    if (!file || !file.type.startsWith('image/') || !assets?.onAssetUpload) {
-      event.target.value = '';
-      return;
-    }
+
     void (async () => {
       try {
-        if (pendingUploadId) {
-          await startUploadForId(pendingUploadId, file);
-          pendingPickerUploadIdRef.current = null;
+        if (pickId) {
+          await doUpload(pickId, file);
+          pendingPickerId.current = null;
         } else {
-          await uploadImage(file);
+          await uploadFile(file);
         }
       } catch (err) {
-        console.error('[tiptap] upload failed from picker', err);
-      } finally {
-        event.target.value = '';
+        console.error('[tiptap] picker upload failed', err);
+        pendingPickerId.current = null;
       }
     })();
   };
-  const isActive = (name: string, attrs?: Record<string, unknown>) => editor?.isActive(name, attrs) ?? false;
+
+  const onPickImage = () => {
+    if (pendingPickerId.current) return;
+    const id = crypto.randomUUID();
+    pendingPickerId.current = id;
+    insertPlaceholder(id, PICKER_SRC, true);
+  };
+
+  const isActive = (name: string, attrs?: Record<string, unknown>) =>
+    editor?.isActive(name, attrs) ?? false;
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      ref={editorHostRef}
-      data-jp-field="content"
-      className="space-y-3"
-    >
+    <div ref={hostRef} data-jp-field="content" className="space-y-2">
       {editor && (
         <div
           data-jp-ignore-select="true"
-          className="sticky top-2 z-[65] rounded-md border border-zinc-700 bg-zinc-950/95 p-2 shadow-lg backdrop-blur"
+          className="sticky top-0 z-[65] border-b border-zinc-800 bg-zinc-950"
         >
-          <div className="flex flex-wrap items-center gap-1.5">
-            <ToolbarButton title="Undo" onClick={() => editor.chain().focus().undo().run()}>
-              <Undo2 size={14} />
-            </ToolbarButton>
-            <ToolbarButton title="Redo" onClick={() => editor.chain().focus().redo().run()}>
-              <Redo2 size={14} />
-            </ToolbarButton>
-            <ToolbarSeparator />
+          {/* ── Main toolbar ── */}
+          <div className="flex flex-wrap items-center justify-center gap-1 p-2">
+            {/* History */}
+            <Btn title="Undo" onClick={() => editor.chain().focus().undo().run()}>
+              <Undo2 size={13} />
+            </Btn>
+            <Btn title="Redo" onClick={() => editor.chain().focus().redo().run()}>
+              <Redo2 size={13} />
+            </Btn>
+            <Sep />
 
-            <ToolbarButton active={isActive('paragraph')} title="Paragraph" onClick={setParagraph}>
+            {/* Block type */}
+            <Btn
+              active={isActive('paragraph')}
+              title="Paragraph"
+              onClick={() => editor.chain().focus().setParagraph().run()}
+            >
               P
-            </ToolbarButton>
-            <ToolbarButton active={isActive('heading', { level: 1 })} title="Heading 1" onClick={() => setHeading(1)}>
+            </Btn>
+            <Btn
+              active={isActive('heading', { level: 1 })}
+              title="Heading 1"
+              onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+            >
               H1
-            </ToolbarButton>
-            <ToolbarButton active={isActive('heading', { level: 2 })} title="Heading 2" onClick={() => setHeading(2)}>
+            </Btn>
+            <Btn
+              active={isActive('heading', { level: 2 })}
+              title="Heading 2"
+              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            >
               H2
-            </ToolbarButton>
-            <ToolbarButton active={isActive('heading', { level: 3 })} title="Heading 3" onClick={() => setHeading(3)}>
+            </Btn>
+            <Btn
+              active={isActive('heading', { level: 3 })}
+              title="Heading 3"
+              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+            >
               H3
-            </ToolbarButton>
-            <ToolbarButton title="Headings" onClick={() => setHeading(2)}>
-              <Heading size={14} />
-            </ToolbarButton>
-            <ToolbarSeparator />
+            </Btn>
+            <Sep />
 
-            <ToolbarButton active={isActive('bold')} title="Bold" onClick={() => editor.chain().focus().toggleBold().run()}>
-              <Bold size={14} />
-            </ToolbarButton>
-            <ToolbarButton active={isActive('italic')} title="Italic" onClick={() => editor.chain().focus().toggleItalic().run()}>
-              <Italic size={14} />
-            </ToolbarButton>
-            <ToolbarButton active={isActive('underline')} title="Underline" onClick={() => editor.chain().focus().toggleUnderline().run()}>
-              <UnderlineIcon size={14} />
-            </ToolbarButton>
-            <ToolbarButton active={isActive('strike')} title="Strike" onClick={() => editor.chain().focus().toggleStrike().run()}>
-              <Strikethrough size={14} />
-            </ToolbarButton>
-            <ToolbarButton active={isActive('code')} title="Inline code" onClick={() => editor.chain().focus().toggleCode().run()}>
-              <Code2 size={14} />
-            </ToolbarButton>
-            <ToolbarSeparator />
+            {/* Inline marks */}
+            <Btn
+              active={isActive('bold')}
+              title="Bold (Ctrl+B)"
+              onClick={() => editor.chain().focus().toggleBold().run()}
+            >
+              <Bold size={13} />
+            </Btn>
+            <Btn
+              active={isActive('italic')}
+              title="Italic (Ctrl+I)"
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+            >
+              <Italic size={13} />
+            </Btn>
+            <Btn
+              active={isActive('strike')}
+              title="Strikethrough"
+              onClick={() => editor.chain().focus().toggleStrike().run()}
+            >
+              <Strikethrough size={13} />
+            </Btn>
+            <Btn
+              active={isActive('code')}
+              title="Inline code"
+              onClick={() => editor.chain().focus().toggleCode().run()}
+            >
+              <Code2 size={13} />
+            </Btn>
+            <Sep />
 
-            <ToolbarButton active={isActive('bulletList')} title="Bullet list" onClick={() => editor.chain().focus().toggleBulletList().run()}>
-              <List size={14} />
-            </ToolbarButton>
-            <ToolbarButton active={isActive('orderedList')} title="Ordered list" onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-              <ListOrdered size={14} />
-            </ToolbarButton>
-            <ToolbarButton active={isActive('blockquote')} title="Blockquote" onClick={() => editor.chain().focus().toggleBlockquote().run()}>
-              <Quote size={14} />
-            </ToolbarButton>
-            <ToolbarButton active={isActive('codeBlock')} title="Code block" onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
-              <SquareCode size={14} />
-            </ToolbarButton>
-            <ToolbarSeparator />
+            {/* Lists & block nodes */}
+            <Btn
+              active={isActive('bulletList')}
+              title="Bullet list"
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+            >
+              <List size={13} />
+            </Btn>
+            <Btn
+              active={isActive('orderedList')}
+              title="Ordered list"
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            >
+              <ListOrdered size={13} />
+            </Btn>
+            <Btn
+              active={isActive('blockquote')}
+              title="Blockquote"
+              onClick={() => editor.chain().focus().toggleBlockquote().run()}
+            >
+              <Quote size={13} />
+            </Btn>
+            <Btn
+              active={isActive('codeBlock')}
+              title="Code block"
+              onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+            >
+              <SquareCode size={13} />
+            </Btn>
+            <Sep />
 
-            <ToolbarButton active={isActive('link')} title="Set link" onClick={setLink}>
-              <Link2 size={14} />
-            </ToolbarButton>
-            <ToolbarButton title="Remove link" onClick={() => editor.chain().focus().unsetLink().run()}>
-              <Unlink2 size={14} />
-            </ToolbarButton>
-            <ToolbarButton title="Add image" onClick={onPickImageClick}>
-              <ImagePlus size={14} />
-            </ToolbarButton>
-            <ToolbarButton title="Clear formatting" onClick={clearFormatting}>
-              <Eraser size={14} />
-            </ToolbarButton>
+            {/* Link / image / clear */}
+            <Btn
+              active={isActive('link') || linkOpen}
+              title="Set link"
+              onClick={openLink}
+            >
+              <Link2 size={13} />
+            </Btn>
+            <Btn
+              title="Remove link"
+              onClick={() => editor.chain().focus().unsetLink().run()}
+            >
+              <Unlink2 size={13} />
+            </Btn>
+            <Btn title="Insert image" onClick={onPickImage}>
+              <ImagePlus size={13} />
+            </Btn>
+            <Btn
+              title="Clear formatting"
+              onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+            >
+              <Eraser size={13} />
+            </Btn>
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={onFileSelected}
-          />
+
+          {/* ── Link popover row (replaces window.prompt) ── */}
+          {linkOpen && (
+            <div className="flex items-center gap-2 border-t border-zinc-700 px-2 py-1.5">
+              <Link2 size={12} className="shrink-0 text-zinc-500" />
+              <input
+                ref={linkInputRef}
+                type="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyLink();
+                  }
+                  if (e.key === 'Escape') setLinkOpen(false);
+                }}
+                placeholder="https://example.com"
+                className="min-w-0 flex-1 bg-transparent text-xs text-zinc-100 placeholder:text-zinc-500 outline-none"
+              />
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={applyLink}
+                className="shrink-0 rounded px-2 py-0.5 text-xs bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+              >
+                Set
+              </button>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setLinkOpen(false)}
+                className="shrink-0 rounded px-2 py-0.5 text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-200 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       )}
+
       <EditorContent editor={editor} className="jp-simple-editor" />
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onFileSelected}
+      />
     </div>
   );
 };
+
+// ── Public view ───────────────────────────────────────────────────────────────
 
 const PublicTiptapContent: React.FC<{ content: string }> = ({ content }) => (
   <article className="prose max-w-none prose-zinc" data-jp-field="content">
@@ -531,25 +677,17 @@ const PublicTiptapContent: React.FC<{ content: string }> = ({ content }) => (
   </article>
 );
 
+// ── Export ────────────────────────────────────────────────────────────────────
+
 export const Tiptap: React.FC<{ data: TiptapData; settings?: TiptapSettings }> = ({ data }) => {
   const { mode } = useStudio();
-  const isStudio = mode === 'studio';
-
   return (
-    <section
-      style={
-        {
-          '--local-bg': 'var(--background)',
-          '--local-surface': 'var(--card)',
-          '--local-text': 'var(--foreground)',
-          '--local-border': 'var(--border)',
-        } as React.CSSProperties
-      }
-      className="py-12 bg-[var(--local-bg)]"
-    >
-      <div className="container mx-auto px-6 max-w-4xl">
-        {isStudio ? <StudioTiptapEditor data={data} /> : <PublicTiptapContent content={data.content ?? ''} />}
-      </div>
+    <section className="w-full">
+      {mode === 'studio' ? (
+        <StudioTiptapEditor data={data} />
+      ) : (
+        <PublicTiptapContent content={data.content ?? ''} />
+      )}
     </section>
   );
 };

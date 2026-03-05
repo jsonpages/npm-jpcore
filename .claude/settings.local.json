@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"\\\\wsl.localhost\\\\Ubuntu\\\\home\\\\dev\\\\npm-jpcore\\\\node_modules\\\\@tiptap\"\" 2>/dev/null | head -5 || echo \"no root node_modules/@tiptap \")",
+      "Bash(wsl -e bash -c \"ls /home/dev/npm-jpcore/apps/tenant-alpha/node_modules/@tiptap/ 2>&1 | head -30\")",
+      "Bash(wsl -e bash -c \"ls /home/dev/npm-jpcore/node_modules/@tiptap/ 2>&1 | head -30\")",
+      "Bash(wsl -d Ubuntu -e bash -c \"ls /home/dev/npm-jpcore/apps/tenant-alpha/node_modules/@tiptap/ 2>/dev/null | head -30\")",
+      "Bash(wsl -d Ubuntu -e bash -c \"ls /home/dev/npm-jpcore/node_modules/@tiptap/ 2>/dev/null | head -30\")",
+      "Bash(wsl -d Ubuntu -e bash -c \"ls /home/dev/npm-jpcore/apps/tenant-alpha/node_modules/tiptap-markdown/src/ 2>/dev/null || ls /home/dev/npm-jpcore/apps/tenant-alpha/node_modules/tiptap-markdown/dist/ 2>/dev/null | head -20\")",
+      "Bash(wsl -d Ubuntu -e bash -c \"cat /home/dev/npm-jpcore/apps/tenant-alpha/node_modules/tiptap-markdown/src/serialize/MarkdownSerializer.js | head -60\")",
+      "Bash(wsl -d Ubuntu -e bash -c \"cat /home/dev/npm-jpcore/apps/tenant-alpha/node_modules/tiptap-markdown/src/util/extensions.js\")"
+    ]
+  }
+}

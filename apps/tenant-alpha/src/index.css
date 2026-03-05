@@ -182,9 +182,65 @@ html {
   pointer-events: none;
 }
 
-/* Tiptap simple-editor-like behavior in Studio */
-.jp-simple-editor .ProseMirror:focus {
+/* ==========================================================================
+   TIPTAP / PROSEMIRROR — Editor typography
+   Tailwind preflight resets all heading/list styles. Re-apply here using
+   tenant theme tokens so the editor is WYSIWYG.
+   ========================================================================== */
+.jp-simple-editor .ProseMirror {
   outline: none;
+  word-break: break-word;
+}
+.jp-simple-editor .ProseMirror > * + * { margin-top: 0.75em; }
+
+.jp-simple-editor .ProseMirror h1 { font-size: 2em;    font-weight: 700; line-height: 1.2; margin-top: 1.25em; margin-bottom: 0.25em; }
+.jp-simple-editor .ProseMirror h2 { font-size: 1.5em;  font-weight: 700; line-height: 1.3; margin-top: 1.25em; margin-bottom: 0.25em; }
+.jp-simple-editor .ProseMirror h3 { font-size: 1.25em; font-weight: 600; line-height: 1.4; margin-top: 1.25em; margin-bottom: 0.25em; }
+.jp-simple-editor .ProseMirror h4 { font-size: 1em;    font-weight: 600; line-height: 1.5; margin-top: 1em;    margin-bottom: 0.25em; }
+
+.jp-simple-editor .ProseMirror p  { line-height: 1.7; }
+
+.jp-simple-editor .ProseMirror strong { font-weight: 700; }
+.jp-simple-editor .ProseMirror em     { font-style: italic; }
+.jp-simple-editor .ProseMirror s      { text-decoration: line-through; }
+
+.jp-simple-editor .ProseMirror a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+.jp-simple-editor .ProseMirror a:hover { opacity: 0.8; }
+
+.jp-simple-editor .ProseMirror code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.875em;
+  background: color-mix(in oklch, var(--foreground) 8%, transparent);
+  border-radius: 0.25em;
+  padding: 0.1em 0.35em;
+}
+.jp-simple-editor .ProseMirror pre {
+  background: color-mix(in oklch, var(--background) 60%, black);
+  border-radius: 0.5em;
+  padding: 1em 1.25em;
+  overflow-x: auto;
+}
+.jp-simple-editor .ProseMirror pre code {
+  background: none;
+  padding: 0;
+}
+
+.jp-simple-editor .ProseMirror ul { list-style-type: disc;    padding-left: 1.625em; }
+.jp-simple-editor .ProseMirror ol { list-style-type: decimal; padding-left: 1.625em; }
+.jp-simple-editor .ProseMirror li { line-height: 1.7; margin-top: 0.25em; }
+.jp-simple-editor .ProseMirror li + li { margin-top: 0.25em; }
+
+.jp-simple-editor .ProseMirror blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1em;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.jp-simple-editor .ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5em 0;
 }
 
 .jp-simple-editor .ProseMirror img {
@@ -203,6 +259,16 @@ html {
 .jp-simple-editor .ProseMirror img[data-upload-error="true"] {
   outline: 2px solid rgb(239 68 68 / 0.8);
   outline-offset: 2px;
+}
+
+/* Placeholder when editor is empty */
+.jp-simple-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  pointer-events: none;
+  float: left;
+  height: 0;
 }
 
 
