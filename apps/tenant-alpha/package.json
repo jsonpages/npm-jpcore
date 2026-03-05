@@ -13,6 +13,7 @@
   "dependencies": {
     "@tiptap/extension-image": "latest",
     "@tiptap/extension-link": "latest",
+    "@tiptap/extension-underline": "latest",
     "@tiptap/react": "latest",
     "@tiptap/starter-kit": "latest",
     "@jsonpages/core": "^1.0.44",

@@ -134,14 +134,23 @@ program
       await processScriptInNode(scriptPath, targetDir);
       spinner.succeed('Source code and assets projected successfully.');
 
-      // 5. DEPENDENCY RESOLUTION (versions from @jsonpages/stack manifest)
+      // 5. DEPENDENCY RESOLUTION (SOT: apps/tenant-alpha/package.json; fallback: @jsonpages/stack)
       spinner.start('Installing dependencies (this may take a minute)...');
-      const stack = (await import('@jsonpages/stack')).default;
-      const depSpecs = Object.entries(stack.dependencies || {}).map(([name, ver]) => `${name}@${ver}`);
-      const devDepSpecs = Object.entries(stack.devDependencies || {}).map(([name, ver]) => `${name}@${ver}`);
-
-      await execa(npmCmd, ['install', ...depSpecs], { cwd: targetDir });
-      await execa(npmCmd, ['install', '-D', ...devDepSpecs], { cwd: targetDir });
+      const sotPath = path.resolve(process.cwd(), 'apps', 'tenant-alpha', 'package.json');
+      let depSpecs = [];
+      let devDepSpecs = [];
+      if (await fs.pathExists(sotPath)) {
+        const sot = await fs.readJson(sotPath);
+        depSpecs = Object.entries(sot.dependencies || {}).map(([n, v]) => `${n}@${v}`);
+        devDepSpecs = Object.entries(sot.devDependencies || {}).map(([n, v]) => `${n}@${v}`);
+      }
+      if (depSpecs.length === 0 && devDepSpecs.length === 0) {
+        const stack = (await import('@jsonpages/stack')).default;
+        depSpecs = Object.entries(stack.dependencies || {}).map(([name, ver]) => `${name}@${ver}`);
+        devDepSpecs = Object.entries(stack.devDependencies || {}).map(([name, ver]) => `${name}@${ver}`);
+      }
+      if (depSpecs.length > 0) await execa(npmCmd, ['install', ...depSpecs], { cwd: targetDir });
+      if (devDepSpecs.length > 0) await execa(npmCmd, ['install', '-D', ...devDepSpecs], { cwd: targetDir });
       
       spinner.succeed(chalk.green.bold('✨ Tenant Ready!'));
 

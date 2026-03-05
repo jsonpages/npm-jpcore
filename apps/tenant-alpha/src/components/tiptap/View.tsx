@@ -60,26 +60,26 @@ const UploadableImage = Image.extend({
       ...this.parent?.(),
       uploadId: {
         default: null,
-        parseHTML: (element) => element.getAttribute('data-upload-id'),
-        renderHTML: (attributes) =>
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-upload-id'),
+        renderHTML: (attributes: Record<string, unknown>) =>
           attributes.uploadId ? { 'data-upload-id': String(attributes.uploadId) } : {},
       },
       uploading: {
         default: false,
-        parseHTML: (element) => element.getAttribute('data-uploading') === 'true',
-        renderHTML: (attributes) =>
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-uploading') === 'true',
+        renderHTML: (attributes: Record<string, unknown>) =>
           attributes.uploading ? { 'data-uploading': 'true' } : {},
       },
       uploadError: {
         default: false,
-        parseHTML: (element) => element.getAttribute('data-upload-error') === 'true',
-        renderHTML: (attributes) =>
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-upload-error') === 'true',
+        renderHTML: (attributes: Record<string, unknown>) =>
           attributes.uploadError ? { 'data-upload-error': 'true' } : {},
       },
       awaitingUpload: {
         default: false,
-        parseHTML: (element) => element.getAttribute('data-awaiting-upload') === 'true',
-        renderHTML: (attributes) =>
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-awaiting-upload') === 'true',
+        renderHTML: (attributes: Record<string, unknown>) =>
           attributes.awaitingUpload ? { 'data-awaiting-upload': 'true' } : {},
       },
     };
@@ -127,7 +127,7 @@ const updateImageByUploadId = (
   patch: Record<string, unknown>
 ): boolean => {
   let targetPos: number | null = null;
-  editor.state.doc.descendants((node, pos) => {
+  editor.state.doc.descendants((node: { type: { name: string }; attrs?: Record<string, unknown> }, pos: number) => {
     if (node.type.name === 'image' && node.attrs?.uploadId === uploadId) {
       targetPos = pos;
       return false;
@@ -281,7 +281,7 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
           class:
             'prose prose-invert max-w-none min-h-[220px] rounded-lg border border-zinc-800 bg-zinc-950/60 p-4 text-zinc-100 outline-none',
         },
-        handleDrop: (_view, event) => {
+        handleDrop: (_view: unknown, event: DragEvent) => {
           const file = event.dataTransfer?.files?.[0];
           if (!file || !file.type.startsWith('image/') || !assets?.onAssetUpload) return false;
           event.preventDefault();
@@ -294,8 +294,8 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
           })();
           return true;
         },
-        handlePaste: (_view, event) => {
-          const file = Array.from(event.clipboardData?.files ?? []).find((f) =>
+        handlePaste: (_view: unknown, event: ClipboardEvent) => {
+          const file = Array.from(event.clipboardData?.files ?? []).find((f: File) =>
             f.type.startsWith('image/')
           );
           if (!file || !assets?.onAssetUpload) return false;
@@ -309,7 +309,7 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
           })();
           return true;
         },
-        handleClickOn: (_view, _pos, node) => {
+        handleClickOn: (_view: unknown, _pos: number, node: { type: { name: string }; attrs?: Record<string, unknown> }) => {
           if (node.type.name !== 'image') return false;
           if (node.attrs?.awaitingUpload !== true) return false;
           const uploadId = typeof node.attrs?.uploadId === 'string' ? node.attrs.uploadId : null;
@@ -319,14 +319,14 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
           return true;
         },
       },
-      onUpdate: ({ editor: currentEditor }) => {
+      onUpdate: ({ editor: currentEditor }: { editor: Editor }) => {
         const markdown = getEditorMarkdown(currentEditor);
         emitInlineUpdate(markdown);
       },
       onFocus: () => {
         setFocusLock(true);
       },
-      onBlur: ({ editor: currentEditor }) => {
+      onBlur: ({ editor: currentEditor }: { editor: Editor }) => {
         const markdown = getEditorMarkdown(currentEditor);
         if (markdown !== latestEmittedMarkdownRef.current) {
           emitInlineUpdate(markdown);
