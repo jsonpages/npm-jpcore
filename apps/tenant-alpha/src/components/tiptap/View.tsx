@@ -670,7 +670,7 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
 // ── Public view ───────────────────────────────────────────────────────────────
 
 const PublicTiptapContent: React.FC<{ content: string }> = ({ content }) => (
-  <article className="prose max-w-none prose-zinc" data-jp-field="content">
+  <article className="jp-tiptap-content" data-jp-field="content">
     <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
       {content}
     </ReactMarkdown>
@@ -682,12 +682,14 @@ const PublicTiptapContent: React.FC<{ content: string }> = ({ content }) => (
 export const Tiptap: React.FC<{ data: TiptapData; settings?: TiptapSettings }> = ({ data }) => {
   const { mode } = useStudio();
   return (
-    <section className="w-full">
-      {mode === 'studio' ? (
-        <StudioTiptapEditor data={data} />
-      ) : (
-        <PublicTiptapContent content={data.content ?? ''} />
-      )}
+    <section className="w-full py-12">
+      <div className="container mx-auto px-6 max-w-3xl">
+        {mode === 'studio' ? (
+          <StudioTiptapEditor data={data} />
+        ) : (
+          <PublicTiptapContent content={data.content ?? ''} />
+        )}
+      </div>
     </section>
   );
 };
