@@ -8,7 +8,9 @@
     "dev:clean": "vite --force",
     "build": "tsc && vite build",
     "dist": "bash ./src2Code.sh src index.html package.json",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "bake:email": "tsx scripts/bake-email.tsx",
+    "bakemail": "npm run bake:email --"
   },
   "dependencies": {
     "@tiptap/extension-image": "^2.11.5",
@@ -34,6 +36,9 @@
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "^5.7.3",
-    "vite": "^6.0.11"
+    "vite": "^6.0.11",
+    "@react-email/components": "^0.0.41",
+    "@react-email/render": "^1.0.5",
+    "tsx": "^4.20.5"
   }
 }
