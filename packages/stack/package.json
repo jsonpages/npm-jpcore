@@ -1,6 +1,6 @@
 {
   "name": "@jsonpages/stack",
-  "version": "1.0.43",
+  "version": "1.0.44",
   "description": "JsonPages tenant stack manifest — single source of truth for dependency versions",
   "private": false,
   "type": "module",

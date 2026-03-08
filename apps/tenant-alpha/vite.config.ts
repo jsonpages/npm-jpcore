@@ -39,6 +39,21 @@ function sendJson(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+function sendJsonFile(res, filePath) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(content);
+  } catch (e) {
+    sendJson(res, 500, { error: e?.message || 'Read failed' });
+  }
+}
+
+function isTenantPageJsonRequest(req, pathname) {
+  if (req.method !== 'GET' || !pathname.endsWith('.json')) return false;
+  const viteOrStaticPrefixes = ['/api/', '/assets/', '/src/', '/node_modules/', '/public/', '/@'];
+  return !viteOrStaticPrefixes.some((prefix) => pathname.startsWith(prefix));
+}
 export default defineConfig({
   plugins: [
     react(),
@@ -47,11 +62,25 @@ export default defineConfig({
       name: 'upload-asset-api',
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
+          const pathname = (req.url || '').split('?')[0];
+          const isPageJsonRequest = isTenantPageJsonRequest(req, pathname);
+
+          if (isPageJsonRequest) {
+            const normalizedPath = decodeURIComponent(pathname).replace(/\\/g, '/');
+            const slug = normalizedPath.replace(/^\/+/, '').replace(/\.json$/i, '').replace(/^\/+|\/+$/g, '');
+            const candidate = path.resolve(DATA_PAGES_DIR, `${slug}.json`);
+            const isInsidePagesDir = candidate.startsWith(`${DATA_PAGES_DIR}${path.sep}`) || candidate === DATA_PAGES_DIR;
+            if (!slug || !isInsidePagesDir || !fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) {
+              sendJson(res, 404, { error: 'Page JSON not found' });
+              return;
+            }
+            sendJsonFile(res, candidate);
+            return;
+          }
           if (req.method === 'GET' && req.url === '/api/list-assets') {
             try { sendJson(res, 200, listImagesInDir(ASSETS_IMAGES_DIR, '/assets/images')); } catch (e) { sendJson(res, 500, { error: e?.message || 'List failed' }); }
             return;
           }
-          const pathname = (req.url || '').split('?')[0];
           if (req.method === 'POST' && pathname === '/api/save-to-file') {
             const chunks = [];
             req.on('data', (chunk) => chunks.push(chunk));
@@ -101,4 +130,7 @@ export default defineConfig({
   ],
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
 });
+
+
+
 
