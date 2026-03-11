@@ -724,7 +724,15 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
 
   return (
     <EngineErrorBoundary>
-      <ConfigProvider config={{ registry, schemas, tenantId: config.tenantId ?? 'default', assets: config.assets }}>
+      <ConfigProvider
+        config={{
+          registry,
+          schemas,
+          tenantId: config.tenantId ?? 'default',
+          assets: config.assets,
+          overlayDisabledSectionTypes: config.overlayDisabledSectionTypes,
+        }}
+      >
         <BrowserRouter>
           <Routes>
             <Route

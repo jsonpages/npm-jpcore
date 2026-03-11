@@ -98,4 +98,6 @@ export interface JsonPagesConfig {
   addSection?: AddSectionConfig;
   /** Optional assets config for Image Picker (gallery, upload target). */
   assets?: AssetsConfig;
+  /** Optional list of section types where Studio overlay should be disabled. */
+  overlayDisabledSectionTypes?: string[];
 }

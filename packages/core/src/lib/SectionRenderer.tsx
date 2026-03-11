@@ -138,13 +138,15 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
   onReorder,
 }) => {
   const { mode } = useStudio();
-  const { registry } = useConfig();
+  const { registry, overlayDisabledSectionTypes } = useConfig();
   const isStudio = mode === 'studio';
   const isSelected = isStudio && selectedId === section.id;
 
   const Component = registry[section.type];
   const scope = (section.type === 'header' || section.type === 'footer') ? 'global' : 'local';
-  const disableOverlayForSection = section.type === 'tiptap';
+  const disableOverlayForSection = Array.isArray(overlayDisabledSectionTypes)
+    ? overlayDisabledSectionTypes.includes(section.type as string)
+    : false;
   
   const isStickyHeader = section.type === 'header' && (section.settings as any)?.sticky;
 

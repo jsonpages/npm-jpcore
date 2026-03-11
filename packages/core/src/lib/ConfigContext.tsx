@@ -15,15 +15,25 @@ export interface ConfigContextValue {
   tenantId?: string;
   /** Optional assets config for Image Picker (gallery, upload). */
   assets?: AssetsConfig;
+  /** Optional list of section types where Studio overlay should be disabled. */
+  overlayDisabledSectionTypes?: string[];
 }
 
 const ConfigContext = createContext<ConfigContextValue | undefined>(undefined);
 
-export const ConfigProvider: React.FC<{ config: Pick<JsonPagesConfig, 'registry' | 'schemas' | 'tenantId' | 'assets'>; children: React.ReactNode }> = ({
+export const ConfigProvider: React.FC<{ config: Pick<JsonPagesConfig, 'registry' | 'schemas' | 'tenantId' | 'assets' | 'overlayDisabledSectionTypes'>; children: React.ReactNode }> = ({
   config,
   children,
 }) => (
-  <ConfigContext.Provider value={{ registry: config.registry, schemas: config.schemas, tenantId: config.tenantId, assets: config.assets }}>
+  <ConfigContext.Provider
+    value={{
+      registry: config.registry,
+      schemas: config.schemas,
+      tenantId: config.tenantId,
+      assets: config.assets,
+      overlayDisabledSectionTypes: config.overlayDisabledSectionTypes,
+    }}
+  >
     {children}
   </ConfigContext.Provider>
 );
