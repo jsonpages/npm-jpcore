@@ -3,14 +3,14 @@
  * Data from getHydratedData (file-backed or draft); assets from public/assets/images.
  * Supports Hybrid Persistence: Local Filesystem (Dev) or Cloud Bridge (Prod).
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { JsonPagesEngine } from '@jsonpages/core';
 import type { JsonPagesConfig, LibraryImageEntry, ProjectState } from '@jsonpages/core';
 import { ComponentRegistry } from '@/lib/ComponentRegistry';
 import { SECTION_SCHEMAS } from '@/lib/schemas';
 import { addSectionConfig } from '@/lib/addSectionConfig';
 import { getHydratedData } from '@/lib/draftStorage';
-import type { SiteConfig, ThemeConfig, MenuConfig } from '@/types';
+import type { SiteConfig, ThemeConfig, MenuConfig, PageConfig } from '@/types';
 import type { DeployPhase, StepId } from '@/types/deploy';
 import { DEPLOY_STEPS } from '@/lib/deploySteps';
 import { startCloudSaveStream } from '@/lib/cloudSaveStream';
@@ -20,7 +20,6 @@ import menuData from '@/data/config/menu.json';
 import { getFilePages } from '@/lib/getFilePages';
 import { DopaDrawer } from '@/components/save-drawer/DopaDrawer';
 
-import fontsCss from './fonts.css?inline';
 import tenantCss from './index.css?inline';
 
 // Cloud Configuration (Injected by Vercel/Netlify Env Vars)
@@ -45,6 +44,44 @@ interface CloudSaveUiState {
   deployUrl?: string;
 }
 
+type ContentMode = 'cloud' | 'error';
+type ContentStatus = 'ok' | 'empty_namespace' | 'legacy_fallback';
+
+type ContentResponse = {
+  ok?: boolean;
+  siteConfig?: unknown;
+  pages?: unknown;
+  items?: unknown;
+  error?: string;
+  code?: string;
+  correlationId?: string;
+  contentStatus?: ContentStatus;
+  usedUnscopedFallback?: boolean;
+  namespace?: string;
+  namespaceMatchedKeys?: number;
+};
+
+type CachedCloudContent = {
+  keyFingerprint: string;
+  savedAt: number;
+  siteConfig: unknown | null;
+  pages: Record<string, unknown>;
+};
+
+const CLOUD_CACHE_KEY = 'jp_cloud_content_cache_v1';
+const CLOUD_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function normalizeApiBase(raw: string): string {
+  return raw.trim().replace(/\/+$/, '');
+}
+
+function buildApiCandidates(raw: string): string[] {
+  const base = normalizeApiBase(raw);
+  const withApi = /\/api\/v1$/i.test(base) ? base : `${base}/api/v1`;
+  const candidates = [withApi, base];
+  return Array.from(new Set(candidates.filter(Boolean)));
+}
+
 function getInitialData() {
   return getHydratedData(TENANT_ID, filePages, fileSiteConfig);
 }
@@ -63,13 +100,235 @@ function stepProgress(doneSteps: StepId[]): number {
   return Math.round((doneSteps.length / DEPLOY_STEPS.length) * 100);
 }
 
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function asString(value: unknown, fallback: string): string {
+  return typeof value === 'string' && value.trim() ? value : fallback;
+}
+
+function coercePageConfig(slug: string, value: unknown): PageConfig | null {
+  let input = value;
+  if (typeof input === 'string') {
+    try {
+      input = JSON.parse(input) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (!isObjectRecord(input) || !Array.isArray(input.sections)) return null;
+
+  const inputMeta = isObjectRecord(input.meta) ? input.meta : {};
+  const normalizedSlug = asString(input.slug, slug);
+  const normalizedId = asString(input.id, `${normalizedSlug}-page`);
+  const title = asString(inputMeta.title, normalizedSlug);
+  const description = asString(inputMeta.description, '');
+
+  return {
+    id: normalizedId,
+    slug: normalizedSlug,
+    meta: { title, description },
+    sections: input.sections as PageConfig['sections'],
+  };
+}
+
+function coerceSiteConfig(value: unknown): SiteConfig | null {
+  let input = value;
+  if (typeof input === 'string') {
+    try {
+      input = JSON.parse(input) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (!isObjectRecord(input)) return null;
+  if (!isObjectRecord(input.identity)) return null;
+  if (!Array.isArray(input.pages)) return null;
+
+  return input as unknown as SiteConfig;
+}
+
+function toPagesRecord(value: unknown): Record<string, PageConfig> | null {
+  const directPage = coercePageConfig('home', value);
+  if (directPage) {
+    const directSlug = asString(directPage.slug, 'home')
+      .toLowerCase()
+      .replace(/[^a-z0-9/_-]/g, '-')
+      .replace(/^\/+|\/+$/g, '') || 'home';
+    return { [directSlug]: directPage };
+  }
+
+  if (!isObjectRecord(value)) return null;
+  const next: Record<string, PageConfig> = {};
+  for (const [rawKey, payload] of Object.entries(value)) {
+    const rawKeyTrimmed = rawKey.trim();
+    const slugFromNamespacedKey = rawKeyTrimmed.match(/^t_[a-z0-9-]+_page_(.+)$/i)?.[1];
+    const normalizedSlug = (slugFromNamespacedKey ?? rawKeyTrimmed)
+      .toLowerCase()
+      .replace(/[^a-z0-9/_-]/g, '-')
+      .replace(/^\/+|\/+$/g, '');
+    const slug = normalizedSlug || 'home';
+    const page = coercePageConfig(slug, payload);
+    if (!page) continue;
+    next[slug] = page;
+  }
+  return next;
+}
+
+function normalizePageRegistry(value: unknown): Record<string, PageConfig> {
+  if (!isObjectRecord(value)) return {};
+  const normalized: Record<string, PageConfig> = {};
+
+  for (const [registrySlug, rawPageValue] of Object.entries(value)) {
+    const direct = coercePageConfig(registrySlug, rawPageValue);
+    if (direct) {
+      normalized[direct.slug || registrySlug] = direct;
+      continue;
+    }
+
+    const nested = toPagesRecord(rawPageValue);
+    if (nested && Object.keys(nested).length > 0) {
+      Object.assign(normalized, nested);
+    }
+  }
+
+  return normalized;
+}
+
+function extractContentSources(payload: ContentResponse | Record<string, unknown>): {
+  pagesSource: unknown;
+  siteSource: unknown;
+} {
+  // Canonical contract: { pages, siteConfig }
+  if (isObjectRecord(payload) && isObjectRecord(payload.pages)) {
+    return { pagesSource: payload.pages, siteSource: payload.siteConfig };
+  }
+
+  // Edge public JSON contract: { digest, updatedAt, items: { ... } }
+  if (isObjectRecord(payload) && isObjectRecord(payload.items)) {
+    const items = payload.items;
+    let siteSource: unknown = null;
+    const pageEntries: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(items)) {
+      if (/(_config_site|config_site|config:site)$/i.test(key)) {
+        siteSource = value;
+        continue;
+      }
+      if (/(_page_|^page_|page:)/i.test(key)) {
+        pageEntries[key] = value;
+      }
+    }
+    return { pagesSource: pageEntries, siteSource };
+  }
+
+  // Raw map fallback: treat payload object itself as page map.
+  return { pagesSource: payload, siteSource: null };
+}
+
+type CloudLoadFailure = {
+  reasonCode: string;
+  message: string;
+  correlationId?: string;
+};
+
+function isCloudLoadFailure(value: unknown): value is CloudLoadFailure {
+  return (
+    isObjectRecord(value) &&
+    typeof value.reasonCode === 'string' &&
+    typeof value.message === 'string'
+  );
+}
+
+function toCloudLoadFailure(value: unknown): CloudLoadFailure {
+  if (isCloudLoadFailure(value)) return value;
+  if (value instanceof Error) {
+    return { reasonCode: 'CLOUD_LOAD_FAILED', message: value.message };
+  }
+  return { reasonCode: 'CLOUD_LOAD_FAILED', message: 'Cloud content unavailable.' };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+}
+
+function backoffDelayMs(attempt: number): number {
+  const base = 250 * Math.pow(2, attempt);
+  const jitter = Math.floor(Math.random() * 120);
+  return base + jitter;
+}
+
+function logBootstrapEvent(event: string, details: Record<string, unknown>) {
+  console.info('[boot]', { event, at: new Date().toISOString(), ...details });
+}
+
+function cloudFingerprint(apiBase: string, apiKey: string): string {
+  return `${normalizeApiBase(apiBase)}::${apiKey.slice(-8)}`;
+}
+
+function readCachedCloudContent(fingerprint: string): CachedCloudContent | null {
+  try {
+    const raw = localStorage.getItem(CLOUD_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedCloudContent;
+    if (!parsed || parsed.keyFingerprint !== fingerprint) return null;
+    if (!parsed.savedAt || Date.now() - parsed.savedAt > CLOUD_CACHE_TTL_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedCloudContent(entry: CachedCloudContent): void {
+  try {
+    localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(entry));
+  } catch {
+    // non-blocking cache path
+  }
+}
+
+function buildThemeFontVarsCss(input: unknown): string {
+  if (!isObjectRecord(input)) return '';
+  const tokens = isObjectRecord(input.tokens) ? input.tokens : null;
+  const typography = tokens && isObjectRecord(tokens.typography) ? tokens.typography : null;
+  const fontFamily = typography && isObjectRecord(typography.fontFamily) ? typography.fontFamily : null;
+  const primary = typeof fontFamily?.primary === 'string' ? fontFamily.primary : "'Instrument Sans', system-ui, sans-serif";
+  const serif = typeof fontFamily?.serif === 'string' ? fontFamily.serif : "'Instrument Serif', Georgia, serif";
+  const mono = typeof fontFamily?.mono === 'string' ? fontFamily.mono : "'JetBrains Mono', monospace";
+  return `:root{--theme-font-primary:${primary};--theme-font-serif:${serif};--theme-font-mono:${mono};}`;
+}
+
 function App() {
-  const [{ pages, siteConfig }] = useState(getInitialData);
+  const isCloudMode = Boolean(CLOUD_API_URL && CLOUD_API_KEY);
+  const localInitialData = useMemo(() => (isCloudMode ? null : getInitialData()), [isCloudMode]);
+  const localInitialPages = useMemo(() => {
+    if (!localInitialData) return {};
+    const normalized = normalizePageRegistry(localInitialData.pages as unknown);
+    return Object.keys(normalized).length > 0 ? normalized : localInitialData.pages;
+  }, [localInitialData]);
+  const [pages, setPages] = useState<Record<string, PageConfig>>(localInitialPages);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig>(
+    localInitialData?.siteConfig ?? fileSiteConfig
+  );
   const [assetsManifest, setAssetsManifest] = useState<LibraryImageEntry[]>([]);
   const [cloudSaveUi, setCloudSaveUi] = useState<CloudSaveUiState>(getInitialCloudSaveUiState);
+  const [contentMode, setContentMode] = useState<ContentMode>('cloud');
+  const [contentFallback, setContentFallback] = useState<CloudLoadFailure | null>(null);
+  const [showTopProgress, setShowTopProgress] = useState(false);
+  const [hasInitialCloudResolved, setHasInitialCloudResolved] = useState(!isCloudMode);
+  const [bootstrapRunId, setBootstrapRunId] = useState(0);
   const activeCloudSaveController = useRef<AbortController | null>(null);
+  const contentLoadInFlight = useRef<Promise<void> | null>(null);
   const pendingCloudSave = useRef<{ state: ProjectState; slug: string } | null>(null);
-  const isCloudMode = Boolean(CLOUD_API_URL && CLOUD_API_KEY);
+  const warmBootFromCloudCache = useRef(false);
+  const cloudApiCandidates = useMemo(
+    () => (isCloudMode && CLOUD_API_URL ? buildApiCandidates(CLOUD_API_URL) : []),
+    [isCloudMode, CLOUD_API_URL]
+  );
 
   useEffect(() => {
     // In Cloud mode, listing assets might be different or disabled for MVP
@@ -85,6 +344,192 @@ function App() {
       activeCloudSaveController.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (!isCloudMode || !CLOUD_API_URL || !CLOUD_API_KEY) {
+      setContentMode('cloud');
+      setContentFallback(null);
+      setShowTopProgress(false);
+      setHasInitialCloudResolved(true);
+      logBootstrapEvent('boot.local.ready', { mode: 'local' });
+      return;
+    }
+    if (contentLoadInFlight.current) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const maxRetryAttempts = 2;
+    const startedAt = Date.now();
+    const primaryApiBase = cloudApiCandidates[0] ?? normalizeApiBase(CLOUD_API_URL);
+    const fingerprint = cloudFingerprint(primaryApiBase, CLOUD_API_KEY);
+    const cached = readCachedCloudContent(fingerprint);
+    if (cached) {
+      const cachedPages = toPagesRecord(cached.pages);
+      const cachedSite = coerceSiteConfig(cached.siteConfig);
+      if (cachedPages && Object.keys(cachedPages).length > 0) {
+        setPages(cachedPages);
+      }
+      if (cachedSite) {
+        setSiteConfig(cachedSite);
+      }
+      setContentMode('cloud');
+      setContentFallback(null);
+      warmBootFromCloudCache.current = true;
+      setShowTopProgress(false);
+      setHasInitialCloudResolved(true);
+      logBootstrapEvent('boot.cloud.cache_hit', { ageMs: Date.now() - cached.savedAt });
+    } else {
+      warmBootFromCloudCache.current = false;
+      setShowTopProgress(true);
+      setHasInitialCloudResolved(false);
+    }
+    logBootstrapEvent('boot.start', { mode: 'cloud', apiCandidates: cloudApiCandidates.length });
+
+    const loadCloudContent = async () => {
+      try {
+        let payload: ContentResponse | null = null;
+        let lastFailure: CloudLoadFailure | null = null;
+
+        for (const apiBase of cloudApiCandidates) {
+          for (let attempt = 0; attempt <= maxRetryAttempts; attempt += 1) {
+            try {
+              const res = await fetch(`${apiBase}/content`, {
+                method: 'GET',
+                headers: {
+                  Authorization: `Bearer ${CLOUD_API_KEY}`,
+                },
+                signal: controller.signal,
+              });
+
+              const contentType = (res.headers.get('content-type') || '').toLowerCase();
+              if (!contentType.includes('application/json')) {
+                lastFailure = {
+                  reasonCode: 'NON_JSON_RESPONSE',
+                  message: `Non-JSON response from ${apiBase}/content`,
+                };
+                break;
+              }
+
+              const parsed = (await res.json().catch(() => ({}))) as ContentResponse;
+              if (!res.ok) {
+                lastFailure = {
+                  reasonCode: parsed.code || `HTTP_${res.status}`,
+                  message: parsed.error || `Cloud content read failed: ${res.status} (${apiBase}/content)`,
+                  correlationId: parsed.correlationId,
+                };
+                if (isRetryableStatus(res.status) && attempt < maxRetryAttempts) {
+                  await sleep(backoffDelayMs(attempt));
+                  continue;
+                }
+                break;
+              }
+
+              payload = parsed;
+              break;
+            } catch (error: unknown) {
+              if (controller.signal.aborted) throw error;
+              const message = error instanceof Error ? error.message : 'Network error';
+              lastFailure = {
+                reasonCode: 'NETWORK_TRANSIENT',
+                message: `${message} (${apiBase}/content)`,
+              };
+              if (attempt < maxRetryAttempts) {
+                await sleep(backoffDelayMs(attempt));
+                continue;
+              }
+            }
+          }
+          if (payload) {
+            break;
+          }
+        }
+
+        if (!payload) {
+          throw (
+            lastFailure || {
+              reasonCode: 'CLOUD_ENDPOINT_UNREACHABLE',
+              message: 'Cloud content endpoint not reachable as JSON.',
+            }
+          );
+        }
+
+        const { pagesSource, siteSource } = extractContentSources(payload);
+        const remotePages = toPagesRecord(pagesSource);
+        const remoteSite = coerceSiteConfig(siteSource);
+        const remotePageCount = remotePages ? Object.keys(remotePages).length : 0;
+        if (remotePageCount === 0 && !remoteSite) {
+          throw {
+            reasonCode: payload.contentStatus === 'empty_namespace' ? 'EMPTY_NAMESPACE' : 'EMPTY_PAYLOAD',
+            message: 'Cloud payload is empty for this tenant namespace.',
+            correlationId: payload.correlationId,
+          } satisfies CloudLoadFailure;
+        }
+        if (import.meta.env.DEV) {
+          console.info('[content] cloud diagnostics', {
+            contentStatus: payload.contentStatus ?? 'ok',
+            namespace: payload.namespace,
+            namespaceMatchedKeys: payload.namespaceMatchedKeys,
+            usedUnscopedFallback: payload.usedUnscopedFallback,
+            correlationId: payload.correlationId,
+          });
+        }
+        if (remotePages && remotePageCount > 0) {
+          setPages(remotePages);
+        }
+        if (remoteSite) {
+          setSiteConfig(remoteSite);
+        }
+        writeCachedCloudContent({
+          keyFingerprint: fingerprint,
+          savedAt: Date.now(),
+          siteConfig: remoteSite ?? null,
+          pages: (remotePages ?? {}) as Record<string, unknown>,
+        });
+        setContentMode('cloud');
+        setContentFallback(null);
+        setHasInitialCloudResolved(true);
+        logBootstrapEvent('boot.cloud.success', {
+          mode: 'cloud',
+          elapsedMs: Date.now() - startedAt,
+          contentStatus: payload.contentStatus ?? 'ok',
+          correlationId: payload.correlationId ?? null,
+        });
+      } catch (error: unknown) {
+        if (controller.signal.aborted) return;
+        const failure = toCloudLoadFailure(error);
+        if (warmBootFromCloudCache.current) {
+          setContentMode('cloud');
+          setContentFallback({
+            reasonCode: 'CLOUD_REFRESH_FAILED',
+            message: failure.message,
+            correlationId: failure.correlationId,
+          });
+          setHasInitialCloudResolved(true);
+        } else {
+          setContentMode('error');
+          setContentFallback(failure);
+          setHasInitialCloudResolved(true);
+        }
+        logBootstrapEvent('boot.cloud.error', {
+          mode: 'cloud',
+          elapsedMs: Date.now() - startedAt,
+          reasonCode: failure.reasonCode,
+          correlationId: failure.correlationId ?? null,
+        });
+      }
+    };
+
+    let inFlight: Promise<void> | null = null;
+    inFlight = loadCloudContent().finally(() => {
+      setShowTopProgress(false);
+      if (contentLoadInFlight.current === inFlight) {
+        contentLoadInFlight.current = null;
+      }
+    });
+    contentLoadInFlight.current = inFlight;
+    return () => controller.abort();
+  }, [isCloudMode, CLOUD_API_KEY, CLOUD_API_URL, cloudApiCandidates, bootstrapRunId]);
 
   const runCloudSave = useCallback(
     async (
@@ -192,7 +637,7 @@ function App() {
     siteConfig,
     themeConfig,
     menuConfig,
-    themeCss: { tenant: fontsCss + '\n' + tenantCss },
+    themeCss: { tenant: `${buildThemeFontVarsCss(themeConfig)}\n${tenantCss}` },
     addSection: addSectionConfig,
     persistence: {
       async saveToFile(state: ProjectState, slug: string): Promise<void> {
@@ -212,7 +657,7 @@ function App() {
           throw new Error('Cloud mode is not configured for hot save.');
         }
         const apiBase = CLOUD_API_URL.replace(/\/$/, '');
-        const res = await fetch(`${apiBase}/save2edge`, {
+        const res = await fetch(`${apiBase}/hotSave`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -262,9 +707,98 @@ function App() {
     },
   };
 
+  const shouldRenderEngine = !isCloudMode || hasInitialCloudResolved;
+
   return (
     <>
-      <JsonPagesEngine config={config} />
+      {isCloudMode && showTopProgress ? (
+        <>
+          <style>
+            {`@keyframes jp-top-progress-slide { 0% { transform: translateX(-120%); } 100% { transform: translateX(320%); } }`}
+          </style>
+          <div
+            role="status"
+            aria-live="polite"
+            aria-label="Cloud loading progress"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 2,
+              zIndex: 1300,
+              background: 'rgba(255,255,255,0.08)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                width: '32%',
+                height: '100%',
+                background: 'linear-gradient(90deg, rgba(88,166,255,0.15) 0%, rgba(88,166,255,0.85) 50%, rgba(88,166,255,0.15) 100%)',
+                animation: 'jp-top-progress-slide 1.15s ease-in-out infinite',
+                willChange: 'transform',
+              }}
+            />
+          </div>
+        </>
+      ) : null}
+      {shouldRenderEngine ? <JsonPagesEngine config={config} /> : null}
+      {isCloudMode && (contentMode === 'error' || contentFallback?.reasonCode === 'CLOUD_REFRESH_FAILED') ? (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            top: 12,
+            right: 12,
+            zIndex: 1200,
+            background: 'rgba(179, 65, 24, 0.92)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            color: '#fff',
+            padding: '8px 12px',
+            borderRadius: 10,
+            fontSize: 12,
+            maxWidth: 360,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+          }}
+        >
+          {contentMode === 'error' ? 'Cloud content unavailable.' : 'Cloud refresh failed, showing cached content.'}
+          {contentFallback ? (
+            <div style={{ opacity: 0.85, marginTop: 4 }}>
+              <div>{contentFallback.message}</div>
+              <div style={{ marginTop: 2 }}>
+                Reason: {contentFallback.reasonCode}
+                {contentFallback.correlationId ? ` | Correlation: ${contentFallback.correlationId}` : ''}
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    contentLoadInFlight.current = null;
+                    setContentMode('cloud');
+                    setContentFallback(null);
+                    setHasInitialCloudResolved(false);
+                    setShowTopProgress(true);
+                    setBootstrapRunId((prev) => prev + 1);
+                  }}
+                  style={{
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    borderRadius: 8,
+                    padding: '4px 10px',
+                    background: 'transparent',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <DopaDrawer
         isOpen={cloudSaveUi.isOpen}
         phase={cloudSaveUi.phase}
