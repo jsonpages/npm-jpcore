@@ -1,6 +1,6 @@
-# @jsonpages/stack
+# @olonjs/stack
 
-**Single source of truth** for JsonPages tenant dependency versions (enterprise stack manifest).
+**Single source of truth** for OlonJS tenant dependency versions (enterprise stack manifest).
 
 ## Purpose
 
@@ -11,15 +11,15 @@
 ## Workflow
 
 1. **Upgrade stack:** Edit `stack-versions.json` (dependencies, devDependencies, peerDependencies). Keep `peerDependencies` in sync with what Core supports.
-2. **Publish order:** Publish `@jsonpages/stack` first, then `@jsonpages/core`, then `@jsonpages/cli`.
+2. **Publish order:** Publish `@olonjs/stack` first, then `@olonjs/core`, then `@olonjs/cli` (legacy aliases: `@jsonpages/stack`, `@jsonpages/core`, `@jsonpages/cli`).
 3. **From repo:** Run `npm install` at monorepo root so workspace deps resolve; then build/publish Core and CLI as needed.
 
 ## Consumers
 
 | Package        | Use |
 |----------------|-----|
-| @jsonpages/core | `prepack` runs `scripts/sync-peers-from-stack.js` → copies `peerDependencies` into Core’s package.json. |
-| @jsonpages/cli  | On `jsonpages new tenant <name>`, installs deps with `name@version` from `dependencies` and `devDependencies`. |
+| @olonjs/core | `prepack` runs `scripts/sync-peers-from-stack.js` → copies `peerDependencies` into Core’s package.json. |
+| @olonjs/cli  | On `olonjs new tenant <name>` (legacy alias command: `jsonpages new tenant <name>`), installs deps with `name@version` from `dependencies` and `devDependencies`. |
 
 ## File layout
 

@@ -1,6 +1,6 @@
 # Publishing and Release
 
-This document is the operational source of truth for publishing `@jsonpages/stack`, `@jsonpages/core`, and `@jsonpages/cli` from this monorepo.
+This document is the operational source of truth for publishing `@olonjs/stack`, `@olonjs/core`, and `@olonjs/cli` from this monorepo, plus compatibility bridge packages under `@jsonpages/*`.
 
 ## Scope
 
@@ -10,7 +10,7 @@ This document is the operational source of truth for publishing `@jsonpages/stac
 
 ## Prerequisites
 
-- npm account with publish rights on `@jsonpages`
+- npm account with publish rights on `@olonjs`
 - `NPM_TOKEN` available in environment or root `.env`
 - root `.npmrc` configured for npm registry auth
 - dependencies installed from monorepo root
@@ -25,14 +25,16 @@ NPM_TOKEN=npm_xxx
 
 Always publish in this order:
 
-1. `@jsonpages/stack`
-2. `@jsonpages/core`
-3. `@jsonpages/cli`
+1. `@olonjs/stack`
+2. `@olonjs/core`
+3. `@olonjs/cli`
+4. compatibility bridges (`@jsonpages/stack`, `@jsonpages/core`, `@jsonpages/cli`)
 
 Reason:
 
 - `core` aligns dependency contracts using stack manifest
 - `cli` must package DNA generated from tenant source apps using the new `core` version
+- compatibility bridges must point to freshly published `@olonjs/*` versions
 
 ## Release scripts
 
@@ -45,9 +47,10 @@ Current behavior includes:
 - build all workspaces
 - patch version + publish `stack`
 - build, patch version + publish `core`
-- update `apps/tenant-alpha` to new `@jsonpages/core`
-- build and `dist` `tenant-alpha`
+- update both tenant apps to new `@olonjs/core`
+- build and `dist` `tenant-alpha` and `tenant-agritourism`
 - build, patch version + publish `cli`
+- sync bridge dependencies and publish `@jsonpages/*` compatibility packages
 
 ### `npm run release:enterprise`
 
@@ -138,7 +141,7 @@ If npm commands fail under UNC paths (`\\wsl.localhost\...`), use WSL shell to r
 - npm auth errors during publish
   - Verify `NPM_TOKEN`, `.npmrc`, and npm org permissions
 - Release succeeds but new tenants are stale
-  - Ensure `dist:dna:all` ran before publishing `@jsonpages/cli`
+- Ensure `dist:dna:all` ran before publishing `@olonjs/cli`
 
 ## Related docs
 

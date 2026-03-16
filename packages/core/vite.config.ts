@@ -24,9 +24,9 @@ export default defineConfig({
     lib: {
       // Punto di ingresso della libreria
       entry: path.resolve(__dirname, 'src/index.ts'),
-      name: 'JsonPagesCore',
+      name: 'OlonJsCore',
       formats: ['es', 'umd'],
-      fileName: (format) => `jsonpages-core.${format === 'es' ? 'js' : 'umd.cjs'}`,
+      fileName: (format) => `olonjs-core.${format === 'es' ? 'js' : 'umd.cjs'}`,
     },
     rollupOptions: {
       // 🛡️ Peer Dependencies: non includerle nel bundle finale

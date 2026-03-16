@@ -2,7 +2,7 @@
 
 **Per chi:** Sviluppo grafico e dati quando **non** usi il CMS (Studio/ICE). Il sito è un **client**: i dati arrivano da JSON locali, da API o da un CMS esterno; tu ti occupi di layout, design e rendering.
 
-**Riferimento spec:** JSONPAGES Architecture v1.2 — solo le parti che riguardano struttura sito, componenti e dati. Ignori: Studio, ICE, Form Factory, IDAC, TOCC, AddSectionConfig, schema obbligatori per l'editor.
+**Riferimento spec:** OlonJS Architecture v1.2 (legacy alias: JSONPAGES) — solo le parti che riguardano struttura sito, componenti e dati. Ignori: Studio, ICE, Form Factory, IDAC, TOCC, AddSectionConfig, schema obbligatori per l'editor.
 
 ---
 
@@ -22,7 +22,7 @@ Non devi: tipizzare tutto per l'editor, esporre schema Zod al Form Factory, gest
 - **`src/data/config/theme.json`** — (Opzionale) Token tema (colori, font, radius).
 - **`src/data/pages/<slug>.json`** — Una pagina = `slug`, `meta`, `sections[]` (array di blocchi `id`, `type`, `data`, `settings`). **Per creare una nuova pagina** basta aggiungere un file `<slug>.json` in `src/data/pages/`; lo slug del nome file diventa il path della pagina (es. `chi-siamo.json` → `/chi-siamo`).
 - **`src/components/<sectionType>/`** — Una cartella per tipo di blocco (hero, header, footer, feature-grid, …).
-- **`src/App.tsx`** — Carica site, menu, theme, pages; costruisce la config; renderizza **`<JsonPagesEngine config={config} />`**.
+- **`src/App.tsx`** — Carica site, menu, theme, pages; costruisce la config; renderizza **`<JsonPagesEngine config={config} />` *(from `@olonjs/core`, legacy alias: `@jsonpages/core`)***.
 
 Il motore (Core) si aspetta comunque un **registry** (mappa tipo → componente) e le **pagine** nel formato previsto (slug → page con `sections`). Come popoli i JSON (a mano, da script, da altro CMS) è fuori dall'editor.
 
@@ -66,7 +66,7 @@ Non devi registrare schema o AddSectionConfig a meno che non attivi Studio.
 
 ## 5. Registry e config (minimo)
 
-- **Registry:** Un oggetto che mappa ogni `sectionType` (stringa) al componente React che renderizza quel tipo. Es.: `{ header: Header, footer: Footer, hero: Hero, ... }`. Se non usi Studio, puoi tipizzare in modo lasco (es. `Record<string, React.FC<any>>` o comunque compatibile con quanto si aspetta `JsonPagesConfig['registry']`).
+- **Registry:** Un oggetto che mappa ogni `sectionType` (stringa) al componente React che renderizza quel tipo. Es.: `{ header: Header, footer: Footer, hero: Hero, ... }`. Se non usi Studio, puoi tipizzare in modo lasco (es. `Record<string, React.FC<any>>` o comunque compatibile con quanto si aspetta `JsonPagesConfig['registry']` from `@olonjs/core`).
 - **Config da passare a JsonPagesEngine:**  
   `tenantId`, `registry`, `pages`, `siteConfig`, `menuConfig`, `themeConfig` (o oggetto vuoto), `themeCss: { tenant: cssString }`.  
   Se **non** usi Studio, **schemas** e **addSection** possono essere placeholder (oggetto vuoto / no-op) se il Core lo permette; altrimenti fornisci il minimo (es. schemas = `{}`, addSection = `{ addableSectionTypes: [], sectionTypeLabels: {}, getDefaultSectionData: () => ({}) }`) per non rompere l'engine.

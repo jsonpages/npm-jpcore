@@ -1,4 +1,4 @@
-import type { AddSectionConfig } from '@jsonpages/core';
+import type { AddSectionConfig } from '@olonjs/core';
 
 const addableSectionTypes = [
   'hero', 'about-strip', 'service-cards', 'testimonials',

@@ -12,13 +12,20 @@ const __dirname = path.dirname(__filename);
 const CLI_ASSETS_DIR = path.resolve(__dirname, '../assets');
 const TEMPLATES_DIR = path.join(CLI_ASSETS_DIR, 'templates');
 const LEGACY_ALPHA_DNA_PATH = path.join(CLI_ASSETS_DIR, 'src_tenant_alpha.sh');
+const PACKAGE_JSON_PATH = path.resolve(__dirname, '../package.json');
+const CLI_PACKAGE = JSON.parse(await fs.readFile(PACKAGE_JSON_PATH, 'utf-8'));
 
 const program = new Command();
 
 program
-  .name('jsonpages')
-  .description('JsonPages CLI - Sovereign Projection Engine')
-  .version('2.0.2');
+  .name('olonjs')
+  .description('OlonJS CLI - Sovereign Projection Engine')
+  .version(CLI_PACKAGE.version);
+
+const invokedAs = path.basename(process.argv[1] ?? '');
+if (invokedAs === 'jsonpages' || invokedAs === 'jsonpages.cmd') {
+  console.warn(chalk.yellow('[compat] `jsonpages` is deprecated. Use `olonjs` instead.'));
+}
 
 async function processScriptInNode(scriptPath, targetDir) {
   const content = await fs.readFile(scriptPath, 'utf-8');

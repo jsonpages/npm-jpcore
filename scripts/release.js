@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Enterprise release script for @jsonpages/stack, @jsonpages/core, @jsonpages/cli.
+ * Enterprise release script for @olonjs/stack, @olonjs/core, @olonjs/cli.
  * Run from monorepo root. Uses NPM_TOKEN for authentication (no interactive login).
  *
  * Usage:
@@ -144,19 +144,29 @@ function getVersion(dir) {
 // All version/publish run from root with -w so .npmrc and NPM_TOKEN apply.
 function getCommandPlan() {
   return [
-    { step: "1/5", desc: "Build all workspaces", cmd: "npm run build:all", cwd: "root", skip: false },
-    { step: "2/5", desc: "@jsonpages/stack", cmd: "npm version patch --no-git-tag-version -w @jsonpages/stack", cwd: "root", skip: false },
-    { step: "2/5", desc: "@jsonpages/stack (publish)", cmd: "npm publish --access public -w @jsonpages/stack", cwd: "root", skip: dryRun },
-    { step: "3/5", desc: "@jsonpages/core", cmd: "npm run build -w @jsonpages/core", cwd: "root", skip: false },
-    { step: "3/5", desc: "@jsonpages/core", cmd: "npm version patch --no-git-tag-version -w @jsonpages/core", cwd: "root", skip: false },
-    { step: "3/5", desc: "@jsonpages/core (publish)", cmd: "npm publish --access public -w @jsonpages/core", cwd: "root", skip: dryRun },
-    { step: "4/5", desc: "tenant-alpha", cmd: "Update package.json @jsonpages/core -> ^<new-version>", cwd: "apps/tenant-alpha", skip: false },
-    { step: "4/5", desc: "tenant-alpha", cmd: "npm install -w tenant-alpha", cwd: "root", skip: false },
-    { step: "4/5", desc: "tenant-alpha", cmd: "npm run build -w tenant-alpha", cwd: "root", skip: false },
-    { step: "4/5", desc: "tenant-alpha", cmd: "npm run dist -w tenant-alpha", cwd: "root", skip: false },
-    { step: "5/5", desc: "@jsonpages/cli", cmd: "npm run build -w @jsonpages/cli", cwd: "root", skip: false },
-    { step: "5/5", desc: "@jsonpages/cli", cmd: "npm version patch --no-git-tag-version -w @jsonpages/cli", cwd: "root", skip: false },
-    { step: "5/5", desc: "@jsonpages/cli (publish)", cmd: "npm publish --access public -w @jsonpages/cli", cwd: "root", skip: dryRun },
+    { step: "1/6", desc: "Build all workspaces", cmd: "npm run build:all", cwd: "root", skip: false },
+    { step: "2/6", desc: "@olonjs/stack", cmd: "npm version patch --no-git-tag-version -w @olonjs/stack", cwd: "root", skip: false },
+    { step: "2/6", desc: "@olonjs/stack (publish)", cmd: "npm publish --access public -w @olonjs/stack", cwd: "root", skip: dryRun },
+    { step: "3/6", desc: "@olonjs/core", cmd: "npm run build -w @olonjs/core", cwd: "root", skip: false },
+    { step: "3/6", desc: "@olonjs/core", cmd: "npm version patch --no-git-tag-version -w @olonjs/core", cwd: "root", skip: false },
+    { step: "3/6", desc: "@olonjs/core (publish)", cmd: "npm publish --access public -w @olonjs/core", cwd: "root", skip: dryRun },
+    { step: "4/6", desc: "tenant-alpha", cmd: "Update package.json @olonjs/core -> ^<new-version>", cwd: "apps/tenant-alpha", skip: false },
+    { step: "4/6", desc: "tenant-alpha", cmd: "npm install -w tenant-alpha", cwd: "root", skip: false },
+    { step: "4/6", desc: "tenant-alpha", cmd: "npm run build -w tenant-alpha", cwd: "root", skip: false },
+    { step: "4/6", desc: "tenant-alpha", cmd: "npm run dist -w tenant-alpha", cwd: "root", skip: false },
+    { step: "4/6", desc: "tenant-agritourism", cmd: "Update package.json @olonjs/core -> ^<new-version>", cwd: "apps/tenant-agritourism", skip: false },
+    { step: "4/6", desc: "tenant-agritourism", cmd: "npm install -w tenant-agritourism", cwd: "root", skip: false },
+    { step: "4/6", desc: "tenant-agritourism", cmd: "npm run build -w tenant-agritourism", cwd: "root", skip: false },
+    { step: "4/6", desc: "tenant-agritourism", cmd: "npm run dist -w tenant-agritourism", cwd: "root", skip: false },
+    { step: "5/6", desc: "@olonjs/cli", cmd: "npm run build -w @olonjs/cli", cwd: "root", skip: false },
+    { step: "5/6", desc: "@olonjs/cli", cmd: "npm version patch --no-git-tag-version -w @olonjs/cli", cwd: "root", skip: false },
+    { step: "5/6", desc: "@olonjs/cli (publish)", cmd: "npm publish --access public -w @olonjs/cli", cwd: "root", skip: dryRun },
+    { step: "6/6", desc: "@jsonpages/stack compat", cmd: "npm version patch --no-git-tag-version -w @jsonpages/stack", cwd: "root", skip: false },
+    { step: "6/6", desc: "@jsonpages/stack compat (publish)", cmd: "npm publish --access public -w @jsonpages/stack", cwd: "root", skip: dryRun },
+    { step: "6/6", desc: "@jsonpages/core compat", cmd: "npm version patch --no-git-tag-version -w @jsonpages/core", cwd: "root", skip: false },
+    { step: "6/6", desc: "@jsonpages/core compat (publish)", cmd: "npm publish --access public -w @jsonpages/core", cwd: "root", skip: dryRun },
+    { step: "6/6", desc: "@jsonpages/cli compat", cmd: "npm version patch --no-git-tag-version -w @jsonpages/cli", cwd: "root", skip: false },
+    { step: "6/6", desc: "@jsonpages/cli compat (publish)", cmd: "npm publish --access public -w @jsonpages/cli", cwd: "root", skip: dryRun },
   ];
 }
 
@@ -181,51 +191,89 @@ function stepBuildAll() {
 }
 
 function stepStack() {
-  log("Step 2/5: @jsonpages/stack — version patch & publish (from root -w)");
-  run("npm version patch --no-git-tag-version -w @jsonpages/stack");
+  log("Step 2/6: @olonjs/stack — version patch & publish (from root -w)");
+  run("npm version patch --no-git-tag-version -w @olonjs/stack");
+  const newVersion = getVersion(path.join(ROOT, "packages", "stack"));
   if (!dryRun) {
-    run("npm publish --access public -w @jsonpages/stack");
+    run("npm publish --access public -w @olonjs/stack");
   } else {
     log("[dry-run] Skipping npm publish for stack");
   }
+  return newVersion;
 }
 
 function stepCore() {
-  log("Step 3/5: @jsonpages/core — build, version patch & publish (from root -w)");
+  log("Step 3/6: @olonjs/core — build, version patch & publish (from root -w)");
   const dir = path.join(ROOT, "packages", "core");
-  run("npm run build -w @jsonpages/core");
-  run("npm version patch --no-git-tag-version -w @jsonpages/core");
+  run("npm run build -w @olonjs/core");
+  run("npm version patch --no-git-tag-version -w @olonjs/core");
   const newVersion = getVersion(dir);
   if (!dryRun) {
-    run("npm publish --access public -w @jsonpages/core");
+    run("npm publish --access public -w @olonjs/core");
   } else {
     log("[dry-run] Skipping npm publish for core");
   }
   return newVersion;
 }
 
-function stepTenantAlpha(coreVersion) {
-  log("Step 4/5: tenant-alpha — pin @jsonpages/core, build & dist (from root -w)");
-  const dir = path.join(ROOT, "apps", "tenant-alpha");
+function stepTenant(tenantName, coreVersion) {
+  log(`Step 4/6: ${tenantName} — pin @olonjs/core, build & dist (from root -w)`);
+  const dir = path.join(ROOT, "apps", tenantName);
   const pkg = readPackageJson(dir);
-  const prev = pkg.dependencies["@jsonpages/core"];
-  pkg.dependencies["@jsonpages/core"] = `^${coreVersion}`;
+  const prev = pkg.dependencies["@olonjs/core"] ?? pkg.dependencies["@jsonpages/core"];
+  pkg.dependencies["@olonjs/core"] = `^${coreVersion}`;
+  if (pkg.dependencies["@jsonpages/core"]) {
+    delete pkg.dependencies["@jsonpages/core"];
+  }
   writePackageJson(dir, pkg);
-  log(`Updated @jsonpages/core: ${prev} -> ^${coreVersion}`);
-  run("npm install -w tenant-alpha");
-  run("npm run build -w tenant-alpha");
-  run("npm run dist -w tenant-alpha");
+  log(`Updated ${tenantName} @olonjs/core: ${prev ?? "(unset)"} -> ^${coreVersion}`);
+  run(`npm install -w ${tenantName}`);
+  run(`npm run build -w ${tenantName}`);
+  run(`npm run dist -w ${tenantName}`);
 }
 
 function stepCli() {
-  log("Step 5/5: @jsonpages/cli — build, version patch & publish (from root -w)");
-  run("npm run build -w @jsonpages/cli");
-  run("npm version patch --no-git-tag-version -w @jsonpages/cli");
+  log("Step 5/6: @olonjs/cli — build, version patch & publish (from root -w)");
+  run("npm run build -w @olonjs/cli");
+  run("npm version patch --no-git-tag-version -w @olonjs/cli");
+  const newVersion = getVersion(path.join(ROOT, "packages", "cli"));
   if (!dryRun) {
-    run("npm publish --access public -w @jsonpages/cli");
+    run("npm publish --access public -w @olonjs/cli");
   } else {
     log("[dry-run] Skipping npm publish for cli");
   }
+  return newVersion;
+}
+
+function stepCompatPackages(stackVersion, coreVersion, cliVersion) {
+  log("Step 6/6: compat packages (@jsonpages/*) — sync deps, version patch & publish");
+
+  const coreCompatDir = path.join(ROOT, "packages", "jsonpages-core-compat");
+  const coreCompatPkg = readPackageJson(coreCompatDir);
+  coreCompatPkg.dependencies["@olonjs/core"] = `^${coreVersion}`;
+  writePackageJson(coreCompatDir, coreCompatPkg);
+
+  const stackCompatDir = path.join(ROOT, "packages", "jsonpages-stack-compat");
+  const stackCompatPkg = readPackageJson(stackCompatDir);
+  stackCompatPkg.dependencies["@olonjs/stack"] = `^${stackVersion}`;
+  writePackageJson(stackCompatDir, stackCompatPkg);
+
+  const cliCompatDir = path.join(ROOT, "packages", "jsonpages-cli-compat");
+  const cliCompatPkg = readPackageJson(cliCompatDir);
+  cliCompatPkg.dependencies["@olonjs/cli"] = `^${cliVersion}`;
+  writePackageJson(cliCompatDir, cliCompatPkg);
+
+  run("npm version patch --no-git-tag-version -w @jsonpages/stack");
+  if (!dryRun) run("npm publish --access public -w @jsonpages/stack");
+  else log("[dry-run] Skipping npm publish for @jsonpages/stack compat");
+
+  run("npm version patch --no-git-tag-version -w @jsonpages/core");
+  if (!dryRun) run("npm publish --access public -w @jsonpages/core");
+  else log("[dry-run] Skipping npm publish for @jsonpages/core compat");
+
+  run("npm version patch --no-git-tag-version -w @jsonpages/cli");
+  if (!dryRun) run("npm publish --access public -w @jsonpages/cli");
+  else log("[dry-run] Skipping npm publish for @jsonpages/cli compat");
 }
 
 // --- Main ---
@@ -239,10 +287,12 @@ function main() {
     assertGitClean();
 
     stepBuildAll();
-    stepStack();
+    const stackVersion = stepStack();
     const coreVersion = stepCore();
-    stepTenantAlpha(coreVersion);
-    stepCli();
+    stepTenant("tenant-alpha", coreVersion);
+    stepTenant("tenant-agritourism", coreVersion);
+    const cliVersion = stepCli();
+    stepCompatPackages(stackVersion, coreVersion, cliVersion);
 
     log("Release completed successfully.");
     if (dryRun) {

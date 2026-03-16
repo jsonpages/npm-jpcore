@@ -1,4 +1,4 @@
-# 💎 JsonPages Sovereign Tenant
+# 💎 OlonJS Sovereign Tenant
 
 > **Status:** Production Ready  
 > **Stack:** React 19 + Vite + Tailwind v4 + TypeScript  
@@ -45,7 +45,7 @@ Se sei il Lead Developer e devi creare nuovi Componenti (Capsule), definire Sche
 
 ## 📂 Anatomia del Progetto (JSP Protocol)
 
-La struttura non è casuale. Segue il **JsonPages Site Protocol**. Non spostare i file a caso.
+La struttura non è casuale. Segue il **OlonJS Site Protocol (legacy alias: JsonPages Site Protocol)**. Non spostare i file a caso.
 
 ```text
 src/
@@ -87,16 +87,16 @@ Il sistema usa una **Strategia Ibrida** definita in `src/App.tsx`.
 
 2.  **In Produzione (Vercel/Netlify):**
     Il File System è di sola lettura. Il tasto "Save" non funzionerebbe.
-    Per abilitare l'editing online, il progetto supporta il **JsonPages Cloud Bridge**.
+    Per abilitare l'editing online, il progetto supporta il **OlonJS Cloud Bridge (legacy alias: JsonPages Cloud Bridge)**.
     
     *Configurazione (Environment Variables):*
-    *   `VITE_JSONPAGES_CLOUD_URL`: L'endpoint delle API.
-    *   `VITE_JSONPAGES_API_KEY`: La tua chiave di progetto.
+    *   `VITE_OLONJS_CLOUD_URL` (fallback: `VITE_JSONPAGES_CLOUD_URL`): L'endpoint delle API.
+    *   `VITE_OLONJS_API_KEY` (fallback: `VITE_JSONPAGES_API_KEY`): La tua chiave di progetto.
 
     *Quando configurato, il CMS committa le modifiche direttamente sul tuo repository Git.*
 
 ---
 
-**Built with JsonPages.**  
+**Built with OlonJS** *(legacy alias: JsonPages)*.  
 *Busy is the new Boring.*
 

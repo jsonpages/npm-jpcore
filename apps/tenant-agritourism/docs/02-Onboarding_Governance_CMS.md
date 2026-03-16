@@ -3,7 +3,7 @@
 
 **Target:** Lead Developers & Architects setting up the **CMS** (Studio, ICE, Form Factory): in-app authoring, strong typing, content and component governance.
 
-**Spec Reference:** JSONPAGES Architecture Specifications v1.2 (full) + Appendix A — Tenant Type & Code-Generation Annex.
+**Spec Reference:** OlonJS Architecture Specifications v1.2 (legacy alias: JSONPAGES) + Appendix A — Tenant Type & Code-Generation Annex.
 
 ---
 
@@ -40,7 +40,7 @@ Typing (TypeScript types + Zod schema) serves **two levels**: Governance (Develo
 -   **`src/lib/schemas.ts`** — SECTION_SCHEMAS (aggregate of data schemas per type) + export SectionType.
 -   **`src/lib/ComponentRegistry.tsx`** — Typed Registry: `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }`.
 -   **`src/lib/addSectionConfig.ts`** — AddSectionConfig (addableSectionTypes, sectionTypeLabels, getDefaultSectionData).
--   **`src/types.ts`** — SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **module augmentation** for SectionDataRegistry and SectionSettingsRegistry; re-export from `@jsonpages/core`.
+-   **`src/types.ts`** — SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **module augmentation** for SectionDataRegistry and SectionSettingsRegistry; re-export from `@olonjs/core`.
 -   **`src/App.tsx`** — Bootstrap: config (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection); `<JsonPagesEngine config={config} />`.
 -   **Global CSS** — Includes TOCC selectors for overlay (hover/selected/type label).
 

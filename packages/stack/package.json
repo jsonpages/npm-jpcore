@@ -1,7 +1,7 @@
 {
-  "name": "@jsonpages/stack",
+  "name": "@olonjs/stack",
   "version": "1.0.56",
-  "description": "JsonPages tenant stack manifest — single source of truth for dependency versions",
+  "description": "OlonJS tenant stack manifest - single source of truth for dependency versions",
   "private": false,
   "type": "module",
   "main": "./index.js",

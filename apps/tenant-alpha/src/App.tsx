@@ -4,8 +4,8 @@
  * Supports Hybrid Persistence: Local Filesystem (Dev) or Cloud Bridge (Prod).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { JsonPagesEngine } from '@jsonpages/core';
-import type { JsonPagesConfig, LibraryImageEntry, ProjectState } from '@jsonpages/core';
+import { JsonPagesEngine } from '@olonjs/core';
+import type { JsonPagesConfig, LibraryImageEntry, ProjectState } from '@olonjs/core';
 import { ComponentRegistry } from '@/lib/ComponentRegistry';
 import { SECTION_SCHEMAS } from '@/lib/schemas';
 import { addSectionConfig } from '@/lib/addSectionConfig';
@@ -23,8 +23,10 @@ import { DopaDrawer } from '@/components/save-drawer/DopaDrawer';
 import tenantCss from './index.css?inline';
 
 // Cloud Configuration (Injected by Vercel/Netlify Env Vars)
-const CLOUD_API_URL = import.meta.env.VITE_JSONPAGES_CLOUD_URL;
-const CLOUD_API_KEY = import.meta.env.VITE_JSONPAGES_API_KEY;
+const CLOUD_API_URL =
+  import.meta.env.VITE_OLONJS_CLOUD_URL ?? import.meta.env.VITE_JSONPAGES_CLOUD_URL;
+const CLOUD_API_KEY =
+  import.meta.env.VITE_OLONJS_API_KEY ?? import.meta.env.VITE_JSONPAGES_API_KEY;
 
 const themeConfig = themeData as unknown as ThemeConfig;
 const menuConfig = menuData as unknown as MenuConfig;

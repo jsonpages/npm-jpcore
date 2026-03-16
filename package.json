@@ -1,5 +1,5 @@
 {
-    "name": "jsonpages-monorepo",
+    "name": "olonjs-monorepo",
     "private": true,
     "type": "module",
     "workspaces": [

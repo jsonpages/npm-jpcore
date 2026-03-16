@@ -1,5 +1,5 @@
 /**
- * @jsonpages/core — Public API
+ * @olonjs/core — Public API (legacy alias: @jsonpages/core)
  */
 
 // Lib: kernel, types, engine, renderers, context, persistence, events, utils, shared-types

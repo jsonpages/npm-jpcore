@@ -19,7 +19,7 @@ import { CliSection }       from '@/components/cli-section';
 import { DocsLayout }       from '@/components/docs-layout';
 import { Tiptap }           from '@/components/tiptap';
 
-import type { SectionType }              from '@jsonpages/core';
+import type { SectionType }              from '@olonjs/core';
 import type { SectionComponentPropsMap } from '@/types';
 
 export const ComponentRegistry: {

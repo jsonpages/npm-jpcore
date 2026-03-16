@@ -1,5 +1,5 @@
 /**
- * Sync Core's peerDependencies from @jsonpages/stack.
+ * Sync Core's peerDependencies from @olonjs/stack.
  * Run before pack/publish so published Core declares the same versions as the stack.
  */
 import { readFileSync, writeFileSync } from 'fs';
@@ -12,10 +12,10 @@ const pkgPath = join(coreRoot, 'package.json');
 
 let stack;
 try {
-  const stackModule = await import('@jsonpages/stack');
+  const stackModule = await import('@olonjs/stack');
   stack = stackModule.default ?? stackModule;
 } catch (e) {
-  console.warn('sync-peers-from-stack: @jsonpages/stack not found, skipping sync.', e.message);
+  console.warn('sync-peers-from-stack: @olonjs/stack not found, skipping sync.', e.message);
   process.exit(0);
 }
 
@@ -27,4 +27,4 @@ if (!stack?.peerDependencies) {
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
 pkg.peerDependencies = { ...stack.peerDependencies };
 writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
-console.log('sync-peers-from-stack: Core peerDependencies synced from @jsonpages/stack.');
+console.log('sync-peers-from-stack: Core peerDependencies synced from @olonjs/stack.');

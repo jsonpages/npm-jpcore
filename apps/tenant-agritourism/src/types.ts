@@ -4,7 +4,7 @@ import type {
   SiteConfig as CoreSiteConfig,
   ThemeConfig as CoreThemeConfig,
   MenuConfig as CoreMenuConfig,
-} from '@jsonpages/core';
+} from '@olonjs/core';
 
 import type { HeaderData,           HeaderSettings }           from '@/components/header';
 import type { FooterData,           FooterSettings }           from '@/components/footer';
@@ -36,7 +36,7 @@ export type SectionComponentPropsMap = {
 };
 
 // ── Module Augmentation (MTRP §1.1) ──────────────────────────────────────── 
-declare module '@jsonpages/core' {
+declare module '@olonjs/core' {
   export interface SectionDataRegistry {
     'header':           HeaderData;
     'footer':           FooterData;
@@ -68,7 +68,7 @@ declare module '@jsonpages/core' {
 }
 
 // Re-export everything from core (Section, MenuItem, etc.)
-export * from '@jsonpages/core';
+export * from '@olonjs/core';
 
 // ── Convenience aliases ─────────────────────────────────────────────────────
 export type PageConfig = CorePageConfig;

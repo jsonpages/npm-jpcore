@@ -1,7 +1,7 @@
 /**
  * 🧩 SHARED TYPES
  * Contracts shared between the Admin Engine and the Input Registry.
- * In the Monorepo, this will live in @jsonpages/shared-data.
+ * In the monorepo, this will live in @olonjs/shared-data.
  */
 
 export interface BaseWidgetProps<T = unknown> {

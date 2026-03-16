@@ -4,9 +4,9 @@ This document defines the current architecture of `npm-jpcore`.
 
 ## Monorepo layout
 
-- `packages/core` -> `@jsonpages/core`
-- `packages/cli` -> `@jsonpages/cli`
-- `packages/stack` -> `@jsonpages/stack`
+- `packages/core` -> `@olonjs/core`
+- `packages/cli` -> `@olonjs/cli`
+- `packages/stack` -> `@olonjs/stack`
 - `apps/tenant-alpha` -> template source app (`alpha`)
 - `apps/tenant-agritourism` -> template source app (`agritourism`)
 
@@ -14,21 +14,21 @@ Root workspace config is in `package.json` (`workspaces: ["packages/*", "apps/*"
 
 ## Package responsibilities
 
-## `@jsonpages/stack`
+## `@olonjs/stack`
 
 - version manifest package
 - consumed by other packages to keep dependency policy aligned
 
-## `@jsonpages/core`
+## `@olonjs/core`
 
 - runtime engine used by tenant apps
 - published package consumed by generated tenants
 
-## `@jsonpages/cli`
+## `@olonjs/cli`
 
 - scaffolds new tenants
 - resolves DNA from template assets
-- command surface: `jsonpages new tenant <name> [--template <name>] [--agritourism] [--script <path>]`
+- command surface: `olonjs new tenant <name> [--template <name>] [--agritourism] [--script <path>]` (`jsonpages` alias supported)
 
 ## Template architecture
 

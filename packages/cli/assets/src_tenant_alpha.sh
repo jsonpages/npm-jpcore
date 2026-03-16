@@ -10,7 +10,7 @@ cat << 'END_OF_FILE_CONTENT' > "docs/01-Onboarding_Client_completo_aggiornato.md
 
 **Per chi:** Sviluppo grafico e dati quando **non** usi il CMS (Studio/ICE). Il sito è un **client**: i dati arrivano da JSON locali, da API o da un CMS esterno; tu ti occupi di layout, design e rendering.
 
-**Riferimento spec:** JSONPAGES Architecture v1.2 — solo le parti che riguardano struttura sito, componenti e dati. Ignori: Studio, ICE, Form Factory, IDAC, TOCC, AddSectionConfig, schema obbligatori per l'editor.
+**Riferimento spec:** OlonJS Architecture v1.2 (legacy alias: JSONPAGES) — solo le parti che riguardano struttura sito, componenti e dati. Ignori: Studio, ICE, Form Factory, IDAC, TOCC, AddSectionConfig, schema obbligatori per l'editor.
 
 ---
 
@@ -115,7 +115,7 @@ cat << 'END_OF_FILE_CONTENT' > "docs/01-Onboarding_Governance_naked.md"
 
 **Target:** Frontend Developers & Data Entry staff who **do not** use the CMS (Studio/ICE). The site acts as a **client**: data comes from local JSON, APIs, or an external CMS; you are responsible for layout, design, and rendering.
 
-**Spec Reference:** JSONPAGES Architecture v1.2 — only the parts regarding site structure, components, and data. You ignore: Studio, ICE, Form Factory, IDAC, TOCC, AddSectionConfig, and mandatory schemas for the editor.
+**Spec Reference:** OlonJS Architecture v1.2 (legacy alias: JSONPAGES) — only the parts regarding site structure, components, and data. You ignore: Studio, ICE, Form Factory, IDAC, TOCC, AddSectionConfig, and mandatory schemas for the editor.
 
 ---
 
@@ -218,7 +218,7 @@ cat << 'END_OF_FILE_CONTENT' > "docs/02-Onboarding_Governance_CMS.md"
 
 **Target:** Lead Developers & Architects setting up the **CMS** (Studio, ICE, Form Factory): in-app authoring, strong typing, content and component governance.
 
-**Spec Reference:** JSONPAGES Architecture Specifications v1.2 (full) + Appendix A — Tenant Type & Code-Generation Annex.
+**Spec Reference:** OlonJS Architecture Specifications v1.2 (legacy alias: JSONPAGES) + Appendix A — Tenant Type & Code-Generation Annex.
 
 ---
 
@@ -255,7 +255,7 @@ Typing (TypeScript types + Zod schema) serves **two levels**: Governance (Develo
 -   **`src/lib/schemas.ts`** — SECTION_SCHEMAS (aggregate of data schemas per type) + export SectionType.
 -   **`src/lib/ComponentRegistry.tsx`** — Typed Registry: `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }`.
 -   **`src/lib/addSectionConfig.ts`** — AddSectionConfig (addableSectionTypes, sectionTypeLabels, getDefaultSectionData).
--   **`src/types.ts`** — SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **module augmentation** for SectionDataRegistry and SectionSettingsRegistry; re-export from `@jsonpages/core`.
+-   **`src/types.ts`** — SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **module augmentation** for SectionDataRegistry and SectionSettingsRegistry; re-export from `@olonjs/core`.
 -   **`src/App.tsx`** — Bootstrap: config (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection); `<JsonPagesEngine config={config} />`.
 -   **Global CSS** — Includes TOCC selectors for overlay (hover/selected/type label).
 
@@ -424,7 +424,7 @@ La tipizzazione (tipi TypeScript + schema Zod) serve a **due livelli**: governan
 - **`src/lib/schemas.ts`** — SECTION_SCHEMAS (aggregato degli schema data per tipo) + export SectionType.
 - **`src/lib/ComponentRegistry.tsx`** — Registry tipizzato: `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }`.
 - **`src/lib/addSectionConfig.ts`** — AddSectionConfig (addableSectionTypes, sectionTypeLabels, getDefaultSectionData).
-- **`src/types.ts`** — SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **module augmentation** per SectionDataRegistry e SectionSettingsRegistry; re-export da `@jsonpages/core`.
+- **`src/types.ts`** — SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **module augmentation** per SectionDataRegistry e SectionSettingsRegistry; re-export da `@olonjs/core`.
 - **`src/App.tsx`** — Bootstrap: config (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection); `<JsonPagesEngine config={config} />`.
 - **CSS globale** — Include i selettori TOCC per overlay (hover/selected/type label).
 
@@ -596,7 +596,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "@tiptap/extension-link": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
-    "@jsonpages/core": "^1.0.64",
+    "@olonjs/core": "^1.0.64",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
     "react": "^19.0.0",
@@ -926,8 +926,8 @@ cat << 'END_OF_FILE_CONTENT' > "src/App.tsx"
  * Supports Hybrid Persistence: Local Filesystem (Dev) or Cloud Bridge (Prod).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { JsonPagesEngine } from '@jsonpages/core';
-import type { JsonPagesConfig, LibraryImageEntry, ProjectState } from '@jsonpages/core';
+import { JsonPagesEngine } from '@olonjs/core';
+import type { JsonPagesConfig, LibraryImageEntry, ProjectState } from '@olonjs/core';
 import { ComponentRegistry } from '@/lib/ComponentRegistry';
 import { SECTION_SCHEMAS } from '@/lib/schemas';
 import { addSectionConfig } from '@/lib/addSectionConfig';
@@ -945,8 +945,8 @@ import { DopaDrawer } from '@/components/save-drawer/DopaDrawer';
 import tenantCss from './index.css?inline';
 
 // Cloud Configuration (Injected by Vercel/Netlify Env Vars)
-const CLOUD_API_URL = import.meta.env.VITE_JSONPAGES_CLOUD_URL;
-const CLOUD_API_KEY = import.meta.env.VITE_JSONPAGES_API_KEY;
+const CLOUD_API_URL = (import.meta.env.VITE_OLONJS_CLOUD_URL ?? import.meta.env.VITE_JSONPAGES_CLOUD_URL);
+const CLOUD_API_KEY = (import.meta.env.VITE_OLONJS_API_KEY ?? import.meta.env.VITE_JSONPAGES_API_KEY);
 
 const themeConfig = themeData as unknown as ThemeConfig;
 const menuConfig = menuData as unknown as MenuConfig;
@@ -1744,13 +1744,13 @@ END_OF_FILE_CONTENT
 echo "Creating src/App_.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/App_.tsx"
 import { useState, useEffect } from 'react';
-import { JsonPagesEngine } from '@jsonpages/core';
-import type { LibraryImageEntry } from '@jsonpages/core';
+import { JsonPagesEngine } from '@olonjs/core';
+import type { LibraryImageEntry } from '@olonjs/core';
 import { ComponentRegistry } from '@/lib/ComponentRegistry';
 import { SECTION_SCHEMAS } from '@/lib/schemas';
 import { addSectionConfig } from '@/lib/addSectionConfig';
 import { getHydratedData } from '@/lib/draftStorage';
-import type { JsonPagesConfig, ProjectState } from '@jsonpages/core';
+import type { JsonPagesConfig, ProjectState } from '@olonjs/core';
 import type { SiteConfig, ThemeConfig, MenuConfig } from '@/types';
 
 import siteData from '@/data/config/site.json';
@@ -2103,12 +2103,12 @@ export const CliSection: React.FC<{ data: CliSectionData; settings?: CliSectionS
           </div>
           <div className="bg-[#020508] px-7 py-6 font-mono text-[0.78rem] leading-[2.1] overflow-x-auto">
             <div><span className="text-[#5c6370] italic"># Step 1 — install CLI globally</span></div>
-            <div><span className="text-[#3b82f6]">$</span> <span className="text-white">npm install -g </span><span className="text-[#98c379]">@jsonpages/cli@latest</span></div>
+            <div><span className="text-[#3b82f6]">$</span> <span className="text-white">npm install -g </span><span className="text-[#98c379]">@olonjs/cli@latest</span></div>
             <div><span className="text-[#334155]">added 1 package in 2.3s</span></div>
-            <div><span className="text-[#22c55e]">✓ @jsonpages/cli@1.2.0 installed</span></div>
+            <div><span className="text-[#22c55e]">✓ @olonjs/cli@1.2.0 installed (legacy alias: @jsonpages/cli)</span></div>
             <div>&nbsp;</div>
             <div><span className="text-[#5c6370] italic"># Step 2 — scaffold a new tenant</span></div>
-            <div><span className="text-[#3b82f6]">$</span> <span className="text-[#98c379]">npx @jsonpages/cli@latest</span> <span className="text-white">new my-tenant</span></div>
+            <div><span className="text-[#3b82f6]">$</span> <span className="text-[#98c379]">npx @olonjs/cli@latest</span> <span className="text-white">new my-tenant</span></div>
             <div><span className="text-[#22c55e]">  ✓ src/components/hero/</span></div>
             <div><span className="text-[#22c55e]">  ✓ src/lib/schemas.ts</span></div>
             <div><span className="text-[#22c55e]">  ✓ src/lib/ComponentRegistry.tsx</span></div>
@@ -2241,7 +2241,7 @@ export const CmsIce: React.FC<{ data: CmsIceData; settings?: CmsIceSettings }> =
                 <span className="absolute top-2.5 right-2.5 font-mono text-[0.5rem] font-bold uppercase tracking-widest bg-[#3b82f6] text-white px-2 py-0.5">HERO | LOCAL</span>
                 <div className="font-display font-black text-[2.4rem] leading-none text-white mb-0.5">The Sovereign Shell.</div>
                 <div className="font-display font-black text-[2.4rem] leading-none bg-gradient-to-r from-[#60a5fa] to-[#22d3ee] bg-clip-text text-transparent mb-4">Zero Runtime Overhead.</div>
-                <p className="text-[0.75rem] text-[#475569] leading-[1.65] max-w-[360px] mb-5">The @jsonpages/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface.</p>
+                <p className="text-[0.75rem] text-[#475569] leading-[1.65] max-w-[360px] mb-5">The @olonjs/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface.</p>
                 <div className="flex gap-2">
                   <span className="text-[0.65rem] font-semibold bg-[#3b82f6] text-white px-3.5 py-1.5 rounded-[5px]">Read the Docs</span>
                   <span className="text-[0.65rem] border border-[rgba(255,255,255,0.15)] text-[#94a3b8] px-3.5 py-1.5 rounded-[5px]">View on NPM</span>
@@ -2611,7 +2611,7 @@ import type { DevexData, DevexSettings } from './types';
 const APP_TSX_LINES = [
   { t: 'cm',  c: '// Your App.tsx is incredibly thin.'                 },
   { t: 'pl',  c: ''                                                     },
-  { t: 'kw',  c: "import { JsonPagesEngine } from '@jsonpages/core';"  },
+  { t: 'kw',  c: "import { JsonPagesEngine } from '@olonjs/core';"  },
   { t: 'kw',  c: "import { config } from './my-config';"               },
   { t: 'pl',  c: ''                                                     },
   { t: 'kw',  c: 'export default function App() {'                     },
@@ -3465,7 +3465,7 @@ echo "Creating src/components/header/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/View.tsx"
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import type { MenuItem } from '@jsonpages/core';
+import type { MenuItem } from '@olonjs/core';
 import type { HeaderData, HeaderSettings } from './types';
 
 export const Header: React.FC<{
@@ -3889,7 +3889,7 @@ mkdir -p "src/components/image-break"
 echo "Creating src/components/image-break/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/image-break/View.tsx"
 import React from 'react';
-import { resolveAssetUrl, useConfig } from '@jsonpages/core';
+import { resolveAssetUrl, useConfig } from '@olonjs/core';
 import type { ImageBreakData, ImageBreakSettings } from './types';
 
 export const ImageBreak: React.FC<{ data: ImageBreakData; settings?: ImageBreakSettings }> = ({ data }) => {
@@ -5915,7 +5915,7 @@ export type SectionComponentPropsMap = {
   'tiptap': { data: TiptapData; settings?: TiptapSettings };
 };
 
-declare module '@jsonpages/core' {
+declare module '@olonjs/core' {
   export interface SectionDataRegistry {
     // ... existing entries
     'tiptap': TiptapData;
@@ -5956,7 +5956,7 @@ import {
   Code2, Quote, SquareCode,
   Link2, Unlink2, ImagePlus, Eraser,
 } from 'lucide-react';
-import { STUDIO_EVENTS, useConfig, useStudio } from '@jsonpages/core';
+import { STUDIO_EVENTS, useConfig, useStudio } from '@olonjs/core';
 import type { TiptapData, TiptapSettings } from './types';
 
 // ── UI primitives ─────────────────────────────────────────────────────────────
@@ -7456,7 +7456,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/docs.json"
                       { "id": "f-7",  "text": "`src/lib/schemas.ts` — SECTION_SCHEMAS (aggregato degli schema data per tipo) + export SectionType." },
                       { "id": "f-8",  "text": "`src/lib/ComponentRegistry.tsx` — Registry tipizzato: `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }`." },
                       { "id": "f-9",  "text": "`src/lib/addSectionConfig.ts` — AddSectionConfig (addableSectionTypes, sectionTypeLabels, getDefaultSectionData)." },
-                      { "id": "f-10", "text": "`src/types.ts` — SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **module augmentation** per SectionDataRegistry e SectionSettingsRegistry; re-export da `@jsonpages/core`." },
+                      { "id": "f-10", "text": "`src/types.ts` — SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **module augmentation** per SectionDataRegistry e SectionSettingsRegistry; re-export da `@olonjs/core`." },
                       { "id": "f-11", "text": "`src/App.tsx` — Bootstrap: config (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection); `<JsonPagesEngine config={config} />`." },
                       { "id": "f-12", "text": "**CSS globale** — Include i selettori TOCC per overlay (hover/selected/type label)." }
                     ]
@@ -7717,7 +7717,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
   "slug": "home",
   "meta": {
     "title": "JsonPages — The Sovereign Shell. Zero Runtime Overhead.",
-    "description": "The @jsonpages/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface, leaving your Tenant code pure and framework-agnostic."
+    "description": "The @olonjs/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface, leaving your Tenant code pure and framework-agnostic."
   },
   "sections": [
     {
@@ -7727,7 +7727,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
         "badge": "Architecture v1.2",
         "title": "The Sovereign Shell.",
         "titleHighlight": "Zero Runtime Overhead.",
-        "description": "The @jsonpages/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface, leaving your Tenant code pure and framework-agnostic.",
+        "description": "The @olonjs/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface, leaving your Tenant code pure and framework-agnostic.",
         "ctas": [
           {
             "id": "cta-1",
@@ -7789,7 +7789,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
             "id": "layer-1",
             "number": "1",
             "layerLevel": "l0",
-            "title": "The Core Engine (@jsonpages/core)",
+            "title": "The Core Engine (@olonjs/core)",
             "description": "Handles the React rendering loop, routing, and the Studio iframe injection. It is completely agnostic of your design system."
           }
         ],
@@ -7925,7 +7925,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
         "anchorId": "start",
         "title": "Trust the Architecture.",
         "description": "Stop building page builders. Start building Systems.",
-        "cliCommand": "npx @jsonpages/cli@latest new tenant",
+        "cliCommand": "npx @olonjs/cli@latest new tenant",
         "ctas": [
           {
             "id": "cta-docs",
@@ -7960,7 +7960,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/post.json"
       "id": "post-editorial-main",
       "type": "tiptap",
       "data": {
-        "content": "# JsonPages Cloud – Terms of Service & EULA\n\n---\n\n### **Last Updated:** March 2026\n\n### 1. THE SERVICE\n\nJsonPages provides a hybrid content management infrastructure consisting of:\n\n- **The Core:** An open-source library (@jsonpages/core) governed by the **MIT License**.\n- **The Cloud:** A proprietary SaaS platform (`cloud.jsonpages.io`) that provides the \"Git Bridge,\" Asset Pipeline, and Managed Infrastructure.\n\nBy using the Cloud Service, you agree to these terms.\n\n### 2. DATA SOVEREIGNTY & OWNERSHIP\n\n- **Your Content:** All data (JSON files), code, and assets managed through JsonPages remain your exclusive property. JsonPages acts only as an **orchestrator**.\n- **The Bridge:** You grant JsonPages the necessary permissions to perform Git operations (commits/pushes) on your behalf to your designated repositories (GitHub/GitLab).\n- **Portability:** Since your content is stored as flat JSON files in your own repository, you retain the right to migrate away from the Cloud Service at any time without data lock-in.\n- \n\n### 3. SUBSCRIPTIONS & ENTITLEMENTS\n\n- **Billing:** The Cloud Service is billed on a subscription basis (**Monthly Recurring Revenue**).\n- **Entitlements:** Each \"Project\" or \"Tenant\" consumes one entitlement. Active entitlements grant access to the Visual Studio (ICE) and the Cloud Save API.\n- **Third-Party Costs:** You are solely responsible for any costs incurred on third-party platforms (e.g., **Vercel** hosting, **GitHub** storage, **Cloudflare** workers).\n\n### 4. ACCEPTABLE USE\n\nYou may not use JsonPages Cloud to:\n\n- Host or manage illegal, harmful, or offensive content.\n- Attempt to reverse-engineer the proprietary Cloud Bridge or bypass entitlement checks.\n- Interfere with the stability of the API for other users.\n- \n\n### 5. LIMITATION OF LIABILITY\n\n- **\"As-Is\" Basis:** The service is provided \"as-is.\" While we strive for 99.9% uptime, JsonPages is not liable for data loss resulting from Git conflicts, third-party outages (Vercel/GitHub), or user error.\n- **No Warranty:** We do not warrant that the service will be error-free or uninterrupted.\n- \n\n### 6. TERMINATION\n\n- **By You:** You can cancel your subscription at any time. Your Studio access will remain active until the end of the current billing cycle.\n- \n- **By Us:** We reserve the right to suspend accounts that violate these terms or fail to settle outstanding invoices.\n\n### 7. GOVERNING LAW\n\nThese terms are governed by the laws of **Italy/European Union**, without regard to conflict of law principles."
+        "content": "# JsonPages Cloud – Terms of Service & EULA\n\n---\n\n### **Last Updated:** March 2026\n\n### 1. THE SERVICE\n\nJsonPages provides a hybrid content management infrastructure consisting of:\n\n- **The Core:** An open-source library (@olonjs/core) governed by the **MIT License**.\n- **The Cloud:** A proprietary SaaS platform (`cloud.jsonpages.io`) that provides the \"Git Bridge,\" Asset Pipeline, and Managed Infrastructure.\n\nBy using the Cloud Service, you agree to these terms.\n\n### 2. DATA SOVEREIGNTY & OWNERSHIP\n\n- **Your Content:** All data (JSON files), code, and assets managed through JsonPages remain your exclusive property. JsonPages acts only as an **orchestrator**.\n- **The Bridge:** You grant JsonPages the necessary permissions to perform Git operations (commits/pushes) on your behalf to your designated repositories (GitHub/GitLab).\n- **Portability:** Since your content is stored as flat JSON files in your own repository, you retain the right to migrate away from the Cloud Service at any time without data lock-in.\n- \n\n### 3. SUBSCRIPTIONS & ENTITLEMENTS\n\n- **Billing:** The Cloud Service is billed on a subscription basis (**Monthly Recurring Revenue**).\n- **Entitlements:** Each \"Project\" or \"Tenant\" consumes one entitlement. Active entitlements grant access to the Visual Studio (ICE) and the Cloud Save API.\n- **Third-Party Costs:** You are solely responsible for any costs incurred on third-party platforms (e.g., **Vercel** hosting, **GitHub** storage, **Cloudflare** workers).\n\n### 4. ACCEPTABLE USE\n\nYou may not use JsonPages Cloud to:\n\n- Host or manage illegal, harmful, or offensive content.\n- Attempt to reverse-engineer the proprietary Cloud Bridge or bypass entitlement checks.\n- Interfere with the stability of the API for other users.\n- \n\n### 5. LIMITATION OF LIABILITY\n\n- **\"As-Is\" Basis:** The service is provided \"as-is.\" While we strive for 99.9% uptime, JsonPages is not liable for data loss resulting from Git conflicts, third-party outages (Vercel/GitHub), or user error.\n- **No Warranty:** We do not warrant that the service will be error-free or uninterrupted.\n- \n\n### 6. TERMINATION\n\n- **By You:** You can cancel your subscription at any time. Your Studio access will remain active until the end of the current billing cycle.\n- \n- **By Us:** We reserve the right to suspend accounts that violate these terms or fail to settle outstanding invoices.\n\n### 7. GOVERNING LAW\n\nThese terms are governed by the laws of **Italy/European Union**, without regard to conflict of law principles."
       },
       "settings": {}
     }
@@ -8733,7 +8733,7 @@ import { CliSection }       from '@/components/cli-section';
 import { DocsLayout }       from '@/components/docs-layout';
 import { Tiptap }           from '@/components/tiptap';
 
-import type { SectionType }              from '@jsonpages/core';
+import type { SectionType }              from '@olonjs/core';
 import type { SectionComponentPropsMap } from '@/types';
 
 export const ComponentRegistry: {
@@ -8821,7 +8821,7 @@ export const Icon: React.FC<IconProps> = ({ name, size = 20, className }) => {
 END_OF_FILE_CONTENT
 echo "Creating src/lib/addSectionConfig.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/addSectionConfig.ts"
-import type { AddSectionConfig } from '@jsonpages/core';
+import type { AddSectionConfig } from '@olonjs/core';
 
 const addableSectionTypes = [
   'hero', 'feature-grid', 'code-block', 'problem-statement',
@@ -9238,8 +9238,8 @@ export function useFormSubmit({ source, tenantId }: UseFormSubmitOptions) {
     pageSlug: string, 
     sectionId: string
   ) => {
-    const cloudApiUrl = import.meta.env.VITE_JSONPAGES_CLOUD_URL as string | undefined;
-    const cloudApiKey = import.meta.env.VITE_JSONPAGES_API_KEY as string | undefined;
+    const cloudApiUrl = (import.meta.env.VITE_OLONJS_CLOUD_URL ?? import.meta.env.VITE_JSONPAGES_CLOUD_URL) as string | undefined;
+    const cloudApiKey = (import.meta.env.VITE_OLONJS_API_KEY ?? import.meta.env.VITE_JSONPAGES_API_KEY) as string | undefined;
 
     if (!cloudApiUrl || !cloudApiKey) {
       setStatus('error');
@@ -9357,7 +9357,7 @@ mkdir -p "src/server"
 mkdir -p "src/types"
 echo "Creating src/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/types.ts"
-import type { MenuItem } from '@jsonpages/core';
+import type { MenuItem } from '@olonjs/core';
 import type { HeaderData,           HeaderSettings }           from '@/components/header';
 import type { FooterData,           FooterSettings }           from '@/components/footer';
 import type { HeroData,             HeroSettings }             from '@/components/hero';
@@ -9400,7 +9400,7 @@ export type SectionComponentPropsMap = {
   'tiptap':            { data: TiptapData;            settings?: TiptapSettings            };
 };
 
-declare module '@jsonpages/core' {
+declare module '@olonjs/core' {
   export interface SectionDataRegistry {
     'header':            HeaderData;
     'footer':            FooterData;
@@ -9445,7 +9445,7 @@ declare module '@jsonpages/core' {
   }
 }
 
-export * from '@jsonpages/core';
+export * from '@olonjs/core';
 
 END_OF_FILE_CONTENT
 echo "Creating src/types/deploy.ts..."
@@ -9510,7 +9510,7 @@ END_OF_FILE_CONTENT
 echo "Creating vite.config.ts..."
 cat << 'END_OF_FILE_CONTENT' > "vite.config.ts"
 /**
- * Generated by @jsonpages/cli. Dev server API: /api/save-to-file, /api/upload-asset, /api/list-assets.
+ * Generated by @olonjs/cli (legacy alias: @jsonpages/cli). Dev server API: /api/save-to-file, /api/upload-asset, /api/list-assets.
  */
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';

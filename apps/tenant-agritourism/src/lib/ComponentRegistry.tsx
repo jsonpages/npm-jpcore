@@ -13,7 +13,7 @@ import { ActivitiesGrid }   from '@/components/activities-grid';
 import { KitchenShowcase }  from '@/components/kitchen-showcase';
 import { GalleryStrip }     from '@/components/gallery-strip';
 
-import type { SectionType }              from '@jsonpages/core';
+import type { SectionType }              from '@olonjs/core';
 import type { SectionComponentPropsMap } from '@/types';
 
 export const ComponentRegistry: {

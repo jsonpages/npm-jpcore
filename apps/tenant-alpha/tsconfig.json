@@ -18,7 +18,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@jsonpages/core": ["../../packages/core/src/index.ts"]
+      "@olonjs/core": ["../../packages/core/src/index.ts"]
     }
   },
   "include": ["src"],

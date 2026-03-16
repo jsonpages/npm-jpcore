@@ -1,0 +1,29 @@
+{
+  "name": "@jsonpages/cli",
+  "version": "3.0.77-olonjs-compat.0",
+  "description": "Compatibility bridge package. Use @olonjs/cli instead.",
+  "type": "module",
+  "bin": {
+    "jsonpages": "./bin/jsonpages.js"
+  },
+  "files": [
+    "bin"
+  ],
+  "author": "OlonJS Team",
+  "license": "MIT",
+  "homepage": "https://github.com/olonjs/npm-jpcore#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/olonjs/npm-jpcore.git",
+    "directory": "packages/jsonpages-cli-compat"
+  },
+  "bugs": {
+    "url": "https://github.com/olonjs/npm-jpcore/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@olonjs/cli": "^3.0.77"
+  }
+}

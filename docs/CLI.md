@@ -1,6 +1,6 @@
 # CLI
 
-This document defines the current `@jsonpages/cli` behavior and contract.
+This document defines the current `@olonjs/cli` behavior and contract.
 
 ## Package location
 
@@ -8,13 +8,13 @@ This document defines the current `@jsonpages/cli` behavior and contract.
 
 ## Binary
 
-- command name: `jsonpages`
+- command name: `olonjs` (primary), `jsonpages` (compatibility alias)
 - entrypoint: `./src/index.js`
 
 ## Primary command
 
 ```bash
-jsonpages new tenant <name>
+olonjs new tenant <name>
 ```
 
 Supported options:
@@ -26,9 +26,9 @@ Supported options:
 Examples:
 
 ```bash
-jsonpages new tenant my-site
-jsonpages new tenant my-site --template agritourism
-jsonpages new tenant my-site --agritourism
+olonjs new tenant my-site
+olonjs new tenant my-site --template agritourism
+olonjs new tenant my-site --agritourism
 ```
 
 ## Template resolution
@@ -45,7 +45,7 @@ If template is unknown and `--script` is not provided, CLI exits with a template
 
 ## Generation pipeline
 
-When running `jsonpages new tenant <name>`:
+When running `olonjs new tenant <name>` (or `jsonpages new tenant <name>`):
 
 1. scaffold Vite React TS app
 2. remove boilerplate files

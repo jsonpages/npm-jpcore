@@ -1,4 +1,4 @@
-import type { MenuItem } from '@jsonpages/core';
+import type { MenuItem } from '@olonjs/core';
 import type { HeaderData,           HeaderSettings }           from '@/components/header';
 import type { FooterData,           FooterSettings }           from '@/components/footer';
 import type { HeroData,             HeroSettings }             from '@/components/hero';
@@ -41,7 +41,7 @@ export type SectionComponentPropsMap = {
   'tiptap':            { data: TiptapData;            settings?: TiptapSettings            };
 };
 
-declare module '@jsonpages/core' {
+declare module '@olonjs/core' {
   export interface SectionDataRegistry {
     'header':            HeaderData;
     'footer':            FooterData;
@@ -86,4 +86,4 @@ declare module '@jsonpages/core' {
   }
 }
 
-export * from '@jsonpages/core';
+export * from '@olonjs/core';

@@ -1,10 +1,10 @@
-# JSONPages Monorepo
+# OlonJS Monorepo
 
-This repository contains the JsonPages stack:
+This repository contains the OlonJS stack:
 
-- `packages/core`: runtime engine (`@jsonpages/core`)
-- `packages/cli`: tenant generator (`@jsonpages/cli`)
-- `packages/stack`: dependency manifest (`@jsonpages/stack`)
+- `packages/core`: runtime engine (`@olonjs/core`)
+- `packages/cli`: tenant generator (`@olonjs/cli`)
+- `packages/stack`: dependency manifest (`@olonjs/stack`)
 - `apps/tenant-alpha`: reference DNA template source
 - `apps/tenant-agritourism`: second DNA template source
 
@@ -47,20 +47,22 @@ npm run dev
 Generate a tenant from default template (`alpha`):
 
 ```bash
-npx @jsonpages/cli new tenant my-tenant
+npx @olonjs/cli new tenant my-tenant
 ```
 
 Generate from explicit template:
 
 ```bash
-npx @jsonpages/cli new tenant my-tenant --template agritourism
+npx @olonjs/cli new tenant my-tenant --template agritourism
 ```
 
 Template alias:
 
 ```bash
-npx @jsonpages/cli new tenant my-tenant --agritourism
+npx @olonjs/cli new tenant my-tenant --agritourism
 ```
+
+CLI command aliases are both supported: `olonjs` (primary) and `jsonpages` (compatibility alias).
 
 ## DNA source of truth
 

@@ -1,5 +1,5 @@
 /**
- * @jsonpages/stack — Export stack manifest for Node ESM and CJS.
+ * @olonjs/stack — Export stack manifest for Node ESM and CJS.
  */
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
