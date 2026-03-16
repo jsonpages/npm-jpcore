@@ -596,7 +596,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "@tiptap/extension-link": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.70",
+    "@olonjs/core": "^1.0.71",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
     "react": "^19.0.0",
@@ -941,6 +941,7 @@ import themeData from '@/data/config/theme.json';
 import menuData from '@/data/config/menu.json';
 import { getFilePages } from '@/lib/getFilePages';
 import { DopaDrawer } from '@/components/save-drawer/DopaDrawer';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import tenantCss from './index.css?inline';
 
@@ -1194,6 +1195,16 @@ function cloudFingerprint(apiBase: string, apiKey: string): string {
   return `${normalizeApiBase(apiBase)}::${apiKey.slice(-8)}`;
 }
 
+function normalizeSlugForCache(slug: string): string {
+  return (
+    slug
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9/_-]/g, '-')
+      .replace(/^\/+|\/+$/g, '') || 'home'
+  );
+}
+
 function readCachedCloudContent(fingerprint: string): CachedCloudContent | null {
   try {
     const raw = localStorage.getItem(CLOUD_CACHE_KEY);
@@ -1248,7 +1259,6 @@ function App() {
   const activeCloudSaveController = useRef<AbortController | null>(null);
   const contentLoadInFlight = useRef<Promise<void> | null>(null);
   const pendingCloudSave = useRef<{ state: ProjectState; slug: string } | null>(null);
-  const warmBootFromCloudCache = useRef(false);
   const cloudApiCandidates = useMemo(
     () => (isCloudMode && CLOUD_API_URL ? buildApiCandidates(CLOUD_API_URL) : []),
     [isCloudMode, CLOUD_API_URL]
@@ -1288,26 +1298,16 @@ function App() {
     const primaryApiBase = cloudApiCandidates[0] ?? normalizeApiBase(CLOUD_API_URL);
     const fingerprint = cloudFingerprint(primaryApiBase, CLOUD_API_KEY);
     const cached = readCachedCloudContent(fingerprint);
+    const cachedPages = cached ? toPagesRecord(cached.pages) : null;
+    const cachedSite = cached ? coerceSiteConfig(cached.siteConfig) : null;
+    const hasCachedFallback = Boolean((cachedPages && Object.keys(cachedPages).length > 0) || cachedSite);
     if (cached) {
-      const cachedPages = toPagesRecord(cached.pages);
-      const cachedSite = coerceSiteConfig(cached.siteConfig);
-      if (cachedPages && Object.keys(cachedPages).length > 0) {
-        setPages(cachedPages);
-      }
-      if (cachedSite) {
-        setSiteConfig(cachedSite);
-      }
-      setContentMode('cloud');
-      setContentFallback(null);
-      warmBootFromCloudCache.current = true;
-      setShowTopProgress(false);
-      setHasInitialCloudResolved(true);
       logBootstrapEvent('boot.cloud.cache_hit', { ageMs: Date.now() - cached.savedAt });
-    } else {
-      warmBootFromCloudCache.current = false;
-      setShowTopProgress(true);
-      setHasInitialCloudResolved(false);
     }
+    setContentMode('cloud');
+    setContentFallback(null);
+    setShowTopProgress(true);
+    setHasInitialCloudResolved(false);
     logBootstrapEvent('boot.start', { mode: 'cloud', apiCandidates: cloudApiCandidates.length });
 
     const loadCloudContent = async () => {
@@ -1320,6 +1320,7 @@ function App() {
             try {
               const res = await fetch(`${apiBase}/content`, {
                 method: 'GET',
+                cache: 'no-store',
                 headers: {
                   Authorization: `Bearer ${CLOUD_API_KEY}`,
                 },
@@ -1422,7 +1423,13 @@ function App() {
       } catch (error: unknown) {
         if (controller.signal.aborted) return;
         const failure = toCloudLoadFailure(error);
-        if (warmBootFromCloudCache.current) {
+        if (hasCachedFallback) {
+          if (cachedPages && Object.keys(cachedPages).length > 0) {
+            setPages(cachedPages);
+          }
+          if (cachedSite) {
+            setSiteConfig(cachedSite);
+          }
           setContentMode('cloud');
           setContentFallback({
             reasonCode: 'CLOUD_REFRESH_FAILED',
@@ -1589,14 +1596,26 @@ function App() {
           },
           body: JSON.stringify({
             slug,
-            type: 'page',
-            data: state.page,
+            page: state.page,
+            siteConfig: state.site,
           }),
         });
         const body = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
         if (!res.ok) {
           throw new Error(body.error || body.code || `Hot save failed: ${res.status}`);
         }
+        const keyFingerprint = cloudFingerprint(apiBase, CLOUD_API_KEY);
+        const normalizedSlug = normalizeSlugForCache(slug);
+        const existing = readCachedCloudContent(keyFingerprint);
+        writeCachedCloudContent({
+          keyFingerprint,
+          savedAt: Date.now(),
+          siteConfig: state.site ?? null,
+          pages: {
+            ...(existing?.pages ?? {}),
+            [normalizedSlug]: state.page,
+          },
+        });
       },
       showLegacySave: !isCloudMode,
       showHotSave: isCloudMode,
@@ -1666,6 +1685,26 @@ function App() {
             />
           </div>
         </>
+      ) : null}
+      {isCloudMode && !hasInitialCloudResolved ? (
+        <div className="fixed inset-0 z-[1290] bg-background/80 backdrop-blur-sm">
+          <div className="mx-auto w-full max-w-[1600px] p-6">
+            <div className="grid gap-4 lg:grid-cols-[1fr_420px]">
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-64" />
+                <Skeleton className="h-[220px] w-full rounded-xl" />
+                <Skeleton className="h-[220px] w-full rounded-xl" />
+              </div>
+              <div className="space-y-3 rounded-xl border border-border/50 bg-card/60 p-4">
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-5/6" />
+                <Skeleton className="h-5 w-4/6" />
+                <Skeleton className="h-24 w-full rounded-lg" />
+              </div>
+            </div>
+          </div>
+        </div>
       ) : null}
       {shouldRenderEngine ? <JsonPagesEngine config={config} /> : null}
       {isCloudMode && (contentMode === 'error' || contentFallback?.reasonCode === 'CLOUD_REFRESH_FAILED') ? (
@@ -7185,6 +7224,26 @@ export { Separator }
 
 
 
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/ui/skeleton.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/ui/skeleton.tsx"
+import { cn } from '@/lib/utils';
+import type { HTMLAttributes } from 'react';
+
+function Skeleton({
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn('animate-pulse rounded-md bg-muted', className)}
+      {...props}
+    />
+  );
+}
+
+export { Skeleton };
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/ui/textarea.tsx..."
