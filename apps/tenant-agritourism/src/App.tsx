@@ -152,6 +152,30 @@ function App() {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         if (!res.ok) throw new Error(body.error ?? `Save to file failed: ${res.status}`);
       },
+      async hotSave(state: ProjectState, slug: string): Promise<void> {
+        if (!isCloudMode || !CLOUD_API_URL || !CLOUD_API_KEY) {
+          throw new Error('Cloud mode is not configured for hot save.');
+        }
+        const apiBase = CLOUD_API_URL.replace(/\/$/, '');
+        const res = await fetch(`${apiBase}/hotSave`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${CLOUD_API_KEY}`,
+          },
+          body: JSON.stringify({
+            slug,
+            page: state.page,
+            siteConfig: state.site,
+          }),
+        });
+        const body = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+        if (!res.ok) {
+          throw new Error(body.error || body.code || `Hot save failed: ${res.status}`);
+        }
+      },
+      showLegacySave: !isCloudMode,
+      showHotSave: isCloudMode,
     },
     assets: {
       assetsBaseUrl: '/assets',
