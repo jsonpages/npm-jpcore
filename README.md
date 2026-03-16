@@ -1,5 +1,27 @@
 # OlonJS Monorepo
 
+<p align="center">
+  <a href="https://olonjs.io">
+    <img src="https://github.com/olonjs/npm-jpcore/blob/main/brand/mark/olon-mark-dark-256.png" width="120" height="120" alt="OlonJS Logo">
+  </a>
+</p>
+
+<h1 align="center">OlonJS</h1>
+
+<p align="center">
+  <strong>The AI-Native Content Infrastructure for Vercel & Vite.</strong><br />
+  Deterministic. Sovereign. Git-Backed.
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@olonjs/core">
+    <img src="https://img.shields.io/npm/v/@olonjs/core?color=blue&style=flat-square" alt="npm version">
+  </a>
+  <a href="https://github.com/olonjs/npm-jpcore/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license">
+  </a>
+</p>
+
 This repository contains the OlonJS stack:
 
 - `packages/core`: runtime engine (`@olonjs/core`)
