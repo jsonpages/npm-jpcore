@@ -140,6 +140,44 @@ function getVersion(dir) {
   return readPackageJson(dir).version;
 }
 
+function packageVersionExists(packageName, version) {
+  const escapedName = packageName.replace(/"/g, '\\"');
+  const escapedVersion = version.replace(/"/g, '\\"');
+  try {
+    runSilent(`npm view "${escapedName}@${escapedVersion}" version`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function bumpPatch(version) {
+  const m = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-.+)?$/);
+  if (!m) {
+    throw new Error(`Cannot bump patch for invalid semver: ${version}`);
+  }
+  const major = Number(m[1]);
+  const minor = Number(m[2]);
+  const patch = Number(m[3]) + 1;
+  return `${major}.${minor}.${patch}`;
+}
+
+function ensureUnpublishedVersion(dir, preferredVersion) {
+  const pkg = readPackageJson(dir);
+  let candidate = preferredVersion;
+  while (packageVersionExists(pkg.name, candidate)) {
+    candidate = bumpPatch(candidate);
+  }
+  pkg.version = candidate;
+  writePackageJson(dir, pkg);
+  if (candidate !== preferredVersion) {
+    log(`Resolved unpublished version for ${pkg.name}: ${preferredVersion} -> ${candidate}`, "warn");
+  } else {
+    log(`Resolved unpublished version for ${pkg.name}: ${candidate}`);
+  }
+  return candidate;
+}
+
 // --- Dry-run: full command plan (enterprise: show exactly what would run) ---
 // All version/publish run from root with -w so .npmrc and NPM_TOKEN apply.
 function getCommandPlan() {
@@ -186,7 +224,7 @@ function printCommandPlan() {
 
 // --- Steps ---
 function stepBuildAll() {
-  log("Step 1/5: Build all workspaces");
+  log("Step 1/6: Build all workspaces");
   run("npm run build:all");
 }
 
@@ -246,7 +284,7 @@ function stepCli() {
 }
 
 function stepCompatPackages(stackVersion, coreVersion, cliVersion) {
-  log("Step 6/6: compat packages (@jsonpages/*) — sync deps, version patch & publish");
+  log("Step 6/6: compat packages (@jsonpages/*) — sync deps, version resolve & publish");
 
   const coreCompatDir = path.join(ROOT, "packages", "jsonpages-core-compat");
   const coreCompatPkg = readPackageJson(coreCompatDir);
@@ -263,15 +301,15 @@ function stepCompatPackages(stackVersion, coreVersion, cliVersion) {
   cliCompatPkg.dependencies["@olonjs/cli"] = `^${cliVersion}`;
   writePackageJson(cliCompatDir, cliCompatPkg);
 
-  run("npm version patch --no-git-tag-version -w @jsonpages/stack");
+  ensureUnpublishedVersion(stackCompatDir, stackVersion);
   if (!dryRun) run("npm publish --access public -w @jsonpages/stack");
   else log("[dry-run] Skipping npm publish for @jsonpages/stack compat");
 
-  run("npm version patch --no-git-tag-version -w @jsonpages/core");
+  ensureUnpublishedVersion(coreCompatDir, coreVersion);
   if (!dryRun) run("npm publish --access public -w @jsonpages/core");
   else log("[dry-run] Skipping npm publish for @jsonpages/core compat");
 
-  run("npm version patch --no-git-tag-version -w @jsonpages/cli");
+  ensureUnpublishedVersion(cliCompatDir, cliVersion);
   if (!dryRun) run("npm publish --access public -w @jsonpages/cli");
   else log("[dry-run] Skipping npm publish for @jsonpages/cli compat");
 }

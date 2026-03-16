@@ -24,6 +24,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@olonjs/cli": "^3.0.77"
+    "@olonjs/cli": "^3.0.79"
   }
 }

@@ -30,7 +30,7 @@ Non devi: tipizzare tutto per l'editor, esporre schema Zod al Form Factory, gest
 - **`src/data/config/theme.json`** — (Opzionale) Token tema (colori, font, radius).
 - **`src/data/pages/<slug>.json`** — Una pagina = `slug`, `meta`, `sections[]` (array di blocchi `id`, `type`, `data`, `settings`). **Per creare una nuova pagina** basta aggiungere un file `<slug>.json` in `src/data/pages/`; lo slug del nome file diventa il path della pagina (es. `chi-siamo.json` → `/chi-siamo`).
 - **`src/components/<sectionType>/`** — Una cartella per tipo di blocco (hero, header, footer, feature-grid, …).
-- **`src/App.tsx`** — Carica site, menu, theme, pages; costruisce la config; renderizza **`<JsonPagesEngine config={config} />`**.
+- **`src/App.tsx`** — Carica site, menu, theme, pages; costruisce la config; renderizza **`<JsonPagesEngine config={config} />` *(from `@olonjs/core`, legacy alias: `@jsonpages/core`)***.
 
 Il motore (Core) si aspetta comunque un **registry** (mappa tipo → componente) e le **pagine** nel formato previsto (slug → page con `sections`). Come popoli i JSON (a mano, da script, da altro CMS) è fuori dall'editor.
 
@@ -74,7 +74,7 @@ Non devi registrare schema o AddSectionConfig a meno che non attivi Studio.
 
 ## 5. Registry e config (minimo)
 
-- **Registry:** Un oggetto che mappa ogni `sectionType` (stringa) al componente React che renderizza quel tipo. Es.: `{ header: Header, footer: Footer, hero: Hero, ... }`. Se non usi Studio, puoi tipizzare in modo lasco (es. `Record<string, React.FC<any>>` o comunque compatibile con quanto si aspetta `JsonPagesConfig['registry']`).
+- **Registry:** Un oggetto che mappa ogni `sectionType` (stringa) al componente React che renderizza quel tipo. Es.: `{ header: Header, footer: Footer, hero: Hero, ... }`. Se non usi Studio, puoi tipizzare in modo lasco (es. `Record<string, React.FC<any>>` o comunque compatibile con quanto si aspetta `JsonPagesConfig['registry']` from `@olonjs/core`).
 - **Config da passare a JsonPagesEngine:**  
   `tenantId`, `registry`, `pages`, `siteConfig`, `menuConfig`, `themeConfig` (o oggetto vuoto), `themeCss: { tenant: cssString }`.  
   Se **non** usi Studio, **schemas** e **addSection** possono essere placeholder (oggetto vuoto / no-op) se il Core lo permette; altrimenti fornisci il minimo (es. schemas = `{}`, addSection = `{ addableSectionTypes: [], sectionTypeLabels: {}, getDefaultSectionData: () => ({}) }`) per non rompere l'engine.
@@ -115,7 +115,7 @@ cat << 'END_OF_FILE_CONTENT' > "docs/01-Onboarding_Governance_naked.md"
 
 **Target:** Frontend Developers & Data Entry staff who **do not** use the CMS (Studio/ICE). The site acts as a **client**: data comes from local JSON, APIs, or an external CMS; you are responsible for layout, design, and rendering.
 
-**Spec Reference:** OlonJS Architecture v1.2 (legacy alias: JSONPAGES) — only the parts regarding site structure, components, and data. You ignore: Studio, ICE, Form Factory, IDAC, TOCC, AddSectionConfig, and mandatory schemas for the editor.
+**Spec Reference:** JSONPAGES Architecture v1.2 — only the parts regarding site structure, components, and data. You ignore: Studio, ICE, Form Factory, IDAC, TOCC, AddSectionConfig, and mandatory schemas for the editor.
 
 ---
 
@@ -387,7 +387,7 @@ cat << 'END_OF_FILE_CONTENT' > "docs/02-Onboarding_Governance_completo_aggiornat
 
 **Per chi:** Sviluppo grafico e dati quando vuoi il **CMS** (Studio, ICE, Form Factory): authoring in-app, tipizzazione forte, governance dei contenuti e dei componenti.
 
-**Riferimento spec:** JSONPAGES Architecture Specifications v1.2 (full) + Appendix A — Tenant Type & Code-Generation Annex.
+**Riferimento spec:** OlonJS Architecture Specifications v1.2 (legacy alias: JSONPAGES) + Appendix A — Tenant Type & Code-Generation Annex.
 
 ---
 
@@ -576,50 +576,50 @@ END_OF_FILE_CONTENT
 echo "Creating package.json..."
 cat << 'END_OF_FILE_CONTENT' > "package.json"
 {
-    "name":  "tenant-agritourism",
-    "version":  "1.0.0",
-    "private":  true,
-    "type":  "module",
-    "scripts":  {
-                    "dev":  "vite",
-                    "dev:clean":  "vite --force",
-                    "prebuild":  "node scripts/sync-pages-to-public.mjs",
-                    "build":  "tsc \u0026\u0026 vite build",
-                    "dist":  "bash ./src2Code.sh --template agritourism src vercel.json index.html vite.config.ts scripts docs package.json",
-                    "preview":  "vite preview",
-                    "bake:email":  "tsx scripts/bake-email.tsx",
-                    "bakemail":  "npm run bake:email --",
-                    "dist:dna":  "npm run dist"
-                },
-    "dependencies":  {
-                         "@tiptap/extension-image":  "^2.11.5",
-                         "@tiptap/extension-link":  "^2.11.5",
-                         "@tiptap/react":  "^2.11.5",
-                         "@tiptap/starter-kit":  "^2.11.5",
-                         "@olonjs/core":  "^1.0.58",
-                         "clsx":  "^2.1.1",
-                         "lucide-react":  "^0.474.0",
-                         "react":  "^19.0.0",
-                         "react-markdown":  "^9.0.1",
-                         "react-dom":  "^19.0.0",
-                         "react-router-dom":  "^6.30.3",
-                         "rehype-sanitize":  "^6.0.0",
-                         "remark-gfm":  "^4.0.1",
-                         "tailwind-merge":  "^3.0.1",
-                         "tiptap-markdown":  "^0.8.10",
-                         "zod":  "^3.24.1"
-                     },
-    "devDependencies":  {
-                            "@tailwindcss/vite":  "^4.0.0",
-                            "@types/react":  "^19.0.8",
-                            "@types/react-dom":  "^19.0.3",
-                            "@vitejs/plugin-react":  "^4.3.4",
-                            "typescript":  "^5.7.3",
-                            "vite":  "^6.0.11",
-                            "@react-email/components":  "^0.0.41",
-                            "@react-email/render":  "^1.0.5",
-                            "tsx":  "^4.20.5"
-                        }
+  "name": "tenant-agritourism",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:clean": "vite --force",
+    "prebuild": "node scripts/sync-pages-to-public.mjs",
+    "build": "tsc && vite build",
+    "dist": "bash ./src2Code.sh --template agritourism src vercel.json index.html vite.config.ts scripts docs package.json",
+    "preview": "vite preview",
+    "bake:email": "tsx scripts/bake-email.tsx",
+    "bakemail": "npm run bake:email --",
+    "dist:dna": "npm run dist"
+  },
+  "dependencies": {
+    "@tiptap/extension-image": "^2.11.5",
+    "@tiptap/extension-link": "^2.11.5",
+    "@tiptap/react": "^2.11.5",
+    "@tiptap/starter-kit": "^2.11.5",
+    "@olonjs/core": "^1.0.66",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.474.0",
+    "react": "^19.0.0",
+    "react-markdown": "^9.0.1",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^6.30.3",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.0.1",
+    "tiptap-markdown": "^0.8.10",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11",
+    "@react-email/components": "^0.0.41",
+    "@react-email/render": "^1.0.5",
+    "tsx": "^4.20.5"
+  }
 }
 
 END_OF_FILE_CONTENT
@@ -945,8 +945,10 @@ import { DopaDrawer } from '@/components/save-drawer/DopaDrawer';
 import fontsCss from './fonts.css?inline';
 import tenantCss from './index.css?inline';
 
-const CLOUD_API_URL = (import.meta.env.VITE_OLONJS_CLOUD_URL ?? import.meta.env.VITE_JSONPAGES_CLOUD_URL);
-const CLOUD_API_KEY = (import.meta.env.VITE_OLONJS_API_KEY ?? import.meta.env.VITE_JSONPAGES_API_KEY);
+const CLOUD_API_URL =
+  import.meta.env.VITE_OLONJS_CLOUD_URL ?? import.meta.env.VITE_JSONPAGES_CLOUD_URL;
+const CLOUD_API_KEY =
+  import.meta.env.VITE_OLONJS_API_KEY ?? import.meta.env.VITE_JSONPAGES_API_KEY;
 
 const themeConfig = themeData as unknown as ThemeConfig;
 const menuConfig  = menuData  as unknown as MenuConfig;
@@ -1119,17 +1121,16 @@ function App() {
 export default App;
 
 END_OF_FILE_CONTENT
-# SKIP: src/App.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/App_.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/App_.tsx"
 import { useState, useEffect } from 'react';
-import { JsonPagesEngine } from '@olonjs/core';
-import type { LibraryImageEntry } from '@olonjs/core';
+import { JsonPagesEngine } from '@jsonpages/core';
+import type { LibraryImageEntry } from '@jsonpages/core';
 import { ComponentRegistry } from '@/lib/ComponentRegistry';
 import { SECTION_SCHEMAS } from '@/lib/schemas';
 import { addSectionConfig } from '@/lib/addSectionConfig';
 import { getHydratedData } from '@/lib/draftStorage';
-import type { JsonPagesConfig, ProjectState } from '@olonjs/core';
+import type { JsonPagesConfig, ProjectState } from '@jsonpages/core';
 import type { SiteConfig, ThemeConfig, MenuConfig } from '@/types';
 
 import siteData from '@/data/config/site.json';
@@ -1223,13 +1224,13 @@ cat << 'END_OF_FILE_CONTENT' > "src/_App.tsx"
  * Supports Hybrid Persistence: Local Filesystem (Dev) or Cloud Bridge (Prod).
  */
 import { useState, useEffect } from 'react';
-import { JsonPagesEngine } from '@olonjs/core';
-import type { LibraryImageEntry } from '@olonjs/core';
+import { JsonPagesEngine } from '@jsonpages/core';
+import type { LibraryImageEntry } from '@jsonpages/core';
 import { ComponentRegistry } from '@/lib/ComponentRegistry';
 import { SECTION_SCHEMAS } from '@/lib/schemas';
 import { addSectionConfig } from '@/lib/addSectionConfig';
 import { getHydratedData } from '@/lib/draftStorage';
-import type { JsonPagesConfig, ProjectState } from '@olonjs/core';
+import type { JsonPagesConfig, ProjectState } from '@jsonpages/core';
 import type { SiteConfig, ThemeConfig, MenuConfig } from '@/types';
 
 import siteData from '@/data/config/site.json';
@@ -1241,8 +1242,8 @@ import fontsCss from './fonts.css?inline';
 import tenantCss from './index.css?inline';
 
 // Cloud Configuration (Injected by Vercel/Netlify Env Vars)
-const CLOUD_API_URL = (import.meta.env.VITE_OLONJS_CLOUD_URL ?? import.meta.env.VITE_JSONPAGES_CLOUD_URL);
-const CLOUD_API_KEY = (import.meta.env.VITE_OLONJS_API_KEY ?? import.meta.env.VITE_JSONPAGES_API_KEY);
+const CLOUD_API_URL = import.meta.env.VITE_JSONPAGES_CLOUD_URL;
+const CLOUD_API_KEY = import.meta.env.VITE_JSONPAGES_API_KEY;
 
 const themeConfig = themeData as unknown as ThemeConfig;
 const menuConfig = menuData as unknown as MenuConfig;
@@ -1270,8 +1271,8 @@ function App() {
   }, []);
   
 console.log("🔍 DEBUG ENV:", {
-  URL: (import.meta.env.VITE_OLONJS_CLOUD_URL ?? import.meta.env.VITE_JSONPAGES_CLOUD_URL),
-  KEY: (import.meta.env.VITE_OLONJS_API_KEY ?? import.meta.env.VITE_JSONPAGES_API_KEY) ? "PRESENT" : "MISSING"
+  URL: import.meta.env.VITE_JSONPAGES_CLOUD_URL,
+  KEY: import.meta.env.VITE_JSONPAGES_API_KEY ? "PRESENT" : "MISSING"
 });
   const config: JsonPagesConfig = {
     tenantId: TENANT_ID,
@@ -1360,7 +1361,6 @@ console.log("🔍 DEBUG ENV:", {
 export default App;
 
 END_OF_FILE_CONTENT
-# SKIP: src/_App.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/_main.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/_main.tsx"
 import '@/types'; // TBP: load type augmentation from capsule-driven types
@@ -1379,7 +1379,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/_main.tsx:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components"
 echo "Creating src/components/NotFound.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/NotFound.tsx"
@@ -1416,7 +1415,6 @@ export const NotFound: React.FC = () => {
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/NotFound.tsx:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/about-strip"
 echo "Creating src/components/about-strip/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/about-strip/View.tsx"
@@ -1528,7 +1526,6 @@ export const AboutStrip: React.FC<{ data: AboutStripData; settings?: AboutStripS
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/about-strip/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/about-strip/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/about-strip/index.ts"
 export * from './View';
@@ -1536,7 +1533,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/about-strip/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/about-strip/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/about-strip/schema.ts"
 import { z } from 'zod';
@@ -1557,7 +1553,6 @@ export const AboutStripSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/about-strip/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/about-strip/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/about-strip/types.ts"
 import { z } from 'zod';
@@ -1568,7 +1563,6 @@ export type AboutStripData     = z.infer<typeof AboutStripSchema>;
 export type AboutStripSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/about-strip/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/activities-grid"
 echo "Creating src/components/activities-grid/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/activities-grid/View.tsx"
@@ -1659,7 +1653,6 @@ export const ActivitiesGrid: React.FC<{ data: ActivitiesGridData; settings?: Act
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/activities-grid/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/activities-grid/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/activities-grid/index.ts"
 export * from './View';
@@ -1667,7 +1660,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/activities-grid/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/activities-grid/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/activities-grid/schema.ts"
 import { z } from 'zod';
@@ -1687,7 +1679,6 @@ export const ActivitiesGridSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/activities-grid/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/activities-grid/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/activities-grid/types.ts"
 import { z } from 'zod';
@@ -1698,7 +1689,6 @@ export type ActivitiesGridData     = z.infer<typeof ActivitiesGridSchema>;
 export type ActivitiesGridSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/activities-grid/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/arch-layers"
 echo "Creating src/components/arch-layers/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/arch-layers/View.tsx"
@@ -1810,7 +1800,6 @@ export const ArchLayers: React.FC<{ data: ArchLayersData; settings?: ArchLayersS
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/arch-layers/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/arch-layers/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/arch-layers/index.ts"
 export * from './View';
@@ -1818,7 +1807,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/arch-layers/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/arch-layers/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/arch-layers/schema.ts"
 import { z } from 'zod';
@@ -1849,7 +1837,6 @@ export const ArchLayersSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/arch-layers/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/arch-layers/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/arch-layers/types.ts"
 import { z } from 'zod';
@@ -1862,7 +1849,6 @@ export type ArchLayerLevel = z.infer<typeof ArchLayerLevelSchema>;
 export type SyntaxTokenType = z.infer<typeof SyntaxTokenTypeSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/arch-layers/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/cli-section"
 echo "Creating src/components/cli-section/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cli-section/View.tsx"
@@ -1934,12 +1920,12 @@ export const CliSection: React.FC<{ data: CliSectionData; settings?: CliSectionS
           </div>
           <div className="bg-[#020508] px-7 py-6 font-mono text-[0.78rem] leading-[2.1] overflow-x-auto">
             <div><span className="text-[#5c6370] italic"># Step 1 — install CLI globally</span></div>
-            <div><span className="text-[#3b82f6]">$</span> <span className="text-white">npm install -g </span><span className="text-[#98c379]">@olonjs/cli@latest</span></div>
+            <div><span className="text-[#3b82f6]">$</span> <span className="text-white">npm install -g </span><span className="text-[#98c379]">@jsonpages/cli@latest</span></div>
             <div><span className="text-[#334155]">added 1 package in 2.3s</span></div>
-            <div><span className="text-[#22c55e]">✓ @olonjs/cli@1.2.0 installed (legacy alias: @jsonpages/cli)</span></div>
+            <div><span className="text-[#22c55e]">✓ @jsonpages/cli@1.2.0 installed</span></div>
             <div>&nbsp;</div>
             <div><span className="text-[#5c6370] italic"># Step 2 — scaffold a new tenant</span></div>
-            <div><span className="text-[#3b82f6]">$</span> <span className="text-[#98c379]">npx @olonjs/cli@latest</span> <span className="text-white">new my-tenant</span></div>
+            <div><span className="text-[#3b82f6]">$</span> <span className="text-[#98c379]">npx @jsonpages/cli@latest</span> <span className="text-white">new my-tenant</span></div>
             <div><span className="text-[#22c55e]">  ✓ src/components/hero/</span></div>
             <div><span className="text-[#22c55e]">  ✓ src/lib/schemas.ts</span></div>
             <div><span className="text-[#22c55e]">  ✓ src/lib/ComponentRegistry.tsx</span></div>
@@ -1958,7 +1944,6 @@ export const CliSection: React.FC<{ data: CliSectionData; settings?: CliSectionS
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cli-section/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/cli-section/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cli-section/index.ts"
 export * from './View';
@@ -1966,7 +1951,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cli-section/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/cli-section/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cli-section/schema.ts"
 import { z } from 'zod';
@@ -1986,7 +1970,6 @@ export const CliSectionSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cli-section/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/cli-section/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cli-section/types.ts"
 import { z } from 'zod';
@@ -1997,7 +1980,6 @@ export type CliSectionData     = z.infer<typeof CliSectionSchema>;
 export type CliSectionSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cli-section/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/cms-ice"
 echo "Creating src/components/cms-ice/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cms-ice/View.tsx"
@@ -2076,7 +2058,7 @@ export const CmsIce: React.FC<{ data: CmsIceData; settings?: CmsIceSettings }> =
                 <span className="absolute top-2.5 right-2.5 font-mono text-[0.5rem] font-bold uppercase tracking-widest bg-[#3b82f6] text-white px-2 py-0.5">HERO | LOCAL</span>
                 <div className="font-display font-black text-[2.4rem] leading-none text-white mb-0.5">The Sovereign Shell.</div>
                 <div className="font-display font-black text-[2.4rem] leading-none bg-gradient-to-r from-[#60a5fa] to-[#22d3ee] bg-clip-text text-transparent mb-4">Zero Runtime Overhead.</div>
-                <p className="text-[0.75rem] text-[#475569] leading-[1.65] max-w-[360px] mb-5">The @olonjs/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface.</p>
+                <p className="text-[0.75rem] text-[#475569] leading-[1.65] max-w-[360px] mb-5">The @jsonpages/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface.</p>
                 <div className="flex gap-2">
                   <span className="text-[0.65rem] font-semibold bg-[#3b82f6] text-white px-3.5 py-1.5 rounded-[5px]">Read the Docs</span>
                   <span className="text-[0.65rem] border border-[rgba(255,255,255,0.15)] text-[#94a3b8] px-3.5 py-1.5 rounded-[5px]">View on NPM</span>
@@ -2198,7 +2180,6 @@ export const CmsIce: React.FC<{ data: CmsIceData; settings?: CmsIceSettings }> =
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cms-ice/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/cms-ice/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cms-ice/index.ts"
 export * from './View';
@@ -2206,7 +2187,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cms-ice/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/cms-ice/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cms-ice/schema.ts"
 import { z } from 'zod';
@@ -2226,7 +2206,6 @@ export const CmsIceSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cms-ice/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/cms-ice/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cms-ice/types.ts"
 import { z } from 'zod';
@@ -2237,7 +2216,6 @@ export type CmsIceData     = z.infer<typeof CmsIceSchema>;
 export type CmsIceSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cms-ice/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/code-block"
 echo "Creating src/components/code-block/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/code-block/View.tsx"
@@ -2300,7 +2278,6 @@ export const CodeBlock: React.FC<{ data: CodeBlockData; settings?: CodeBlockSett
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/code-block/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/code-block/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/code-block/index.ts"
 export * from './View';
@@ -2308,7 +2285,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/code-block/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/code-block/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/code-block/schema.ts"
 import { z } from 'zod';
@@ -2329,7 +2305,6 @@ export const CodeBlockSettingsSchema = z.object({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/code-block/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/code-block/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/code-block/types.ts"
 import { z } from 'zod';
@@ -2340,14 +2315,13 @@ export type CodeBlockData = z.infer<typeof CodeBlockSchema>;
 export type CodeBlockSettings = z.infer<typeof BaseSectionSettingsSchema> & z.infer<typeof CodeBlockSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/code-block/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/contact-form"
 echo "Creating src/components/contact-form/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/contact-form/View.tsx"
 import React, { useCallback, useState } from 'react';
 import { useInView } from '@/lib/useInView';
 import { useFormSubmit } from '@/lib/useFormSubmit';
-import { useConfig } from '@olonjs/core';
+import { useConfig } from '@jsonpages/core';
 import type { ContactFormData, ContactFormSettings } from './types';
 
 const inputCls = `
@@ -2579,7 +2553,6 @@ export const ContactForm: React.FC<{ data: ContactFormData; settings?: ContactFo
   );
 };
 END_OF_FILE_CONTENT
-# SKIP: src/components/contact-form/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/contact-form/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/contact-form/index.ts"
 export * from './View';
@@ -2587,7 +2560,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/contact-form/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/contact-form/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/contact-form/schema.ts"
 import { z } from 'zod';
@@ -2606,7 +2578,6 @@ export const ContactFormSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/contact-form/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/contact-form/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/contact-form/types.ts"
 import { z } from 'zod';
@@ -2617,7 +2588,6 @@ export type ContactFormData     = z.infer<typeof ContactFormSchema>;
 export type ContactFormSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/contact-form/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/cta-banner"
 echo "Creating src/components/cta-banner/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cta-banner/View.tsx"
@@ -2690,7 +2660,6 @@ export const CtaBanner: React.FC<{ data: CtaBannerData; settings?: CtaBannerSett
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cta-banner/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/cta-banner/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cta-banner/index.ts"
 export * from './View';
@@ -2698,7 +2667,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cta-banner/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/cta-banner/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cta-banner/schema.ts"
 import { z } from 'zod';
@@ -2713,7 +2681,6 @@ export const CtaBannerSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cta-banner/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/cta-banner/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cta-banner/types.ts"
 import { z } from 'zod';
@@ -2724,12 +2691,11 @@ export type CtaBannerData     = z.infer<typeof CtaBannerSchema>;
 export type CtaBannerSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cta-banner/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/cta-nature"
 echo "Creating src/components/cta-nature/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cta-nature/View.tsx"
 import React from 'react';
-import { resolveAssetUrl, useConfig } from '@olonjs/core';
+import { resolveAssetUrl, useConfig } from '@jsonpages/core';
 import type { CtaNatureData, CtaNatureSettings } from './types';
 import type { SiteConfig } from '@/types';
 import type { HeaderData } from '@/components/header';
@@ -2829,7 +2795,6 @@ export const CtaNature: React.FC<{ data: CtaNatureData; settings?: CtaNatureSett
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cta-nature/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/cta-nature/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cta-nature/index.ts"
 export * from './View';
@@ -2837,7 +2802,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cta-nature/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/cta-nature/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cta-nature/schema.ts"
 import { z } from 'zod';
@@ -2854,7 +2818,6 @@ export const CtaNatureSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cta-nature/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/cta-nature/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cta-nature/types.ts"
 import { z } from 'zod';
@@ -2865,7 +2828,6 @@ export type CtaNatureData     = z.infer<typeof CtaNatureSchema>;
 export type CtaNatureSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/cta-nature/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/devex"
 echo "Creating src/components/devex/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/devex/View.tsx"
@@ -2876,7 +2838,7 @@ import type { DevexData, DevexSettings } from './types';
 const APP_TSX_LINES = [
   { t: 'cm',  c: '// Your App.tsx is incredibly thin.'                 },
   { t: 'pl',  c: ''                                                     },
-  { t: 'kw',  c: "import { JsonPagesEngine } from '@olonjs/core';"  },
+  { t: 'kw',  c: "import { JsonPagesEngine } from '@jsonpages/core';"  },
   { t: 'kw',  c: "import { config } from './my-config';"               },
   { t: 'pl',  c: ''                                                     },
   { t: 'kw',  c: 'export default function App() {'                     },
@@ -2969,7 +2931,6 @@ export const Devex: React.FC<{ data: DevexData; settings?: DevexSettings }> = ({
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/devex/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/devex/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/devex/index.ts"
 export * from './View';
@@ -2977,7 +2938,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/devex/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/devex/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/devex/schema.ts"
 import { z } from 'zod';
@@ -2995,7 +2955,6 @@ export const DevexSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/devex/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/devex/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/devex/types.ts"
 import { z } from 'zod';
@@ -3006,7 +2965,6 @@ export type DevexData     = z.infer<typeof DevexSchema>;
 export type DevexSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/devex/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/docs-layout"
 echo "Creating src/components/docs-layout/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/docs-layout/View.tsx"
@@ -3327,7 +3285,6 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/docs-layout/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/docs-layout/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/docs-layout/index.ts"
 export * from './View';
@@ -3335,7 +3292,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/docs-layout/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/docs-layout/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/docs-layout/schema.ts"
 import { z } from 'zod';
@@ -3370,7 +3326,6 @@ export const DocsLayoutSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/docs-layout/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/docs-layout/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/docs-layout/types.ts"
 import { z } from 'zod';
@@ -3381,7 +3336,6 @@ export type DocsLayoutData     = z.infer<typeof DocsLayoutSchema>;
 export type DocsLayoutSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/docs-layout/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/feature-grid"
 echo "Creating src/components/feature-grid/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/feature-grid/View.tsx"
@@ -3450,7 +3404,6 @@ export const FeatureGrid: React.FC<{ data: FeatureGridData; settings?: FeatureGr
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/feature-grid/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/feature-grid/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/feature-grid/index.ts"
 export * from './View';
@@ -3458,7 +3411,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/feature-grid/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/feature-grid/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/feature-grid/schema.ts"
 import { z } from 'zod';
@@ -3482,7 +3434,6 @@ export const FeatureGridSettingsSchema = z.object({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/feature-grid/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/feature-grid/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/feature-grid/types.ts"
 import { z } from 'zod';
@@ -3493,12 +3444,11 @@ export type FeatureGridData = z.infer<typeof FeatureGridSchema>;
 export type FeatureGridSettings = z.infer<typeof BaseSectionSettingsSchema> & z.infer<typeof FeatureGridSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/feature-grid/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/footer"
 echo "Creating src/components/footer/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/footer/View.tsx"
 import React, { useEffect, useState } from 'react';
-import { resolveAssetUrl, useConfig } from '@olonjs/core';
+import { resolveAssetUrl, useConfig } from '@jsonpages/core';
 import type { FooterData, FooterSettings } from './types';
 
 export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> = ({ data }) => {
@@ -3609,7 +3559,6 @@ export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> =
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/footer/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/footer/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/footer/index.ts"
 export * from './View';
@@ -3617,7 +3566,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/footer/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/footer/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/footer/schema.ts"
 import { z } from 'zod';
@@ -3641,7 +3589,6 @@ export const FooterSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/footer/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/footer/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/footer/types.ts"
 import { z } from 'zod';
@@ -3652,7 +3599,6 @@ export type FooterData     = z.infer<typeof FooterSchema>;
 export type FooterSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/footer/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/gallery-strip"
 echo "Creating src/components/gallery-strip/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/gallery-strip/View.tsx"
@@ -3742,7 +3688,6 @@ export const GalleryStrip: React.FC<{ data: GalleryStripData; settings?: Gallery
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/gallery-strip/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/gallery-strip/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/gallery-strip/index.ts"
 export * from './View';
@@ -3750,7 +3695,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/gallery-strip/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/gallery-strip/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/gallery-strip/schema.ts"
 import { z } from 'zod';
@@ -3773,7 +3717,6 @@ export const GalleryStripSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/gallery-strip/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/gallery-strip/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/gallery-strip/types.ts"
 import { z } from 'zod';
@@ -3784,7 +3727,6 @@ export type GalleryStripData     = z.infer<typeof GalleryStripSchema>;
 export type GalleryStripSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/gallery-strip/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/git-section"
 echo "Creating src/components/git-section/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/git-section/View.tsx"
@@ -3907,7 +3849,6 @@ export const GitSection: React.FC<{ data: GitSectionData; settings?: GitSectionS
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/git-section/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/git-section/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/git-section/index.ts"
 export * from './View';
@@ -3915,7 +3856,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/git-section/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/git-section/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/git-section/schema.ts"
 import { z } from 'zod';
@@ -3934,7 +3874,6 @@ export const GitSectionSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/git-section/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/git-section/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/git-section/types.ts"
 import { z } from 'zod';
@@ -3945,14 +3884,13 @@ export type GitSectionData     = z.infer<typeof GitSectionSchema>;
 export type GitSectionSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/git-section/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/header"
 echo "Creating src/components/header/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/View.tsx"
 import React, { useState, useEffect } from 'react';
-import { resolveAssetUrl, useConfig } from '@olonjs/core';
+import { resolveAssetUrl, useConfig } from '@jsonpages/core';
 import type { HeaderData, HeaderSettings } from './types';
-import type { MenuItem } from '@olonjs/core';
+import type { MenuItem } from '@jsonpages/core';
 
 interface HeaderProps {
   data: HeaderData;
@@ -4163,7 +4101,6 @@ export const Header: React.FC<HeaderProps> = ({ data, menu }) => {
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/header/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/header/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/index.ts"
 export * from './View';
@@ -4171,7 +4108,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/header/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/header/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/schema.ts"
 import { z } from 'zod';
@@ -4196,7 +4132,6 @@ export const HeaderSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/header/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/header/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/types.ts"
 import { z } from 'zod';
@@ -4207,7 +4142,6 @@ export type HeaderData     = z.infer<typeof HeaderSchema>;
 export type HeaderSettings = z.infer<typeof BaseSectionSettingsSchema> & { sticky?: boolean };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/header/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/hero"
 echo "Creating src/components/hero/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/hero/View.tsx"
@@ -4332,7 +4266,6 @@ export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ da
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/hero/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/hero/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/hero/index.ts"
 export * from './View';
@@ -4340,7 +4273,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/hero/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/hero/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/hero/schema.ts"
 import { z } from 'zod';
@@ -4357,7 +4289,6 @@ export const HeroSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/hero/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/hero/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/hero/types.ts"
 import { z } from 'zod';
@@ -4368,12 +4299,11 @@ export type HeroData     = z.infer<typeof HeroSchema>;
 export type HeroSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/hero/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/image-break"
 echo "Creating src/components/image-break/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/image-break/View.tsx"
 import React from 'react';
-import { resolveAssetUrl, useConfig } from '@olonjs/core';
+import { resolveAssetUrl, useConfig } from '@jsonpages/core';
 import type { ImageBreakData, ImageBreakSettings } from './types';
 
 export const ImageBreak: React.FC<{ data: ImageBreakData; settings?: ImageBreakSettings }> = ({ data }) => {
@@ -4419,7 +4349,6 @@ export const ImageBreak: React.FC<{ data: ImageBreakData; settings?: ImageBreakS
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/image-break/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/image-break/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/image-break/index.ts"
 export { ImageBreak } from './View';
@@ -4427,7 +4356,6 @@ export { ImageBreakSchema } from './schema';
 export type { ImageBreakData, ImageBreakSettings } from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/image-break/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/image-break/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/image-break/schema.ts"
 import { z } from 'zod';
@@ -4442,7 +4370,6 @@ export const ImageBreakSettingsSchema = z.object({
   height: z.enum(['sm', 'md', 'lg', 'full']).default('md').describe('ui:select'),
 });
 END_OF_FILE_CONTENT
-# SKIP: src/components/image-break/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/image-break/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/image-break/types.ts"
 import type { z } from 'zod';
@@ -4452,7 +4379,6 @@ export type ImageBreakData = z.infer<typeof ImageBreakSchema>;
 export type ImageBreakSettings = Record<string, unknown>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/image-break/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/image-test"
 mkdir -p "src/components/kitchen-showcase"
 echo "Creating src/components/kitchen-showcase/View.tsx..."
@@ -4572,7 +4498,6 @@ export const KitchenShowcase: React.FC<{ data: KitchenShowcaseData; settings?: K
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/kitchen-showcase/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/kitchen-showcase/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/kitchen-showcase/index.ts"
 export * from './View';
@@ -4580,7 +4505,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/kitchen-showcase/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/kitchen-showcase/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/kitchen-showcase/schema.ts"
 import { z } from 'zod';
@@ -4602,7 +4526,6 @@ export const KitchenShowcaseSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/kitchen-showcase/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/kitchen-showcase/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/kitchen-showcase/types.ts"
 import { z } from 'zod';
@@ -4613,7 +4536,6 @@ export type KitchenShowcaseData     = z.infer<typeof KitchenShowcaseSchema>;
 export type KitchenShowcaseSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/kitchen-showcase/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/pa-section"
 echo "Creating src/components/pa-section/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/pa-section/View.tsx"
@@ -4709,7 +4631,6 @@ export const PaSection: React.FC<{ data: PaSectionData; settings?: PaSectionSett
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/pa-section/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/pa-section/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/pa-section/index.ts"
 export * from './View';
@@ -4717,7 +4638,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/pa-section/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/pa-section/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/pa-section/schema.ts"
 import { z } from 'zod';
@@ -4743,7 +4663,6 @@ export const PaSectionSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/pa-section/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/pa-section/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/pa-section/types.ts"
 import { z } from 'zod';
@@ -4754,7 +4673,6 @@ export type PaSectionData = z.infer<typeof PaSectionSchema>;
 export type PaSectionSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/pa-section/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/philosophy"
 echo "Creating src/components/philosophy/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/philosophy/View.tsx"
@@ -4820,7 +4738,6 @@ export const Philosophy: React.FC<{ data: PhilosophyData; settings?: PhilosophyS
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/philosophy/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/philosophy/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/philosophy/index.ts"
 export * from './View';
@@ -4828,7 +4745,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/philosophy/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/philosophy/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/philosophy/schema.ts"
 import { z } from 'zod';
@@ -4843,7 +4759,6 @@ export const PhilosophySchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/philosophy/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/philosophy/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/philosophy/types.ts"
 import { z } from 'zod';
@@ -4854,7 +4769,6 @@ export type PhilosophyData = z.infer<typeof PhilosophySchema>;
 export type PhilosophySettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/philosophy/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/pillars-grid"
 echo "Creating src/components/pillars-grid/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/pillars-grid/View.tsx"
@@ -4944,7 +4858,6 @@ export const PillarsGrid: React.FC<{ data: PillarsGridData; settings?: PillarsGr
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/pillars-grid/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/pillars-grid/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/pillars-grid/index.ts"
 export * from './View';
@@ -4952,7 +4865,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/pillars-grid/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/pillars-grid/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/pillars-grid/schema.ts"
 import { z } from 'zod';
@@ -4978,7 +4890,6 @@ export const PillarsGridSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/pillars-grid/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/pillars-grid/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/pillars-grid/types.ts"
 import { z } from 'zod';
@@ -4991,7 +4902,6 @@ export type PillarIconVariant = z.infer<typeof PillarIconVariantSchema>;
 export type PillarTagVariant = z.infer<typeof PillarTagVariantSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/pillars-grid/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/pricing-table"
 echo "Creating src/components/pricing-table/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/pricing-table/View.tsx"
@@ -5119,7 +5029,6 @@ export const PricingTable: React.FC<{ data: PricingTableData; settings?: Pricing
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/pricing-table/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/pricing-table/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/pricing-table/index.ts"
 export * from './View';
@@ -5127,7 +5036,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/pricing-table/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/pricing-table/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/pricing-table/schema.ts"
 import { z } from 'zod';
@@ -5152,7 +5060,6 @@ export const PricingTableSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/pricing-table/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/pricing-table/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/pricing-table/types.ts"
 import { z } from 'zod';
@@ -5163,7 +5070,6 @@ export type PricingTableData     = z.infer<typeof PricingTableSchema>;
 export type PricingTableSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/pricing-table/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/problem-statement"
 echo "Creating src/components/problem-statement/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/problem-statement/View.tsx"
@@ -5245,7 +5151,6 @@ export const ProblemStatement: React.FC<{ data: ProblemStatementData; settings?:
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/problem-statement/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/problem-statement/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/problem-statement/index.ts"
 export * from './View';
@@ -5253,7 +5158,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/problem-statement/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/problem-statement/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/problem-statement/schema.ts"
 import { z } from 'zod';
@@ -5283,7 +5187,6 @@ export const ProblemStatementSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/problem-statement/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/problem-statement/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/problem-statement/types.ts"
 import { z } from 'zod';
@@ -5295,7 +5198,6 @@ export type ProblemStatementSettings = z.infer<typeof BaseSectionSettingsSchema>
 export type SiloBlockVariant = z.infer<typeof SiloBlockVariantSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/problem-statement/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/product-triad"
 echo "Creating src/components/product-triad/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/product-triad/View.tsx"
@@ -5400,7 +5302,6 @@ export const ProductTriad: React.FC<{ data: ProductTriadData; settings?: Product
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/product-triad/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/product-triad/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/product-triad/index.ts"
 export * from './View';
@@ -5408,7 +5309,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/product-triad/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/product-triad/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/product-triad/schema.ts"
 import { z } from 'zod';
@@ -5439,7 +5339,6 @@ export const ProductTriadSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/product-triad/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/product-triad/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/product-triad/types.ts"
 import { z } from 'zod';
@@ -5450,7 +5349,6 @@ export type ProductTriadData = z.infer<typeof ProductTriadSchema>;
 export type ProductTriadSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/product-triad/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/save-drawer"
 echo "Creating src/components/save-drawer/DeployConnector.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/save-drawer/DeployConnector.tsx"
@@ -5496,7 +5394,6 @@ export function DeployConnector({ fromState, toState, color }: DeployConnectorPr
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/save-drawer/DeployConnector.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/save-drawer/DeployNode.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/save-drawer/DeployNode.tsx"
 import type { CSSProperties } from 'react';
@@ -5583,7 +5480,6 @@ export function DeployNode({ step, state }: DeployNodeProps) {
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/save-drawer/DeployNode.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/save-drawer/DopaDrawer.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/save-drawer/DopaDrawer.tsx"
 import { useEffect, useMemo, useState } from 'react';
@@ -5863,7 +5759,6 @@ export function DopaDrawer({
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/save-drawer/DopaDrawer.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/save-drawer/Visuals.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/save-drawer/Visuals.tsx"
 import { useEffect, useRef, useState } from 'react';
@@ -5996,7 +5891,6 @@ export function ElapsedTimer({ running }: ElapsedTimerProps) {
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/save-drawer/Visuals.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/save-drawer/saverStyle.css..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/save-drawer/saverStyle.css"
 /* Save Drawer strict_full isolated stylesheet */
@@ -6534,7 +6428,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/components/save-drawer/saverStyle.css"
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/save-drawer/saverStyle.css:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/service-cards"
 echo "Creating src/components/service-cards/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/service-cards/View.tsx"
@@ -6631,7 +6524,6 @@ export const ServiceCards: React.FC<{ data: ServiceCardsData; settings?: Service
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/service-cards/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/service-cards/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/service-cards/index.ts"
 export * from './View';
@@ -6639,7 +6531,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/service-cards/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/service-cards/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/service-cards/schema.ts"
 import { z } from 'zod';
@@ -6660,7 +6551,6 @@ export const ServiceCardsSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/service-cards/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/service-cards/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/service-cards/types.ts"
 import { z } from 'zod';
@@ -6671,7 +6561,6 @@ export type ServiceCardsData     = z.infer<typeof ServiceCardsSchema>;
 export type ServiceCardsSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/service-cards/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/testimonials"
 echo "Creating src/components/testimonials/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/testimonials/View.tsx"
@@ -6775,7 +6664,6 @@ export const Testimonials: React.FC<{ data: TestimonialsData; settings?: Testimo
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/testimonials/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/testimonials/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/testimonials/index.ts"
 export * from './View';
@@ -6783,7 +6671,6 @@ export * from './schema';
 export * from './types';
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/testimonials/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/testimonials/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/testimonials/schema.ts"
 import { z } from 'zod';
@@ -6803,7 +6690,6 @@ export const TestimonialsSchema = BaseSectionData.extend({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/testimonials/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/testimonials/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/testimonials/types.ts"
 import { z } from 'zod';
@@ -6814,7 +6700,6 @@ export type TestimonialsData     = z.infer<typeof TestimonialsSchema>;
 export type TestimonialsSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/testimonials/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/tiptap"
 echo "Creating src/components/tiptap/INTEGRATION.md..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/tiptap/INTEGRATION.md"
@@ -7035,7 +6920,7 @@ export type SectionComponentPropsMap = {
   'tiptap': { data: TiptapData; settings?: TiptapSettings };
 };
 
-declare module '@olonjs/core' {
+declare module '@jsonpages/core' {
   export interface SectionDataRegistry {
     // ... existing entries
     'tiptap': TiptapData;
@@ -7076,7 +6961,7 @@ import {
   Code2, Quote, SquareCode,
   Link2, Unlink2, ImagePlus, Eraser,
 } from 'lucide-react';
-import { STUDIO_EVENTS, useConfig, useStudio } from '@olonjs/core';
+import { STUDIO_EVENTS, useConfig, useStudio } from '@jsonpages/core';
 import type { TiptapData, TiptapSettings } from './types';
 
 // ── UI primitives ─────────────────────────────────────────────────────────────
@@ -7826,7 +7711,6 @@ export { Checkbox }
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/ui/checkbox.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/ui/input.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ui/input.tsx"
 import * as React from "react"
@@ -7854,7 +7738,6 @@ export { Input }
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/ui/input.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/ui/label.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ui/label.tsx"
 import * as React from "react"
@@ -7885,7 +7768,6 @@ export { Label }
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/ui/label.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/ui/select.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ui/select.tsx"
 import * as React from "react"
@@ -8079,7 +7961,6 @@ export {
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/ui/select.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/ui/select.txt..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ui/select.txt"
 import * as React from "react"
@@ -8273,7 +8154,6 @@ export {
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/ui/select.txt:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/ui/separator.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ui/separator.tsx"
 "use client"
@@ -8310,7 +8190,6 @@ export { Separator }
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/ui/separator.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/ui/textarea.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ui/textarea.tsx"
 import * as React from "react"
@@ -8337,7 +8216,6 @@ export { Textarea }
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/ui/textarea.tsx:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/data"
 mkdir -p "src/data/config"
 echo "Creating src/data/config/menu.json..."
@@ -8367,7 +8245,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/menu.json"
   ]
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/config/menu.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/config/site.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
 {
@@ -8493,7 +8370,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
   }
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/config/site.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/config/theme.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/config/theme.json"
 {
@@ -8526,7 +8402,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/theme.json"
   }
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/config/theme.json:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/data/leads"
 echo "Creating src/data/leads/20260303-184345-ce2e0866-081b-4c14-a48e-455b028bd061.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260303-184345-ce2e0866-081b-4c14-a48e-455b028bd061.json"
@@ -8554,7 +8429,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260303-184345-ce2e0866-081b-4c1
   }
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/leads/20260303-184345-ce2e0866-081b-4c14-a48e-455b028bd061.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/leads/20260303-190419-0546e435-75ed-4e22-8d4a-f20345225b87.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260303-190419-0546e435-75ed-4e22-8d4a-f20345225b87.json"
 {
@@ -8581,7 +8455,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260303-190419-0546e435-75ed-4e2
   }
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/leads/20260303-190419-0546e435-75ed-4e22-8d4a-f20345225b87.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/leads/20260304-124504-3cca76fa-9dec-4e33-a032-a9383f530276.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260304-124504-3cca76fa-9dec-4e33-a032-a9383f530276.json"
 {
@@ -8608,7 +8481,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260304-124504-3cca76fa-9dec-4e3
   }
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/leads/20260304-124504-3cca76fa-9dec-4e33-a032-a9383f530276.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/leads/20260306-094712-e7502599-995b-4719-9b93-8a581f17fb24.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260306-094712-e7502599-995b-4719-9b93-8a581f17fb24.json"
 {
@@ -8635,7 +8507,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260306-094712-e7502599-995b-471
   }
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/leads/20260306-094712-e7502599-995b-4719-9b93-8a581f17fb24.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/leads/20260306-113554-2471022b-a8f6-40b6-8d72-26a494e83909.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260306-113554-2471022b-a8f6-40b6-8d72-26a494e83909.json"
 {
@@ -8662,7 +8533,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260306-113554-2471022b-a8f6-40b
   }
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/leads/20260306-113554-2471022b-a8f6-40b6-8d72-26a494e83909.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/leads/20260306-114208-b87e8760-1c66-4c7e-859f-649a69859194.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260306-114208-b87e8760-1c66-4c7e-859f-649a69859194.json"
 {
@@ -8689,7 +8559,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260306-114208-b87e8760-1c66-4c7
   }
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/leads/20260306-114208-b87e8760-1c66-4c7e-859f-649a69859194.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/leads/20260306-125638-bd129b57-5bf9-4064-b028-ab98438beabb.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260306-125638-bd129b57-5bf9-4064-b028-ab98438beabb.json"
 {
@@ -8716,7 +8585,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260306-125638-bd129b57-5bf9-406
   }
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/leads/20260306-125638-bd129b57-5bf9-4064-b028-ab98438beabb.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/leads/20260306-131108-0b1e982a-82fd-4df2-b9b8-f0ba52c26a89.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260306-131108-0b1e982a-82fd-4df2-b9b8-f0ba52c26a89.json"
 {
@@ -8743,7 +8611,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/leads/20260306-131108-0b1e982a-82fd-4df
   }
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/leads/20260306-131108-0b1e982a-82fd-4df2-b9b8-f0ba52c26a89.json:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/data/pages"
 echo "Creating src/data/pages/accoglienza.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/pages/accoglienza.json"
@@ -8939,7 +8806,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/accoglienza.json"
   ]
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/pages/accoglienza.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/pages/contatti.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/pages/contatti.json"
 {
@@ -8992,7 +8858,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/contatti.json"
   ]
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/pages/contatti.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/pages/cucina.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/pages/cucina.json"
 {
@@ -9076,7 +8941,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/cucina.json"
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/data/pages/cucina.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/pages/dafare.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/pages/dafare.json"
 {
@@ -9142,7 +9006,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/dafare.json"
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/data/pages/dafare.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/pages/docs.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/pages/docs.json"
 {
@@ -9244,7 +9107,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/docs.json"
                       { "id": "f-7",  "text": "`src/lib/schemas.ts` — SECTION_SCHEMAS (aggregato degli schema data per tipo) + export SectionType." },
                       { "id": "f-8",  "text": "`src/lib/ComponentRegistry.tsx` — Registry tipizzato: `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }`." },
                       { "id": "f-9",  "text": "`src/lib/addSectionConfig.ts` — AddSectionConfig (addableSectionTypes, sectionTypeLabels, getDefaultSectionData)." },
-                      { "id": "f-10", "text": "`src/types.ts` — SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **module augmentation** per SectionDataRegistry e SectionSettingsRegistry; re-export da `@olonjs/core`." },
+                      { "id": "f-10", "text": "`src/types.ts` — SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **module augmentation** per SectionDataRegistry e SectionSettingsRegistry; re-export da `@jsonpages/core`." },
                       { "id": "f-11", "text": "`src/App.tsx` — Bootstrap: config (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection); `<JsonPagesEngine config={config} />`." },
                       { "id": "f-12", "text": "**CSS globale** — Include i selettori TOCC per overlay (hover/selected/type label)." }
                     ]
@@ -9498,7 +9361,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/docs.json"
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/data/pages/docs.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/pages/home.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
 {
@@ -9711,7 +9573,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
   ]
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/pages/home.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/pages/offerte.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/pages/offerte.json"
 {
@@ -9823,7 +9684,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/offerte.json"
   ]
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/pages/offerte.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/pages/post.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/pages/post.json"
 {
@@ -9838,7 +9698,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/post.json"
       "id": "post-editorial-main",
       "type": "tiptap",
       "data": {
-        "content": "# JsonPages Cloud – Terms of Service & EULA\n\n---\n\n### **Last Updated:** March 2026\n\n### 1. THE SERVICE\n\nJsonPages provides a hybrid content management infrastructure consisting of:\n\n- **The Core:** An open-source library (@olonjs/core) governed by the **MIT License**.\n- **The Cloud:** A proprietary SaaS platform (`cloud.jsonpages.io`) that provides the \"Git Bridge,\" Asset Pipeline, and Managed Infrastructure.\n\nBy using the Cloud Service, you agree to these terms.\n\n### 2. DATA SOVEREIGNTY & OWNERSHIP\n\n- **Your Content:** All data (JSON files), code, and assets managed through JsonPages remain your exclusive property. JsonPages acts only as an **orchestrator**.\n- **The Bridge:** You grant JsonPages the necessary permissions to perform Git operations (commits/pushes) on your behalf to your designated repositories (GitHub/GitLab).\n- **Portability:** Since your content is stored as flat JSON files in your own repository, you retain the right to migrate away from the Cloud Service at any time without data lock-in.\n- \n\n### 3. SUBSCRIPTIONS & ENTITLEMENTS\n\n- **Billing:** The Cloud Service is billed on a subscription basis (**Monthly Recurring Revenue**).\n- **Entitlements:** Each \"Project\" or \"Tenant\" consumes one entitlement. Active entitlements grant access to the Visual Studio (ICE) and the Cloud Save API.\n- **Third-Party Costs:** You are solely responsible for any costs incurred on third-party platforms (e.g., **Vercel** hosting, **GitHub** storage, **Cloudflare** workers).\n\n### 4. ACCEPTABLE USE\n\nYou may not use JsonPages Cloud to:\n\n- Host or manage illegal, harmful, or offensive content.\n- Attempt to reverse-engineer the proprietary Cloud Bridge or bypass entitlement checks.\n- Interfere with the stability of the API for other users.\n- \n\n### 5. LIMITATION OF LIABILITY\n\n- **\"As-Is\" Basis:** The service is provided \"as-is.\" While we strive for 99.9% uptime, JsonPages is not liable for data loss resulting from Git conflicts, third-party outages (Vercel/GitHub), or user error.\n- **No Warranty:** We do not warrant that the service will be error-free or uninterrupted.\n- \n\n### 6. TERMINATION\n\n- **By You:** You can cancel your subscription at any time. Your Studio access will remain active until the end of the current billing cycle.\n- \n- **By Us:** We reserve the right to suspend accounts that violate these terms or fail to settle outstanding invoices.\n\n### 7. GOVERNING LAW\n\nThese terms are governed by the laws of **Italy/European Union**, without regard to conflict of law principles."
+        "content": "# JsonPages Cloud – Terms of Service & EULA\n\n---\n\n### **Last Updated:** March 2026\n\n### 1. THE SERVICE\n\nJsonPages provides a hybrid content management infrastructure consisting of:\n\n- **The Core:** An open-source library (@jsonpages/core) governed by the **MIT License**.\n- **The Cloud:** A proprietary SaaS platform (`cloud.jsonpages.io`) that provides the \"Git Bridge,\" Asset Pipeline, and Managed Infrastructure.\n\nBy using the Cloud Service, you agree to these terms.\n\n### 2. DATA SOVEREIGNTY & OWNERSHIP\n\n- **Your Content:** All data (JSON files), code, and assets managed through JsonPages remain your exclusive property. JsonPages acts only as an **orchestrator**.\n- **The Bridge:** You grant JsonPages the necessary permissions to perform Git operations (commits/pushes) on your behalf to your designated repositories (GitHub/GitLab).\n- **Portability:** Since your content is stored as flat JSON files in your own repository, you retain the right to migrate away from the Cloud Service at any time without data lock-in.\n- \n\n### 3. SUBSCRIPTIONS & ENTITLEMENTS\n\n- **Billing:** The Cloud Service is billed on a subscription basis (**Monthly Recurring Revenue**).\n- **Entitlements:** Each \"Project\" or \"Tenant\" consumes one entitlement. Active entitlements grant access to the Visual Studio (ICE) and the Cloud Save API.\n- **Third-Party Costs:** You are solely responsible for any costs incurred on third-party platforms (e.g., **Vercel** hosting, **GitHub** storage, **Cloudflare** workers).\n\n### 4. ACCEPTABLE USE\n\nYou may not use JsonPages Cloud to:\n\n- Host or manage illegal, harmful, or offensive content.\n- Attempt to reverse-engineer the proprietary Cloud Bridge or bypass entitlement checks.\n- Interfere with the stability of the API for other users.\n- \n\n### 5. LIMITATION OF LIABILITY\n\n- **\"As-Is\" Basis:** The service is provided \"as-is.\" While we strive for 99.9% uptime, JsonPages is not liable for data loss resulting from Git conflicts, third-party outages (Vercel/GitHub), or user error.\n- **No Warranty:** We do not warrant that the service will be error-free or uninterrupted.\n- \n\n### 6. TERMINATION\n\n- **By You:** You can cancel your subscription at any time. Your Studio access will remain active until the end of the current billing cycle.\n- \n- **By Us:** We reserve the right to suspend accounts that violate these terms or fail to settle outstanding invoices.\n\n### 7. GOVERNING LAW\n\nThese terms are governed by the laws of **Italy/European Union**, without regard to conflict of law principles."
       },
       "settings": {}
     }
@@ -10073,7 +9933,6 @@ export function LeadNotificationEmail({
 export default LeadNotificationEmail;
 
 END_OF_FILE_CONTENT
-# SKIP: src/emails/LeadNotificationEmail.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/emails/LeadSenderConfirmationEmail.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/emails/LeadSenderConfirmationEmail.tsx"
 import {
@@ -10223,13 +10082,11 @@ export function LeadSenderConfirmationEmail({
 export default LeadSenderConfirmationEmail;
 
 END_OF_FILE_CONTENT
-# SKIP: src/emails/LeadSenderConfirmationEmail.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/fonts.css..."
 cat << 'END_OF_FILE_CONTENT' > "src/fonts.css"
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700;1,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 END_OF_FILE_CONTENT
-# SKIP: src/fonts.css:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/hooks"
 echo "Creating src/hooks/useDocumentMeta.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/hooks/useDocumentMeta.ts"
@@ -10257,7 +10114,6 @@ export const useDocumentMeta = (meta: PageMeta): void => {
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/hooks/useDocumentMeta.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/index.css..."
 cat << 'END_OF_FILE_CONTENT' > "src/index.css"
 @import "tailwindcss";
@@ -10451,7 +10307,6 @@ html { scroll-behavior: smooth; }
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/index.css:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/lib"
 echo "Creating src/lib/ComponentRegistry.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/ComponentRegistry.tsx"
@@ -10491,7 +10346,6 @@ export const ComponentRegistry: {
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/lib/ComponentRegistry.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/lib/IconResolver.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/IconResolver.tsx"
 import React from 'react';
@@ -10550,7 +10404,6 @@ export const Icon: React.FC<IconProps> = ({ name, size = 20, className }) => {
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/lib/IconResolver.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/lib/addSectionConfig.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/addSectionConfig.ts"
 import type { AddSectionConfig } from '@olonjs/core';
@@ -10608,7 +10461,6 @@ export const addSectionConfig: AddSectionConfig = {
 };
 
 END_OF_FILE_CONTENT
-# SKIP: src/lib/addSectionConfig.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/lib/base-schemas.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/base-schemas.ts"
 import { z } from 'zod';
@@ -10640,7 +10492,6 @@ export const CtaSchema = z.object({
 });
 
 END_OF_FILE_CONTENT
-# SKIP: src/lib/base-schemas.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/lib/cloudSaveStream.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/cloudSaveStream.ts"
 import type { StepId } from '@/types/deploy';
@@ -10765,7 +10616,6 @@ export async function startCloudSaveStream(input: StartCloudSaveStreamInput): Pr
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/lib/cloudSaveStream.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/lib/deploySteps.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/deploySteps.ts"
 import type { DeployStep } from '@/types/deploy';
@@ -10810,7 +10660,6 @@ export const DEPLOY_STEPS: readonly DeployStep[] = [
 ] as const;
 
 END_OF_FILE_CONTENT
-# SKIP: src/lib/deploySteps.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/lib/draftStorage.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/draftStorage.ts"
 /**
@@ -10839,7 +10688,6 @@ export function getHydratedData(
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/lib/draftStorage.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/lib/getFilePages.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/getFilePages.ts"
 /**
@@ -10875,7 +10723,6 @@ export function getFilePages(): Record<string, PageConfig> {
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/lib/getFilePages.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/lib/schemas.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/schemas.ts"
 // Re-export base schemas
@@ -10913,7 +10760,6 @@ export const SECTION_SCHEMAS = {
 export type SectionType = keyof typeof SECTION_SCHEMAS;
 
 END_OF_FILE_CONTENT
-# SKIP: src/lib/schemas.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/lib/useFormSubmit.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/useFormSubmit.ts"
 import { useState, useCallback } from 'react';
@@ -10935,8 +10781,8 @@ export function useFormSubmit({ source, tenantId }: UseFormSubmitOptions) {
     pageSlug: string, 
     sectionId: string
   ) => {
-    const cloudApiUrl = (import.meta.env.VITE_OLONJS_CLOUD_URL ?? import.meta.env.VITE_JSONPAGES_CLOUD_URL) as string | undefined;
-    const cloudApiKey = (import.meta.env.VITE_OLONJS_API_KEY ?? import.meta.env.VITE_JSONPAGES_API_KEY) as string | undefined;
+    const cloudApiUrl = import.meta.env.VITE_JSONPAGES_CLOUD_URL as string | undefined;
+    const cloudApiKey = import.meta.env.VITE_JSONPAGES_API_KEY as string | undefined;
 
     if (!cloudApiUrl || !cloudApiKey) {
       setStatus('error');
@@ -11003,7 +10849,6 @@ export function useFormSubmit({ source, tenantId }: UseFormSubmitOptions) {
   return { submit, status, message, reset };
 }
 END_OF_FILE_CONTENT
-# SKIP: src/lib/useFormSubmit.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/lib/useInView.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/useInView.ts"
 import { useEffect, useRef } from 'react';
@@ -11037,7 +10882,6 @@ export function useInView<T extends HTMLElement>(threshold = 0.12) {
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/lib/useInView.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/lib/utils.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/utils.ts"
 import { clsx, type ClassValue } from 'clsx';
@@ -11048,7 +10892,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/lib/utils.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/main.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/main.tsx"
 import '@/types'; // TBP: load type augmentation from capsule-driven types
@@ -11067,7 +10910,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/main.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/main_.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/main_.tsx"
 import '@/types'; // TBP: load type augmentation from capsule-driven types
@@ -11170,7 +11012,6 @@ export type MenuConfig = CoreMenuConfig;
 export type ThemeConfig = CoreThemeConfig;
 
 END_OF_FILE_CONTENT
-# SKIP: src/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/types/deploy.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/types/deploy.ts"
 export type StepId = 'commit' | 'push' | 'build' | 'live';
@@ -11190,7 +11031,6 @@ export interface DeployStep {
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/types/deploy.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/vite-env.d.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/vite-env.d.ts"
 /// <reference types="vite/client" />
@@ -11203,7 +11043,6 @@ declare module '*?inline' {
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/vite-env.d.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating vercel.json..."
 cat << 'END_OF_FILE_CONTENT' > "vercel.json"
 {
@@ -11234,7 +11073,7 @@ END_OF_FILE_CONTENT
 echo "Creating vite.config.ts..."
 cat << 'END_OF_FILE_CONTENT' > "vite.config.ts"
 /**
- * Generated by @olonjs/cli (legacy alias: @jsonpages/cli). Dev server API: /api/save-to-file, /api/upload-asset, /api/list-assets.
+ * Generated by @olonjs/cli. Dev server API: /api/save-to-file, /api/upload-asset, /api/list-assets.
  */
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
