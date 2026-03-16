@@ -1,5 +1,5 @@
 import React from 'react';
-import { resolveAssetUrl, useConfig } from '@jsonpages/core';
+import { resolveAssetUrl, useConfig } from '@olonjs/core';
 import type { ImageBreakData, ImageBreakSettings } from './types';
 
 export const ImageBreak: React.FC<{ data: ImageBreakData; settings?: ImageBreakSettings }> = ({ data }) => {

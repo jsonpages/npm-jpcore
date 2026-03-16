@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { resolveAssetUrl, useConfig } from '@jsonpages/core';
+import { resolveAssetUrl, useConfig } from '@olonjs/core';
 import type { HeaderData, HeaderSettings } from './types';
-import type { MenuItem } from '@jsonpages/core';
+import type { MenuItem } from '@olonjs/core';
 
 interface HeaderProps {
   data: HeaderData;

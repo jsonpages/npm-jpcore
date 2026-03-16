@@ -1,5 +1,5 @@
 import React from 'react';
-import { resolveAssetUrl, useConfig } from '@jsonpages/core';
+import { resolveAssetUrl, useConfig } from '@olonjs/core';
 import type { CtaNatureData, CtaNatureSettings } from './types';
 import type { SiteConfig } from '@/types';
 import type { HeaderData } from '@/components/header';

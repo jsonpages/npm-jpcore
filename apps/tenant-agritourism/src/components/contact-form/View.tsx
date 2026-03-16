@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useInView } from '@/lib/useInView';
 import { useFormSubmit } from '@/lib/useFormSubmit';
-import { useConfig } from '@jsonpages/core';
+import { useConfig } from '@olonjs/core';
 import type { ContactFormData, ContactFormSettings } from './types';
 
 const inputCls = `

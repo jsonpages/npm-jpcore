@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { resolveAssetUrl, useConfig } from '@jsonpages/core';
+import { resolveAssetUrl, useConfig } from '@olonjs/core';
 import type { FooterData, FooterSettings } from './types';
 
 export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> = ({ data }) => {
