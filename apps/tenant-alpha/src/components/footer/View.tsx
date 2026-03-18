@@ -1,4 +1,5 @@
 import React from 'react';
+import { OlonMark } from '@/components/ui/OlonMark';
 import type { FooterData, FooterSettings } from './types';
 
 export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> = ({ data }) => {
@@ -15,11 +16,9 @@ export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> =
     >
       <div className="max-w-[1200px] mx-auto px-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 font-bold text-[0.9rem] text-[var(--local-text-muted)]" data-jp-field="brandText">
-            {data.brandText}
-            {data.brandHighlight && (
-              <span className="text-[var(--local-accent)]" data-jp-field="brandHighlight">{data.brandHighlight}</span>
-            )}
+          <div className="flex items-center gap-2.5 font-bold text-[0.9rem] text-[var(--local-text-muted)]">
+            <OlonMark size={20} />
+            <span data-jp-field="brandText">{data.brandText}{data.brandHighlight && <span className="text-[var(--local-accent)]" data-jp-field="brandHighlight">{data.brandHighlight}</span>}</span>
           </div>
           {data.links && data.links.length > 0 && (
             <nav className="flex gap-6">

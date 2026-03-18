@@ -1,80 +1,81 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
-import type { ProblemStatementData, ProblemStatementSettings, SiloBlockVariant } from './types';
+import type { ProblemStatementData, ProblemStatementSettings } from './types';
 
-const variantStyles: Record<SiloBlockVariant, string> = {
-  red: 'bg-[var(--local-panel-bg)] border-[var(--local-panel-border)] text-[var(--local-text-muted)]',
-  amber: 'bg-[var(--local-panel-bg)] border-[var(--local-panel-border)] text-[var(--local-text-muted)]',
-  green: 'bg-[var(--local-accent-soft)] border-[var(--local-panel-border-strong)] text-[var(--local-accent)]',
-  blue: 'bg-[var(--local-accent-soft)] border-[var(--local-panel-border-strong)] text-[var(--local-accent)]',
-};
-
-export const ProblemStatement: React.FC<{ data: ProblemStatementData; settings?: ProblemStatementSettings }> = ({ data }) => {
+export const ProblemStatement: React.FC<{
+  data: ProblemStatementData;
+  settings?: ProblemStatementSettings;
+}> = ({ data }) => {
   return (
-    <section
-      style={{
-        '--local-bg': 'var(--background)',
-        '--local-surface': 'var(--card)',
-        '--local-text': 'var(--foreground)',
-        '--local-text-muted': 'var(--muted-foreground)',
-        '--local-border': 'var(--border)',
-        '--local-radius-md': 'var(--theme-radius-md)',
-        '--local-radius-lg': 'var(--theme-radius-lg)',
-        '--local-panel-bg': 'var(--demo-surface-soft)',
-        '--local-panel-border': 'var(--demo-border-soft)',
-        '--local-panel-border-strong': 'var(--demo-border-strong)',
-        '--local-accent': 'var(--accent)',
-        '--local-accent-soft': 'var(--demo-accent-soft)',
-      } as React.CSSProperties}
-      className="jp-problem relative z-0 py-28 bg-gradient-to-b from-[var(--local-bg)] to-[var(--local-surface)]"
-    >
-      <div className="max-w-[1200px] mx-auto px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div className="relative h-[360px] border border-[var(--local-panel-border)] rounded-[var(--local-radius-lg)] bg-[var(--local-panel-bg)] overflow-hidden flex items-center justify-center">
-            <div className="text-center p-8">
-              {data.siloGroups.map((group, gIdx) => (
-                <div
-                  key={gIdx}
-                  className="mb-4"
-                  data-jp-item-id={(group as { id?: string }).id ?? `legacy-${gIdx}`}
-                  data-jp-item-field="siloGroups"
-                >
-                  <div className="flex flex-wrap justify-center gap-1.5">
-                    {group.blocks.map((block, bIdx) => (
-                      <span
-                        key={(block as { id?: string }).id ?? bIdx}
-                        className={cn(
-                          'inline-block px-4 py-2 rounded-[var(--local-radius-md)] text-[0.8rem] font-semibold border',
-                          variantStyles[block.variant]
-                        )}
-                        data-jp-item-id={(block as { id?: string }).id ?? `legacy-${bIdx}`}
-                        data-jp-item-field="blocks"
-                      >
-                        {block.label}
-                      </span>
-                    ))}
-                  </div>
-                  <span className="text-[0.7rem] text-[var(--local-text-muted)] uppercase tracking-widest mt-2 block opacity-60">
-                    {group.label}
-                  </span>
-                </div>
-              ))}
-            </div>
+    <section id="problem" className="jp-problem py-24">
+      <div className="max-w-[1040px] mx-auto px-8">
+
+        {data.label && (
+          <div className="inline-flex items-center gap-2 text-[10.5px] font-mono font-bold uppercase tracking-[.12em] text-muted-foreground/60 mb-5">
+            <span className="w-[18px] h-px bg-border" aria-hidden />
+            {data.label}
           </div>
-          <div>
-            <h3 className="text-2xl font-bold text-[var(--local-text)] mb-4" data-jp-field="title">
-              {data.title}
+        )}
+
+        {/* Split grid */}
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 rounded-xl overflow-hidden border border-border"
+          style={{ gap: '1px', background: 'var(--border)' }}
+        >
+          {/* Problem cell */}
+          <div className="bg-background p-10 md:p-[40px_42px]" data-jp-field="problemTitle">
+            <div className="text-[10.5px] font-bold tracking-[.10em] uppercase text-red-500 mb-5">
+              {data.problemTag}
+            </div>
+            <h3 className="text-[21px] font-bold tracking-[-0.02em] leading-[1.2] text-foreground mb-6">
+              {data.problemTitle}
             </h3>
-            {data.paragraphs.map((p, idx) => (
-              <p
-                key={idx}
-                className="text-[var(--local-text-muted)] mb-5 text-[1.05rem] leading-relaxed"
-                data-jp-item-id={(p as { id?: string }).id ?? `legacy-${idx}`}
-                data-jp-item-field="paragraphs"
-              >
-                {p.isBold ? <strong className="text-[var(--local-text)]">{p.text}</strong> : p.text}
-              </p>
-            ))}
+            <ul className="flex flex-col gap-3.5" data-jp-field="problemItems">
+              {data.problemItems?.map((item, idx) => (
+                <li
+                  key={(item as { id?: string }).id ?? idx}
+                  className="flex gap-2.5 text-[13.5px] text-muted-foreground leading-[1.65]"
+                  data-jp-item-id={(item as { id?: string }).id ?? `p-${idx}`}
+                  data-jp-item-field="problemItems"
+                >
+                  <span className="flex-shrink-0 w-5 h-5 rounded-sm bg-red-500/10 text-red-500 flex items-center justify-center text-[10px] font-bold mt-0.5">
+                    ✕
+                  </span>
+                  <span>{item.text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Solution cell */}
+          <div className="bg-card p-10 md:p-[40px_42px]" data-jp-field="solutionTitle">
+            <div className="text-[10.5px] font-bold tracking-[.10em] uppercase text-emerald-500 mb-5">
+              {data.solutionTag}
+            </div>
+            <h3 className="text-[21px] font-bold tracking-[-0.02em] leading-[1.2] text-foreground mb-6">
+              {data.solutionTitle}
+            </h3>
+            <ul className="flex flex-col gap-3.5" data-jp-field="solutionItems">
+              {data.solutionItems?.map((item, idx) => (
+                <li
+                  key={(item as { id?: string }).id ?? idx}
+                  className="flex gap-2.5 text-[13.5px] text-muted-foreground leading-[1.65]"
+                  data-jp-item-id={(item as { id?: string }).id ?? `s-${idx}`}
+                  data-jp-item-field="solutionItems"
+                >
+                  <span className="flex-shrink-0 w-5 h-5 rounded-sm bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-[10px] font-bold mt-0.5">
+                    ✓
+                  </span>
+                  <span>
+                    {item.text}
+                    {item.code && (
+                      <> <code className="font-mono text-[11px] bg-muted border border-border rounded px-1.5 py-0.5 text-primary">
+                        {item.code}
+                      </code></>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </div>

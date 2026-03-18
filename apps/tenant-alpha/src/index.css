@@ -66,6 +66,13 @@
   */
   --accent: var(--theme-accent, var(--theme-primary));
 
+  /* Olon brand primitives — consumed by OlonMark SVG gradients */
+  --olon-ring-top:    #84ABFF;
+  --olon-ring-bottom: #0F52E0;
+  --olon-ground:      #080808;
+  --olon-figure:      #e8f0f8;
+  --olon-nucleus:     var(--olon-figure);
+
   /*
      Shared demo/mockup helpers
      These are still theme-derived, but give the tenant a stable semantic

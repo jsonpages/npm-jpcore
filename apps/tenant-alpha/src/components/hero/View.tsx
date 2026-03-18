@@ -1,223 +1,186 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import type { HeroData, HeroSettings } from './types';
 
+const CODE_LINES = [
+  { type: 'p', text: '{' },
+  { type: 'k', text: '  "slug"',   after: ': ', val: '"homepage"', comma: ',' },
+  { type: 'k', text: '  "meta"',   after: ': ', val: '{ "title": "Acme Corp" }', comma: ',' },
+  { type: 'k', text: '  "sections"', after: ': [' },
+  { type: 'p', text: '    {' },
+  { type: 'k', text: '      "type"', after: ':  ', val: '"hero"', comma: ',' },
+  { type: 'k', text: '      "data"', after: ': {' },
+  { type: 'k', text: '        "title"', after: ': ', val: '"Ship faster with agents"', comma: ',' },
+  { type: 'k', text: '        "cta"',   after: ':   ', val: '"Get started"' },
+  { type: 'p', text: '      }' },
+  { type: 'p', text: '    },' },
+  { type: 'c', text: '    { "type": "features" /* ... */ }' },
+  { type: 'p', text: '  ]' },
+  { type: 'p', text: '}' },
+] as const;
+
+const tokenColor: Record<string, string> = {
+  k: 'text-[#84ABFF]',
+  s: 'text-[#86efac]',
+  c: 'text-[#4b5563]',
+  p: 'text-[#9ca3af]',
+};
+
 export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ data }) => {
+  const primaryCta = data.ctas?.find(c => c.variant === 'primary') ?? data.ctas?.[0];
+  const secondaryCta = data.ctas?.find(c => c.variant === 'secondary') ?? data.ctas?.[1];
+
   return (
-    <section
-      style={{
-        '--local-bg':          'var(--background)',
-        '--local-text':        'var(--foreground)',
-        '--local-text-muted':  'var(--muted-foreground)',
-        '--local-primary':     'var(--primary)',
-        '--local-accent':      'var(--accent)',
-        '--local-cyan':        'var(--secondary)',
-        '--local-border':      'var(--border)',
-        '--local-surface':     'var(--card)',
-        '--local-radius-sm':   'var(--theme-radius-sm)',
-        '--local-radius-md':   'var(--theme-radius-md)',
-        '--local-radius-lg':   'var(--theme-radius-lg)',
-        '--local-panel-bg':    'var(--demo-surface)',
-        '--local-panel-deep':  'var(--demo-surface-deep)',
-        '--local-panel-border': 'var(--demo-border-soft)',
-        '--local-panel-border-strong': 'var(--demo-border-strong)',
-        '--local-panel-text-soft': 'var(--demo-text-soft)',
-        '--local-panel-text-faint': 'var(--demo-text-faint)',
-        '--local-accent-soft': 'var(--demo-accent-soft)',
-      } as React.CSSProperties}
-      className="jp-hero relative min-h-screen flex items-center overflow-hidden pt-24 pb-0 bg-[var(--local-bg)]"
-    >
-      {/* Background glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[650px] bg-[radial-gradient(ellipse_at_50%_0%,var(--local-accent-soft),transparent_65%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[image:linear-gradient(var(--local-accent-soft)_1px,transparent_1px),linear-gradient(90deg,var(--local-accent-soft)_1px,transparent_1px)] bg-[size:80px_80px] [mask-image:radial-gradient(ellipse_at_50%_0%,black_25%,transparent_75%)] pointer-events-none" />
+    <section className="jp-hero relative pt-[156px] pb-28 text-center overflow-hidden">
 
-      <div className="relative z-0 max-w-[1200px] mx-auto px-8 w-full">
-        <div className="grid grid-cols-2 gap-16 items-center pb-20">
+      {/* Background glow — absolute, scoped to hero section */}
+      <div
+        className="pointer-events-none absolute z-0 rounded-full"
+        style={{
+          width: '900px',
+          height: '700px',
+          background: 'radial-gradient(ellipse at center, rgba(23,99,255,.10) 0%, transparent 68%)',
+          top: '-160px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+        }}
+        aria-hidden
+      />
+      {/* Grid background — absolute, scoped to hero section */}
+      <div
+        className="pointer-events-none absolute inset-0 z-0 opacity-40"
+        style={{
+          backgroundImage:
+            'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
+          maskImage: 'radial-gradient(ellipse 80% 55% at 50% 0%, black 0%, transparent 100%)',
+        }}
+        aria-hidden
+      />
 
-          {/* LEFT — copy */}
-          <div>
-            {data.badge && (
-              <div
-                className="inline-flex items-center gap-2 bg-[var(--local-accent-soft)] border border-[var(--local-panel-border-strong)] px-4 py-1.5 rounded-full text-[0.70rem] font-mono font-semibold text-[var(--local-accent)] mb-8 tracking-widest uppercase jp-animate-in"
-                data-jp-field="badge"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--local-primary)] jp-pulse-dot" />
-                {data.badge}
-              </div>
-            )}
+      <div className="relative z-10 max-w-[1040px] mx-auto px-8">
 
-            <h1
-              className="font-display font-black text-[clamp(3rem,6vw,5.5rem)] text-[var(--local-text)] leading-[1.0] tracking-tight mb-6 jp-animate-in jp-d1"
-              data-jp-field="title"
+        {/* Eyebrow badge */}
+        {data.badge && (
+          <div className="inline-flex items-center gap-2 mb-8">
+            <Badge
+              variant="brand"
+              className="gap-2 py-1.5 px-4 text-[12px] tracking-[.05em] font-mono"
+              data-jp-field="badge"
             >
-              {data.title}
-              {data.titleHighlight && (
-                <>
-                  <br />
-                  <em
-                    className="not-italic bg-gradient-to-br from-[var(--local-accent)] to-[var(--local-cyan)] bg-clip-text text-transparent"
-                    data-jp-field="titleHighlight"
-                  >
-                    {data.titleHighlight}
-                  </em>
-                </>
-              )}
-            </h1>
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"
+                aria-hidden
+              />
+              {data.badge}
+            </Badge>
+          </div>
+        )}
 
-            {data.description && (
-              <p
-                className="text-[1.05rem] text-[var(--local-text-muted)] max-w-[500px] leading-[1.75] mb-10 jp-animate-in jp-d2"
-                data-jp-field="description"
+        {/* Headline */}
+        <h1
+          className="font-display font-bold tracking-[-0.038em] leading-[1.06] text-foreground mb-2 mx-auto"
+          style={{ fontSize: 'clamp(44px, 6.5vw, 74px)', maxWidth: '840px' }}
+          data-jp-field="title"
+        >
+          {data.title}
+          {data.titleHighlight && (
+            <>
+              {' '}
+              <span
+                className="bg-gradient-to-br from-[#84ABFF] via-[#1763FF] to-[#0F52E0] bg-clip-text text-transparent"
+                data-jp-field="titleHighlight"
               >
-                {data.description}
-              </p>
-            )}
+                {data.titleHighlight}
+              </span>
+            </>
+          )}
+        </h1>
 
-            {data.ctas && data.ctas.length > 0 && (
-              <div className="flex gap-4 flex-wrap jp-animate-in jp-d3">
-                {data.ctas.map((cta, idx) => (
-                  <a
-                    key={cta.id ?? idx}
-                    href={cta.href}
-                    data-jp-item-id={cta.id ?? `legacy-${idx}`}
-                    data-jp-item-field="ctas"
-                    className={cn(
-                      'inline-flex items-center gap-2 px-7 py-3 rounded-[var(--local-radius-md)] font-semibold text-[0.95rem] transition-all duration-200 no-underline',
-                      cta.variant === 'primary'
-                        ? 'bg-[var(--local-primary)] text-white hover:brightness-110 hover:-translate-y-0.5 shadow-[0_0_24px_var(--local-accent-soft)]'
-                        : 'bg-transparent text-[var(--local-text)] border border-[var(--local-panel-border)] hover:border-[var(--local-panel-border-strong)] hover:bg-[var(--local-panel-bg)]'
-                    )}
-                  >
-                    {cta.label}
-                  </a>
-                ))}
-              </div>
-            )}
+        {/* Subtitle */}
+        {data.description && (
+          <p
+            className="text-muted-foreground leading-[1.7] mx-auto mt-6 mb-12"
+            style={{ fontSize: 'clamp(15px, 2vw, 18px)', maxWidth: '560px' }}
+            data-jp-field="description"
+          >
+            {data.description}
+          </p>
+        )}
 
-            {data.metrics && data.metrics.length > 0 && (
-              <div className="flex gap-10 mt-14 pt-10 border-t border-[var(--local-panel-border)] flex-wrap jp-animate-in jp-d4">
-                {data.metrics.map((metric, idx) => (
-                  <div
-                    key={(metric as { id?: string }).id ?? idx}
-                    data-jp-item-id={(metric as { id?: string }).id ?? `legacy-${idx}`}
-                    data-jp-item-field="metrics"
-                  >
-                    <div className="font-display text-[2.2rem] font-black text-[var(--local-text)] leading-none">
-                      {metric.val}
-                    </div>
-                    <div className="text-[0.72rem] font-mono uppercase tracking-[0.1em] text-[var(--local-text-muted)] mt-1 opacity-70">
-                      {metric.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {/* CTAs */}
+        {(primaryCta || secondaryCta) && (
+          <div className="flex items-center justify-center gap-3 flex-wrap mb-0">
+            {primaryCta && (
+              <Button asChild variant="default" size="lg" className="gap-2 px-7 shadow-[0_0_32px_rgba(23,99,255,.38)]">
+                <a
+                  href={primaryCta.href}
+                  data-jp-item-id={primaryCta.id}
+                  data-jp-item-field="ctas"
+                >
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.8 }}>
+                    <rect x="2.5" y="2" width="11" height="12" rx="2" stroke="currentColor" strokeWidth="1.4"/>
+                    <path d="M5.5 6h5M5.5 9h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                  {primaryCta.label}
+                </a>
+              </Button>
+            )}
+            {secondaryCta && (
+              <Button asChild variant="outline" size="lg" className="gap-2 px-7">
+                <a
+                  href={secondaryCta.href}
+                  data-jp-item-id={secondaryCta.id}
+                  data-jp-item-field="ctas"
+                  target={secondaryCta.href?.startsWith('http') ? '_blank' : undefined}
+                  rel={secondaryCta.href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+                >
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.7 }}>
+                    <path d="M8 1C4.13 1 1 4.13 1 8c0 3.09 2.01 5.71 4.79 6.63.35.06.48-.15.48-.34v-1.2c-1.95.42-2.36-.94-2.36-.94-.32-.81-.78-1.02-.78-1.02-.64-.43.05-.42.05-.42.7.05 1.07.72 1.07.72.62 1.07 1.64.76 2.04.58.06-.45.24-.76.44-.93-1.56-.18-3.2-.78-3.2-3.47 0-.77.27-1.4.72-1.89-.07-.18-.31-.9.07-1.87 0 0 .59-.19 1.93.72A6.7 6.7 0 0 1 8 5.17c.6 0 1.2.08 1.76.24 1.34-.91 1.93-.72 1.93-.72.38.97.14 1.69.07 1.87.45.49.72 1.12.72 1.89 0 2.7-1.64 3.29-3.2 3.47.25.22.48.65.48 1.31v1.94c0 .19.12.4.48.34C12.99 13.71 15 11.09 15 8c0-3.87-3.13-7-7-7z" fill="currentColor"/>
+                  </svg>
+                  {secondaryCta.label}
+                </a>
+              </Button>
             )}
           </div>
+        )}
 
-          {/* RIGHT — ICE mini-mockup */}
-          <div className="jp-animate-in jp-d2 rounded-[var(--local-radius-lg)] overflow-hidden border border-[var(--local-panel-border)] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_40px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(59,130,246,0.08)]">
-            {/* Browser bar */}
-            <div className="bg-[var(--local-panel-bg)] px-3 py-2.5 flex items-center gap-1.5 border-b border-[var(--local-panel-border)]">
+        {/* Code window */}
+        <div className="mt-[68px] mx-auto" style={{ maxWidth: '540px' }}>
+          <div
+            className="rounded-xl border border-border text-left overflow-hidden"
+            style={{ background: '#060d14', boxShadow: '0 32px 64px rgba(0,0,0,.44), 0 0 0 1px rgba(255,255,255,.04)' }}
+          >
+            <div className="flex items-center gap-1.5 px-4 py-3 bg-card border-b border-border">
               <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]" />
-              <span className="mx-auto font-mono text-[0.60rem] text-[var(--local-panel-text-faint)] bg-[var(--local-panel-deep)] px-3 py-0.5 rounded-[var(--local-radius-sm)]">localhost:5173 · Studio</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />
+              <span className="flex-1 text-center font-mono text-[11px] text-muted-foreground/60">
+                GET /homepage.json
+              </span>
             </div>
-            {/* Split: canvas + inspector */}
-            <div className="grid grid-cols-[1fr_260px] h-[360px] bg-[var(--local-panel-deep)]">
-              {/* Canvas */}
-              <div className="relative bg-gradient-to-br from-[var(--local-panel-deep)] to-[var(--local-panel-bg)] p-8 flex flex-col justify-center">
-                <span className="absolute top-2 right-2 font-mono text-[0.48rem] font-bold tracking-widest uppercase bg-[var(--local-primary)] text-white px-1.5 py-0.5 rounded-[var(--local-radius-sm)]">HERO | LOCAL</span>
-                <div className="absolute inset-0 border-2 border-[var(--local-primary)] pointer-events-none" />
-                <div className="inline-flex items-center gap-1.5 bg-[var(--local-panel-bg)] border border-[var(--local-panel-border)] rounded-full px-2.5 py-1 font-mono text-[0.52rem] text-[var(--local-panel-text-soft)] mb-3 w-fit">
-                  <span className="w-1 h-1 rounded-full bg-[var(--local-primary)]" />
-                  {data.badge ?? 'Architecture v1.2'}
+            <div className="px-6 py-5 font-mono text-[12.5px] leading-[1.8] overflow-x-auto">
+              {CODE_LINES.map((ln, i) => (
+                <div key={i}>
+                  {ln.type === 'k' ? (
+                    <span>
+                      <span className={tokenColor.k}>{ln.text}</span>
+                      {'after' in ln && <span className={tokenColor.p}>{ln.after}</span>}
+                      {'val' in ln && <span className="text-[#86efac]">{ln.val}</span>}
+                      {'comma' in ln && <span className={tokenColor.p}>{ln.comma}</span>}
+                    </span>
+                  ) : ln.type === 'c' ? (
+                    <span className={tokenColor.c}>{ln.text}</span>
+                  ) : (
+                    <span className={tokenColor.p}>{ln.text}</span>
+                  )}
                 </div>
-                <div className="font-display font-black text-[1.5rem] leading-none text-white mb-0.5">
-                  {data.title}
-                </div>
-                {data.titleHighlight && (
-                  <div className="font-display font-black text-[1.5rem] leading-none bg-gradient-to-r from-[var(--local-accent)] to-[var(--local-cyan)] bg-clip-text text-transparent mb-3">
-                    {data.titleHighlight}
-                  </div>
-                )}
-                <p className="text-[0.65rem] text-[var(--local-panel-text-faint)] leading-[1.6] max-w-[220px] mb-3">
-                  {data.description?.slice(0, 100)}…
-                </p>
-                <div className="flex gap-1.5">
-                  <span className="text-[0.58rem] font-semibold bg-[var(--local-primary)] text-white px-2.5 py-1 rounded-[var(--local-radius-sm)]">Read the Docs</span>
-                  <span className="text-[0.58rem] border border-[var(--local-panel-border)] text-[var(--local-panel-text-soft)] px-2.5 py-1 rounded-[var(--local-radius-sm)]">View on NPM</span>
-                </div>
-                <div className="flex gap-4 mt-3 pt-3 border-t border-[var(--local-panel-border)]">
-                  {(data.metrics ?? []).map((m, i) => (
-                    <div key={i}>
-                      <div className="font-display font-black text-[1rem] text-white leading-none">{m.val}</div>
-                      <div className="font-mono text-[0.44rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] mt-0.5">{m.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* Inspector */}
-              <div className="bg-[var(--local-panel-bg)] border-l border-[var(--local-panel-border)] flex flex-col">
-                <div className="px-3.5 py-2.5 border-b border-[var(--local-panel-border)] flex items-start justify-between">
-                  <div>
-                    <div className="font-display font-bold text-[0.80rem] text-white">Inspector</div>
-                    <div className="flex items-center gap-1.5 mt-0.5 font-mono text-[0.54rem] text-[var(--local-accent)]">
-                      <span className="font-bold">■ HERO</span>
-                      <span className="text-[var(--local-panel-text-faint)]">|</span>
-                      <span className="text-[var(--local-panel-text-faint)]">LOCAL</span>
-                    </div>
-                  </div>
-                  <span className="font-mono text-[0.55rem] text-[var(--local-accent)]">+ Add section</span>
-                </div>
-                {/* Layers */}
-                <div className="border-b border-[var(--local-panel-border)]">
-                  <div className="px-3.5 py-1.5 font-mono text-[0.50rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] flex justify-between">
-                    <span>Page Layers</span><span className="text-[var(--local-panel-text-faint)]">(8)</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3.5 py-1.5 bg-[var(--local-accent-soft)]">
-                    <span className="font-mono text-[0.50rem] uppercase tracking-wide text-[var(--local-accent)] w-9">HERO</span>
-                    <span className="font-sans text-[0.60rem] text-[var(--local-text)] font-semibold flex-1 truncate">{data.title}</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--local-primary)]" />
-                  </div>
-                  <div className="flex items-center gap-2 px-3.5 py-1.5 opacity-50">
-                    <span className="font-mono text-[0.50rem] uppercase tracking-wide text-[var(--local-panel-text-faint)] w-9">SOC</span>
-                    <span className="font-sans text-[0.60rem] text-[var(--local-panel-text-faint)] flex-1 truncate">Separation of Concerns</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-3.5 py-1.5 opacity-35">
-                    <span className="font-mono text-[0.50rem] uppercase tracking-wide text-[var(--local-panel-text-faint)] w-9">CMS</span>
-                    <span className="font-sans text-[0.60rem] text-[var(--local-panel-text-faint)] flex-1 truncate">In-Context Editing</span>
-                  </div>
-                </div>
-                {/* Fields */}
-                <div className="flex-1 px-3.5 py-3 flex flex-col gap-2.5 overflow-hidden">
-                  <div>
-                    <div className="font-mono text-[0.50rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] mb-1">Title</div>
-                    <div className="bg-[var(--local-accent-soft)] border border-[var(--local-panel-border-strong)] rounded-[var(--local-radius-sm)] px-2 py-1.5 font-mono text-[0.58rem] text-[var(--local-text)] truncate">{data.title}</div>
-                  </div>
-                  <div>
-                    <div className="font-mono text-[0.50rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] mb-1">Subtitle</div>
-                    <div className="bg-[var(--local-panel-bg)] border border-[var(--local-panel-border)] rounded-[var(--local-radius-sm)] px-2 py-1.5 font-mono text-[0.58rem] text-[var(--local-panel-text-soft)] truncate">{data.titleHighlight}</div>
-                  </div>
-                  <div>
-                    <div className="font-mono text-[0.50rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] mb-1">Badge</div>
-                    <div className="bg-[var(--local-panel-bg)] border border-[var(--local-panel-border)] rounded-[var(--local-radius-sm)] px-2 py-1.5 font-mono text-[0.58rem] text-[var(--local-panel-text-soft)] truncate">{data.badge}</div>
-                  </div>
-                </div>
-                {/* Bottom bar */}
-                <div className="px-3.5 py-2 border-t border-[var(--local-panel-border)] bg-[var(--local-panel-bg)] flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--local-primary)]" />
-                  <span className="font-mono text-[0.50rem] text-[var(--local-panel-text-soft)]">All Changes Saved</span>
-                  <div className="ml-auto flex gap-1.5">
-                    <span className="font-mono text-[0.48rem] px-1.5 py-0.5 rounded-[var(--local-radius-sm)] border border-[var(--local-panel-border-strong)] bg-[var(--local-accent-soft)] text-[var(--local-accent)]">⬡ HTML</span>
-                    <span className="font-mono text-[0.48rem] px-1.5 py-0.5 rounded-[var(--local-radius-sm)] border border-[var(--local-panel-border)] bg-[var(--local-panel-bg)] text-[var(--local-panel-text-soft)] opacity-50">{ } JSON</span>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
-
         </div>
+
       </div>
     </section>
   );

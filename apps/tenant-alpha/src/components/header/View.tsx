@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { OlonMark } from '@/components/ui/OlonMark';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import type { MenuItem } from '@olonjs/core';
 import type { HeaderData, HeaderSettings } from './types';
 
@@ -12,102 +15,118 @@ export const Header: React.FC<{
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 40);
+    const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <header
-      style={{
-        '--local-bg': 'color-mix(in oklch, var(--background) 88%, transparent)',
-        '--local-text': 'var(--foreground)',
-        '--local-text-muted': 'var(--muted-foreground)',
-        '--local-primary': 'var(--primary)',
-        '--local-accent': 'var(--accent)',
-        '--local-border': 'color-mix(in oklch, var(--primary) 18%, transparent)',
-        '--local-radius-md': 'var(--theme-radius-md)',
-      } as React.CSSProperties}
-      className={cn(
-        'w-full py-4 transition-all duration-300 z-0',
-        scrolled
-          ? 'bg-[var(--local-bg)] backdrop-blur-[20px] border-b border-[var(--local-border)]'
-          : 'bg-transparent border-b border-transparent'
-      )}
-    >
-      <div className="max-w-[1200px] mx-auto px-8 flex justify-between items-center">
-        <a
-          href="/"
-          className="flex items-center gap-2.5 no-underline font-bold text-xl tracking-tight text-[var(--local-text)]"
-        >
-          {data.logoIconText && (
-            <div className="w-8 h-8 rounded-md bg-gradient-to-br from-[var(--local-primary)] to-[var(--local-accent)] flex items-center justify-center font-mono text-[0.8rem] font-bold text-[var(--background)]" data-jp-field="logoIconText">
-              {data.logoIconText}
-            </div>
-          )}
-          <span data-jp-field="logoText">
-            {data.logoText}
-            {data.logoHighlight && (
-              <span className="text-[var(--local-accent)]" data-jp-field="logoHighlight">{data.logoHighlight}</span>
-            )}
-          </span>
-        </a>
+    <>
+      <div style={{ height: '56px' }} aria-hidden />
+      <header
+        className={cn(
+          'fixed top-0 left-0 right-0 w-full h-14 z-50 transition-all duration-300',
+          'flex items-center',
+          scrolled
+            ? 'bg-background/88 backdrop-blur-[16px] border-b border-border/60'
+            : 'bg-transparent border-b border-transparent'
+        )}
+      >
+        <div className="max-w-[1040px] w-full mx-auto px-8 flex items-center gap-3">
 
-        <nav className="hidden md:flex items-center gap-10">
-          {menu.map((item, idx) => (
-            <a
-              key={(item as { id?: string }).id ?? idx}
-              href={item.href}
-              data-jp-item-id={(item as { id?: string }).id ?? `legacy-${idx}`}
-              data-jp-item-field="links"
-              target={item.external ? '_blank' : undefined}
-              rel={item.external ? 'noopener noreferrer' : undefined}
-              className={cn(
-                'no-underline text-sm font-medium transition-colors',
-                item.isCta
-                  ? 'bg-[var(--local-primary)] text-white px-5 py-2 rounded-[var(--local-radius-md)] font-semibold hover:brightness-110 hover:-translate-y-px'
-                  : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)]'
-              )}
+          <a
+            href="/"
+            className="flex items-center gap-2 no-underline shrink-0"
+            aria-label="OlonJS home"
+          >
+            <OlonMark size={26} />
+            <span
+              className="text-lg font-bold tracking-tight text-foreground"
+              data-jp-field="logoText"
             >
-              {item.label}
-            </a>
-          ))}
-        </nav>
+              {data.logoText}
+              {data.logoHighlight && (
+                <span className="text-primary" data-jp-field="logoHighlight">
+                  {data.logoHighlight}
+                </span>
+              )}
+            </span>
+          </a>
 
-        <button
-          type="button"
-          className="md:hidden p-2 text-[var(--local-text-muted)] hover:text-[var(--local-text)]"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {mobileMenuOpen ? (
-              <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>
-            ) : (
-              <><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></>
-            )}
-          </svg>
-        </button>
-      </div>
+          {data.badge && (
+            <>
+              <span className="w-px h-4 bg-border" aria-hidden />
+              <Badge variant="brand" data-jp-field="badge">
+                {data.badge}
+              </Badge>
+            </>
+          )}
 
-      {mobileMenuOpen && (
-        <nav className="md:hidden border-t border-[var(--local-border)] bg-[var(--local-bg)] backdrop-blur-[20px]">
-          <div className="max-w-[1200px] mx-auto px-8 py-4 flex flex-col gap-4">
+          <div className="flex-1" />
+
+          <nav className="hidden md:flex items-center gap-0.5" aria-label="Site">
             {menu.map((item, idx) => (
-              <a
+              <Button
                 key={(item as { id?: string }).id ?? idx}
-                href={item.href}
-                className="text-base font-medium text-[var(--local-text-muted)] hover:text-[var(--local-text)] transition-colors py-2 no-underline"
-                onClick={() => setMobileMenuOpen(false)}
-                data-jp-item-id={(item as { id?: string }).id ?? `legacy-${idx}`}
-                data-jp-item-field="links"
+                asChild
+                variant={item.isCta ? 'default' : 'ghost'}
+                size="sm"
+                className={cn(
+                  'text-[13px]',
+                  !item.isCta && 'text-muted-foreground hover:text-foreground'
+                )}
               >
-                {item.label}
-              </a>
+                <a
+                  href={item.href}
+                  data-jp-item-id={(item as { id?: string }).id ?? `legacy-${idx}`}
+                  data-jp-item-field="links"
+                  target={item.external ? '_blank' : undefined}
+                  rel={item.external ? 'noopener noreferrer' : undefined}
+                >
+                  {item.label}
+                </a>
+              </Button>
             ))}
-          </div>
-        </nav>
-      )}
-    </header>
+          </nav>
+
+          <button
+            type="button"
+            className="md:hidden p-2 rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {mobileMenuOpen ? (
+                <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>
+              ) : (
+                <><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></>
+              )}
+            </svg>
+          </button>
+        </div>
+
+        {mobileMenuOpen && (
+          <nav
+            className="absolute top-14 left-0 right-0 md:hidden border-b border-border bg-background/95 backdrop-blur-[16px]"
+            aria-label="Mobile menu"
+          >
+            <div className="max-w-[1040px] mx-auto px-8 py-4 flex flex-col gap-1">
+              {menu.map((item, idx) => (
+                <a
+                  key={(item as { id?: string }).id ?? idx}
+                  href={item.href}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2.5 no-underline"
+                  onClick={() => setMobileMenuOpen(false)}
+                  data-jp-item-id={(item as { id?: string }).id ?? `legacy-${idx}`}
+                  data-jp-item-field="links"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </nav>
+        )}
+      </header>
+    </>
   );
 };

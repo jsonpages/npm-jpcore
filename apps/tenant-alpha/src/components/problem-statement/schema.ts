@@ -1,25 +1,17 @@
 import { z } from 'zod';
 import { BaseSectionData, BaseArrayItem } from '@/lib/base-schemas';
 
-export const SiloBlockVariantSchema = z.enum(['red', 'amber', 'green', 'blue']);
-const SiloBlockSchema = BaseArrayItem.extend({
-  label: z.string().describe('ui:text'),
-  variant: SiloBlockVariantSchema.describe('ui:select'),
-});
-
-const SiloGroupSchema = BaseArrayItem.extend({
-  blocks: z.array(SiloBlockSchema).describe('ui:list'),
-  label: z.string().describe('ui:text'),
-});
-
-const ProblemParagraphSchema = BaseArrayItem.extend({
-  text: z.string().describe('ui:textarea'),
-  isBold: z.boolean().default(false).describe('ui:checkbox'),
+const ProblemItemSchema = BaseArrayItem.extend({
+  text: z.string().describe('ui:text'),
+  code: z.string().optional().describe('ui:text'),
 });
 
 export const ProblemStatementSchema = BaseSectionData.extend({
-  siloGroups: z.array(SiloGroupSchema).describe('ui:list'),
-  title: z.string().describe('ui:text'),
-  paragraphs: z.array(ProblemParagraphSchema).describe('ui:list'),
-  highlight: z.string().optional().describe('ui:text'),
+  label: z.string().optional().describe('ui:text'),
+  problemTag: z.string().describe('ui:text'),
+  problemTitle: z.string().describe('ui:text'),
+  problemItems: z.array(ProblemItemSchema).describe('ui:list'),
+  solutionTag: z.string().describe('ui:text'),
+  solutionTitle: z.string().describe('ui:text'),
+  solutionItems: z.array(ProblemItemSchema).describe('ui:list'),
 });

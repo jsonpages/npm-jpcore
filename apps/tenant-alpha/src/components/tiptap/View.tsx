@@ -2,6 +2,7 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
+import type { Components, ExtraProps } from 'react-markdown';
 import { useEditor, EditorContent } from '@tiptap/react';
 import type { Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -17,6 +18,90 @@ import {
 } from 'lucide-react';
 import { STUDIO_EVENTS, useConfig, useStudio } from '@olonjs/core';
 import type { TiptapData, TiptapSettings } from './types';
+
+// ── TOC helpers ───────────────────────────────────────────────────────────────
+
+type TocEntry = { id: string; text: string; level: 2 | 3 };
+
+function slugify(raw: string): string {
+  return raw
+    .replace(/[\u{1F300}-\u{1FFFF}]/gu, '')
+    .replace(/[*_`#[\]()]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s.-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function extractToc(markdown: string): TocEntry[] {
+  const entries: TocEntry[] = [];
+  for (const line of markdown.split('\n')) {
+    const h2 = line.match(/^## (.+)/);
+    const h3 = line.match(/^### (.+)/);
+    if (h2) {
+      const text = h2[1].replace(/[*_`#[\]]/g, '').replace(/[\u{1F300}-\u{1FFFF}]/gu, '').trim();
+      entries.push({ id: slugify(h2[1]), text, level: 2 });
+    } else if (h3) {
+      const text = h3[1].replace(/[*_`#[\]]/g, '').trim();
+      entries.push({ id: slugify(h3[1]), text, level: 3 });
+    }
+  }
+  return entries;
+}
+
+// ── Sidebar (always rendered, both in Studio and Public) ──────────────────────
+
+const DocsSidebar: React.FC<{
+  toc: TocEntry[];
+  activeId: string;
+  onNav: (id: string) => void;
+}> = ({ toc, activeId, onNav }) => (
+  <aside className="w-[200px] flex-shrink-0 sticky top-[72px] self-start hidden lg:block">
+    <div className="text-[9px] font-mono font-bold uppercase tracking-[.14em] text-[var(--local-toolbar-text)] mb-3 px-3">
+      On this page
+    </div>
+    <nav className="flex flex-col">
+      {toc.map((entry) => (
+        <button
+          key={entry.id}
+          type="button"
+          onClick={() => onNav(entry.id)}
+          className={[
+            'text-left rounded-[var(--local-radius-sm)] transition-all duration-150 no-underline',
+            entry.level === 3
+              ? 'pl-[22px] pr-3 py-1.5 text-[0.72rem] ml-0.5'
+              : 'px-3 py-2 font-bold text-[0.76rem]',
+            activeId === entry.id
+              ? entry.level === 2
+                ? 'text-[var(--local-primary)] bg-[var(--local-toolbar-hover-bg)] border-l-2 border-[var(--local-primary)] pl-[10px]'
+                : 'text-[var(--local-primary)] font-semibold bg-[var(--local-toolbar-active-bg)]'
+              : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[var(--local-toolbar-hover-bg)]',
+          ].join(' ')}
+        >
+          {entry.level === 3 && (
+            <span
+              className={`inline-block w-[5px] h-[5px] rounded-full mr-2 align-middle mb-px flex-shrink-0 ${
+                activeId === entry.id ? 'bg-[var(--local-primary)]' : 'bg-[var(--local-border)]'
+              }`}
+            />
+          )}
+          {entry.text}
+        </button>
+      ))}
+    </nav>
+    <div className="mt-5 pt-4 border-t border-[var(--local-border)]">
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        className="flex items-center gap-2 font-mono text-[0.58rem] uppercase tracking-widest text-[var(--local-text-muted)] hover:text-[var(--local-primary)] transition-colors px-3"
+      >
+        ↑ Back to top
+      </button>
+    </div>
+  </aside>
+);
 
 // ── UI primitives ─────────────────────────────────────────────────────────────
 
@@ -669,9 +754,29 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
 
 // ── Public view ───────────────────────────────────────────────────────────────
 
+type HeadingProps = React.HTMLAttributes<HTMLHeadingElement> & ExtraProps;
+
+const mdHeading =
+  (level: 2 | 3) =>
+  ({ children, node: _node, ...rest }: HeadingProps) => {
+    const text = String(children ?? '');
+    const id = slugify(text);
+    const Tag = `h${level}` as 'h2' | 'h3';
+    return <Tag id={id} {...rest}>{children}</Tag>;
+  };
+
+const MD_COMPONENTS: Components = {
+  h2: mdHeading(2),
+  h3: mdHeading(3),
+};
+
 const PublicTiptapContent: React.FC<{ content: string }> = ({ content }) => (
   <article className="jp-tiptap-content" data-jp-field="content">
-    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeSanitize]}
+      components={MD_COMPONENTS}
+    >
       {content}
     </ReactMarkdown>
   </article>
@@ -679,8 +784,64 @@ const PublicTiptapContent: React.FC<{ content: string }> = ({ content }) => (
 
 // ── Export ────────────────────────────────────────────────────────────────────
 
-export const Tiptap: React.FC<{ data: TiptapData; settings?: TiptapSettings }> = ({ data }) => {
+export const Tiptap: React.FC<{ data: TiptapData; settings?: TiptapSettings }> = ({ data, settings: _settings }) => {
   const { mode } = useStudio();
+  const isStudio = mode === 'studio';
+
+  const toc = React.useMemo(() => extractToc(data.content ?? ''), [data.content]);
+  const [activeId, setActiveId] = React.useState<string>('');
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
+
+  // IntersectionObserver to track active heading (public mode and studio mode)
+  React.useEffect(() => {
+    if (toc.length === 0) return;
+    const ids = toc.map((e) => e.id);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) {
+          const id = visible[0].target.getAttribute('id') ?? '';
+          if (id) setActiveId(id);
+        }
+      },
+      { rootMargin: '-60px 0px -60% 0px', threshold: 0 }
+    );
+    const scan = () => {
+      ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) observer.observe(el);
+      });
+    };
+    // Delay slightly so the DOM is ready (especially in Studio with Tiptap rendering)
+    const t = setTimeout(scan, 300);
+    return () => {
+      clearTimeout(t);
+      observer.disconnect();
+    };
+  }, [toc, isStudio]);
+
+  const handleNav = React.useCallback((id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setActiveId(id);
+      return;
+    }
+    // Studio mode: headings are in ProseMirror, no IDs — find by text in editor DOM
+    if (contentRef.current) {
+      const headings = Array.from(
+        contentRef.current.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')
+      );
+      const target = headings.find((h) => slugify(h.textContent ?? '') === id);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setActiveId(id);
+      }
+    }
+  }, []);
+
   return (
     <section
       style={{
@@ -701,12 +862,19 @@ export const Tiptap: React.FC<{ data: TiptapData; settings?: TiptapSettings }> =
       } as React.CSSProperties}
       className="w-full py-12 bg-[var(--local-bg)]"
     >
-      <div className="container mx-auto px-6 max-w-3xl">
-        {mode === 'studio' ? (
-          <StudioTiptapEditor data={data} />
-        ) : (
-          <PublicTiptapContent content={data.content ?? ''} />
-        )}
+      <div className="container mx-auto px-4 max-w-6xl">
+        <div className="flex gap-8">
+          {toc.length > 0 && (
+            <DocsSidebar toc={toc} activeId={activeId} onNav={handleNav} />
+          )}
+          <div ref={contentRef} className="flex-1 min-w-0">
+            {isStudio ? (
+              <StudioTiptapEditor data={data} />
+            ) : (
+              <PublicTiptapContent content={data.content ?? ''} />
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -9,7 +9,9 @@ export const FeatureCardSchema = BaseArrayItem.extend({
 });
 
 export const FeatureGridSchema = BaseSectionData.extend({
+  label: z.string().optional().describe('ui:text'),
   sectionTitle: z.string().describe('ui:text'),
+  sectionLead: z.string().optional().describe('ui:textarea'),
   cards: z.array(FeatureCardSchema).describe('ui:list'),
 });
 

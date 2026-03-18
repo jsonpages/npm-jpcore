@@ -8,10 +8,12 @@ export const HeaderSchema = z.object({
   logoText: z.string().describe('ui:text'),
   logoHighlight: z.string().optional().describe('ui:text'),
   logoIconText: z.string().optional().describe('ui:text'),
+  badge: z.string().optional().describe('ui:text'),
   links: z.array(z.object({
     label: z.string().describe('ui:text'),
     href: z.string().describe('ui:text'),
     isCta: z.boolean().default(false).describe('ui:checkbox'),
+    external: z.boolean().default(false).optional().describe('ui:checkbox'),
   })).describe('ui:list'),
 });
 

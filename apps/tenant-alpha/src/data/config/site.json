@@ -28,6 +28,7 @@
       "logoText": "Olon",
       "logoHighlight": "JS",
       "logoIconText": "",
+      "badge": "v1.4.0",
       "links": [
         {
           "label": "Architecture",
@@ -55,25 +56,21 @@
     "id": "global-footer",
     "type": "footer",
     "data": {
-      "brandText": "Json",
-      "brandHighlight": "Pages",
-      "copyright": "© 2026 JsonPages. Source-available · Free to use.",
+      "brandText": "Olon",
+      "brandHighlight": "JS",
+      "copyright": "© 2026 OlonJS · Guido Serio",
       "links": [
         {
           "label": "Docs",
           "href": "/docs"
         },
         {
-          "label": "NPM",
-          "href": "#"
-        },
-        {
           "label": "GitHub",
-          "href": "#"
+          "href": "https://github.com/olonjs/npm-jpcore"
         },
         {
-          "label": "Changelog",
-          "href": "#"
+          "label": "MIT License",
+          "href": "https://github.com/olonjs/npm-jpcore/blob/main/LICENSE"
         }
       ]
     },

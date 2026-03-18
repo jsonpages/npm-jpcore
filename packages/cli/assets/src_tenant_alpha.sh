@@ -596,7 +596,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "@tiptap/extension-link": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.73",
+    "@olonjs/core": "^1.0.74",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
     "react": "^19.0.0",
@@ -1825,18 +1825,18 @@ import { cn } from '@/lib/utils';
 import type { ArchLayersData, ArchLayersSettings, ArchLayerLevel, SyntaxTokenType } from './types';
 
 const layerBgStyles: Record<ArchLayerLevel, string> = {
-  l0: 'bg-[#3b82f6]',
-  l1: 'bg-[rgba(59,130,246,0.6)]',
-  l2: 'bg-[rgba(59,130,246,0.35)]',
+  l0: 'bg-[var(--local-primary)]',
+  l1: 'bg-[var(--local-accent-strong)]',
+  l2: 'bg-[var(--local-accent-soft)]',
 };
 
 const tokenStyles: Record<SyntaxTokenType, string> = {
-  plain: 'text-[#cbd5e1]',
-  keyword: 'text-[#60a5fa]',
-  type: 'text-[#22d3ee]',
-  string: 'text-[#4ade80]',
-  comment: 'text-[#64748b] italic',
-  operator: 'text-[#f472b6]',
+  plain: 'text-[var(--local-demo-text)]',
+  keyword: 'text-[var(--local-accent)]',
+  type: 'text-[var(--local-cyan)]',
+  string: 'text-[var(--local-primary)]',
+  comment: 'text-[var(--local-demo-text-faint)] italic',
+  operator: 'text-[var(--local-accent)]',
 };
 
 export const ArchLayers: React.FC<{ data: ArchLayersData; settings?: ArchLayersSettings }> = ({ data }) => {
@@ -1847,14 +1847,25 @@ export const ArchLayers: React.FC<{ data: ArchLayersData; settings?: ArchLayersS
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary': 'var(--primary)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
+        '--local-accent': 'var(--accent)',
+        '--local-cyan': 'var(--secondary)',
         '--local-border': 'var(--border)',
         '--local-deep': 'var(--background)',
+        '--local-radius-md': 'var(--theme-radius-md)',
+        '--local-radius-lg': 'var(--theme-radius-lg)',
+        '--local-panel-bg': 'var(--demo-surface-soft)',
+        '--local-panel-bar': 'var(--demo-surface)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-accent-soft': 'var(--demo-accent-soft)',
+        '--local-accent-strong': 'var(--demo-accent-strong)',
+        '--local-demo-text': 'var(--demo-text-soft)',
+        '--local-demo-text-faint': 'var(--demo-text-faint)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
       <div className="max-w-[1200px] mx-auto px-8">
         <div className="text-center">
           {data.label && (
@@ -1876,12 +1887,12 @@ export const ArchLayers: React.FC<{ data: ArchLayersData; settings?: ArchLayersS
           {data.layers.map((layer, idx) => (
             <div
               key={layer.id ?? idx}
-              className="group border border-[rgba(255,255,255,0.06)] rounded-[7px] p-8 mb-4 bg-[rgba(255,255,255,0.015)] flex items-start gap-6 transition-all duration-300 hover:border-[rgba(59,130,246,0.2)] hover:translate-x-1.5"
+              className="group border border-[var(--local-panel-border)] rounded-[var(--local-radius-md)] p-8 mb-4 bg-[var(--local-panel-bg)] flex items-start gap-6 transition-all duration-300 hover:border-[var(--local-panel-border-strong)] hover:translate-x-1.5"
               data-jp-item-id={layer.id ?? `legacy-${idx}`}
               data-jp-item-field="layers"
             >
               <div className={cn(
-                'shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-mono text-[0.85rem] font-bold text-white',
+                'shrink-0 w-9 h-9 rounded-[var(--local-radius-md)] flex items-center justify-center font-mono text-[0.85rem] font-bold text-white',
                 layerBgStyles[layer.layerLevel]
               )}>
                 {layer.number}
@@ -1899,8 +1910,8 @@ export const ArchLayers: React.FC<{ data: ArchLayersData; settings?: ArchLayersS
         </div>
         {data.codeLines && data.codeLines.length > 0 && (
           <div className="mt-12 max-w-[740px] mx-auto">
-            <div className="border border-[rgba(255,255,255,0.08)] rounded-[7px] overflow-hidden bg-[var(--local-deep)]">
-              <div className="flex items-center gap-2 px-5 py-3 bg-[rgba(255,255,255,0.03)] border-b border-[rgba(255,255,255,0.06)]">
+            <div className="border border-[var(--local-panel-border)] rounded-[var(--local-radius-md)] overflow-hidden bg-[var(--local-deep)]">
+              <div className="flex items-center gap-2 px-5 py-3 bg-[var(--local-panel-bar)] border-b border-[var(--local-panel-border)]">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
                 <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
                 <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]" />
@@ -1991,12 +2002,20 @@ export const CliSection: React.FC<{ data: CliSectionData; settings?: CliSectionS
         '--local-text':       'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary':    'var(--primary)',
-        '--local-accent':     'var(--color-accent, #60a5fa)',
+        '--local-accent':     'var(--accent)',
         '--local-border':     'var(--border)',
+        '--local-radius-sm':  'var(--theme-radius-sm)',
+        '--local-radius-lg':  'var(--theme-radius-lg)',
+        '--local-panel-bg':   'var(--demo-surface-strong)',
+        '--local-panel-deep': 'var(--demo-surface-deep)',
+        '--local-panel-bar':  'var(--demo-surface)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-text-soft': 'var(--demo-text-soft)',
+        '--local-panel-text-faint': 'var(--demo-text-faint)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border)] to-transparent" />
       <div className="max-w-[1200px] mx-auto px-8 grid grid-cols-2 gap-24 items-center">
 
         {/* LEFT */}
@@ -2023,11 +2042,11 @@ export const CliSection: React.FC<{ data: CliSectionData; settings?: CliSectionS
               {data.steps.map((step, idx) => (
                 <div
                   key={step.id ?? idx}
-                  className="grid grid-cols-[32px_1fr] gap-4 py-6 border-b border-[rgba(255,255,255,0.06)] last:border-b-0 items-start"
+                  className="grid grid-cols-[32px_1fr] gap-4 py-6 border-b border-[var(--local-panel-border)] last:border-b-0 items-start"
                   data-jp-item-id={step.id ?? `legacy-${idx}`}
                   data-jp-item-field="steps"
                 >
-                  <div className="font-display text-[1.25rem] font-black text-[#334155] leading-none mt-0.5">{step.num}</div>
+                  <div className="font-display text-[1.25rem] font-black text-[var(--local-panel-text-faint)] leading-none mt-0.5">{step.num}</div>
                   <div>
                     <div className="font-display font-bold text-[1rem] text-[var(--local-text)] mb-1">{step.title}</div>
                     <p className="text-[0.85rem] text-[var(--local-text-muted)] leading-[1.6]">{step.description}</p>
@@ -2039,30 +2058,30 @@ export const CliSection: React.FC<{ data: CliSectionData; settings?: CliSectionS
         </div>
 
         {/* RIGHT — terminal */}
-        <div className="rounded-[12px] overflow-hidden border border-[rgba(255,255,255,0.10)] shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-          <div className="bg-[#0d1828] px-4 py-2.5 flex items-center gap-1.5 border-b border-[rgba(255,255,255,0.05)]">
+        <div className="rounded-[var(--local-radius-lg)] overflow-hidden border border-[var(--local-panel-border)] shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+          <div className="bg-[var(--local-panel-bar)] px-4 py-2.5 flex items-center gap-1.5 border-b border-[var(--local-panel-border)]">
             <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
             <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
             <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]" />
-            <span className="mx-auto font-mono text-[0.60rem] text-[rgba(255,255,255,0.25)]">Terminal</span>
+            <span className="mx-auto font-mono text-[0.60rem] text-[var(--local-panel-text-faint)]">Terminal</span>
           </div>
-          <div className="bg-[#020508] px-7 py-6 font-mono text-[0.78rem] leading-[2.1] overflow-x-auto">
-            <div><span className="text-[#5c6370] italic"># Step 1 — install CLI globally</span></div>
-            <div><span className="text-[#3b82f6]">$</span> <span className="text-white">npm install -g </span><span className="text-[#98c379]">@jsonpages/cli@latest</span></div>
-            <div><span className="text-[#334155]">added 1 package in 2.3s</span></div>
-            <div><span className="text-[#22c55e]">✓ @jsonpages/cli@1.2.0 installed</span></div>
+          <div className="bg-[var(--local-panel-deep)] px-7 py-6 font-mono text-[0.78rem] leading-[2.1] overflow-x-auto">
+            <div><span className="text-[var(--local-panel-text-faint)] italic"># Step 1 — install CLI globally</span></div>
+            <div><span className="text-[var(--local-accent)]">$</span> <span className="text-[var(--local-text)]">npm install -g </span><span className="text-[var(--local-panel-text-soft)]">@jsonpages/cli@latest</span></div>
+            <div><span className="text-[var(--local-panel-text-faint)]">added 1 package in 2.3s</span></div>
+            <div><span className="text-[var(--local-primary)]">✓ @jsonpages/cli@1.2.0 installed</span></div>
             <div>&nbsp;</div>
-            <div><span className="text-[#5c6370] italic"># Step 2 — scaffold a new tenant</span></div>
-            <div><span className="text-[#3b82f6]">$</span> <span className="text-[#98c379]">npx @jsonpages/cli@latest</span> <span className="text-white">new my-tenant</span></div>
-            <div><span className="text-[#22c55e]">  ✓ src/components/hero/</span></div>
-            <div><span className="text-[#22c55e]">  ✓ src/lib/schemas.ts</span></div>
-            <div><span className="text-[#22c55e]">  ✓ src/lib/ComponentRegistry.tsx</span></div>
-            <div><span className="text-[#22c55e]">  ✓ src/data/pages/home.json</span></div>
-            <div><span className="text-[#22c55e]">  ✓ Done in 1.8s</span></div>
+            <div><span className="text-[var(--local-panel-text-faint)] italic"># Step 2 — scaffold a new tenant</span></div>
+            <div><span className="text-[var(--local-accent)]">$</span> <span className="text-[var(--local-panel-text-soft)]">npx @jsonpages/cli@latest</span> <span className="text-[var(--local-text)]">new my-tenant</span></div>
+            <div><span className="text-[var(--local-primary)]">  ✓ src/components/hero/</span></div>
+            <div><span className="text-[var(--local-primary)]">  ✓ src/lib/schemas.ts</span></div>
+            <div><span className="text-[var(--local-primary)]">  ✓ src/lib/ComponentRegistry.tsx</span></div>
+            <div><span className="text-[var(--local-primary)]">  ✓ src/data/pages/home.json</span></div>
+            <div><span className="text-[var(--local-primary)]">  ✓ Done in 1.8s</span></div>
             <div>&nbsp;</div>
-            <div><span className="text-[#5c6370] italic"># Step 3 — start Studio</span></div>
-            <div><span className="text-[#3b82f6]">$</span> <span className="text-white">cd my-tenant && npm run dev</span></div>
-            <div><span className="text-[#22c55e]">  ➜ Studio ready at </span><span className="text-[#60a5fa]">http://localhost:5173</span><span className="inline-block w-2 h-[1em] bg-[#3b82f6] ml-1 align-text-bottom animate-pulse" /></div>
+            <div><span className="text-[var(--local-panel-text-faint)] italic"># Step 3 — start Studio</span></div>
+            <div><span className="text-[var(--local-accent)]">$</span> <span className="text-[var(--local-text)]">cd my-tenant && npm run dev</span></div>
+            <div><span className="text-[var(--local-primary)]">  ➜ Studio ready at </span><span className="text-[var(--local-accent)]">http://localhost:5173</span><span className="inline-block w-2 h-[1em] bg-[var(--local-primary)] ml-1 align-text-bottom animate-pulse" /></div>
           </div>
         </div>
 
@@ -2122,14 +2141,26 @@ export const CmsIce: React.FC<{ data: CmsIceData; settings?: CmsIceSettings }> =
         '--local-text':       'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary':    'var(--primary)',
-        '--local-accent':     'var(--color-accent, #60a5fa)',
-        '--local-cyan':       'var(--color-secondary, #22d3ee)',
+        '--local-accent':     'var(--accent)',
+        '--local-cyan':       'var(--secondary)',
         '--local-border':     'var(--border)',
         '--local-surface':    'var(--card)',
+        '--local-radius-sm':  'var(--theme-radius-sm)',
+        '--local-radius-md':  'var(--theme-radius-md)',
+        '--local-radius-lg':  'var(--theme-radius-lg)',
+        '--local-panel-bg': 'var(--demo-surface-soft)',
+        '--local-panel-bar': 'var(--demo-surface)',
+        '--local-panel-deep': 'var(--demo-surface-deep)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-panel-text-soft': 'var(--demo-text-soft)',
+        '--local-panel-text-faint': 'var(--demo-text-faint)',
+        '--local-accent-soft': 'var(--demo-accent-soft)',
+        '--local-accent-strong': 'var(--demo-accent-strong)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
       <div className="max-w-[1200px] mx-auto px-8">
 
         {/* Header */}
@@ -2159,66 +2190,66 @@ export const CmsIce: React.FC<{ data: CmsIceData; settings?: CmsIceSettings }> =
         </div>
 
         {/* ICE Mockup — product demo, decorative */}
-        <div className="rounded-[16px] overflow-hidden border border-[rgba(255,255,255,0.10)] shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_60px_120px_rgba(0,0,0,0.7),0_0_80px_rgba(59,130,246,0.08)] mb-16">
+        <div className="rounded-[var(--local-radius-lg)] overflow-hidden border border-[var(--local-panel-border)] shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_60px_120px_rgba(0,0,0,0.7),0_0_80px_rgba(59,130,246,0.08)] mb-16">
           {/* Browser bar */}
-          <div className="bg-[#0d1828] px-4 py-2.5 flex items-center gap-1.5 border-b border-[rgba(255,255,255,0.05)]">
+          <div className="bg-[var(--local-panel-bar)] px-4 py-2.5 flex items-center gap-1.5 border-b border-[var(--local-panel-border)]">
             <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
             <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
             <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]" />
-            <span className="mx-auto font-mono text-[0.62rem] text-[rgba(255,255,255,0.20)] bg-[rgba(255,255,255,0.04)] px-8 py-0.5 rounded">localhost:5173/admin — JsonPages Studio</span>
+            <span className="mx-auto font-mono text-[0.62rem] text-[var(--local-panel-text-faint)] bg-[var(--local-panel-bg)] px-8 py-0.5 rounded-[var(--local-radius-sm)]">localhost:5173/admin — JsonPages Studio</span>
           </div>
           {/* Split */}
-          <div className="grid grid-cols-[1fr_300px] h-[520px] bg-[#060d1b]">
+          <div className="grid grid-cols-[1fr_300px] h-[520px] bg-[var(--local-panel-deep)]">
             {/* Stage */}
             <div className="flex flex-col overflow-hidden">
               {/* Tenant nav sim */}
-              <div className="bg-[rgba(6,13,27,0.96)] px-6 py-3 flex items-center justify-between border-b border-[rgba(255,255,255,0.05)] flex-shrink-0">
+              <div className="bg-[var(--local-panel-bg)] px-6 py-3 flex items-center justify-between border-b border-[var(--local-panel-border)] flex-shrink-0">
                 <div className="flex items-center gap-2 font-display font-bold text-[0.9rem] text-white">
-                  <div className="w-5 h-5 bg-gradient-to-br from-[#3b82f6] to-[#22d3ee] rounded flex items-center justify-center font-mono text-[0.45rem] text-white font-bold">{'{}'}</div>
-                  Json<span className="text-[#60a5fa]">Pages</span>
+                  <div className="w-5 h-5 bg-gradient-to-br from-[var(--local-primary)] to-[var(--local-cyan)] rounded-[var(--local-radius-sm)] flex items-center justify-center font-mono text-[0.45rem] text-white font-bold">{'{}'}</div>
+                  Json<span className="text-[var(--local-accent)]">Pages</span>
                 </div>
-                <div className="flex gap-6 text-[0.68rem] text-[#475569] font-sans">
+                <div className="flex gap-6 text-[0.68rem] text-[var(--local-panel-text-faint)] font-sans">
                   <span>Architecture</span><span>CMS</span><span>Versioning</span><span>Developer</span>
                 </div>
               </div>
               {/* Hero section — selected */}
-              <div className="flex-1 relative p-8 flex flex-col justify-center bg-gradient-to-br from-[#04090f] to-[#071320] outline outline-2 outline-[#3b82f6] -outline-offset-2">
-                <span className="absolute top-2.5 right-2.5 font-mono text-[0.5rem] font-bold uppercase tracking-widest bg-[#3b82f6] text-white px-2 py-0.5">HERO | LOCAL</span>
+              <div className="flex-1 relative p-8 flex flex-col justify-center bg-gradient-to-br from-[var(--local-panel-deep)] to-[var(--local-panel-bg)] outline outline-2 outline-[var(--local-primary)] -outline-offset-2">
+                <span className="absolute top-2.5 right-2.5 font-mono text-[0.5rem] font-bold uppercase tracking-widest bg-[var(--local-primary)] text-white px-2 py-0.5 rounded-[var(--local-radius-sm)]">HERO | LOCAL</span>
                 <div className="font-display font-black text-[2.4rem] leading-none text-white mb-0.5">The Sovereign Shell.</div>
-                <div className="font-display font-black text-[2.4rem] leading-none bg-gradient-to-r from-[#60a5fa] to-[#22d3ee] bg-clip-text text-transparent mb-4">Zero Runtime Overhead.</div>
-                <p className="text-[0.75rem] text-[#475569] leading-[1.65] max-w-[360px] mb-5">The @jsonpages/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface.</p>
+                <div className="font-display font-black text-[2.4rem] leading-none bg-gradient-to-r from-[var(--local-accent)] to-[var(--local-cyan)] bg-clip-text text-transparent mb-4">Zero Runtime Overhead.</div>
+                <p className="text-[0.75rem] text-[var(--local-panel-text-faint)] leading-[1.65] max-w-[360px] mb-5">The @jsonpages/core package is a headless, schema-driven runtime. It handles routing, hydration, and the admin interface.</p>
                 <div className="flex gap-2">
-                  <span className="text-[0.65rem] font-semibold bg-[#3b82f6] text-white px-3.5 py-1.5 rounded-[5px]">Read the Docs</span>
-                  <span className="text-[0.65rem] border border-[rgba(255,255,255,0.15)] text-[#94a3b8] px-3.5 py-1.5 rounded-[5px]">View on NPM</span>
+                  <span className="text-[0.65rem] font-semibold bg-[var(--local-primary)] text-white px-3.5 py-1.5 rounded-[var(--local-radius-md)]">Read the Docs</span>
+                  <span className="text-[0.65rem] border border-[var(--local-panel-border)] text-[var(--local-panel-text-soft)] px-3.5 py-1.5 rounded-[var(--local-radius-md)]">View on NPM</span>
                 </div>
               </div>
               {/* Next section visible but dimmed */}
-              <div className="flex-shrink-0 px-6 py-4 bg-[#0a1628] border-t border-[rgba(255,255,255,0.05)] flex gap-3 opacity-40">
+              <div className="flex-shrink-0 px-6 py-4 bg-[var(--local-panel-bar)] border-t border-[var(--local-panel-border)] flex gap-3 opacity-40">
                 {['The Form Factory', 'The Tenant Protocol', 'The Core Engine'].map((t) => (
-                  <div key={t} className="flex-1 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)] rounded p-2.5">
-                    <div className="w-3.5 h-3.5 rounded bg-[rgba(59,130,246,0.15)] mb-1.5" />
-                    <div className="font-display font-bold text-[0.58rem] text-[#94a3b8]">{t}</div>
+                  <div key={t} className="flex-1 bg-[var(--local-panel-bg)] border border-[var(--local-panel-border)] rounded-[var(--local-radius-sm)] p-2.5">
+                    <div className="w-3.5 h-3.5 rounded-[var(--local-radius-sm)] bg-[var(--local-accent-soft)] mb-1.5" />
+                    <div className="font-display font-bold text-[0.58rem] text-[var(--local-panel-text-soft)]">{t}</div>
                   </div>
                 ))}
               </div>
             </div>
             {/* Inspector */}
-            <div className="bg-[#08121f] border-l border-[rgba(255,255,255,0.06)] flex flex-col overflow-hidden">
-              <div className="px-4 py-3 border-b border-[rgba(255,255,255,0.05)] flex items-start justify-between">
+            <div className="bg-[var(--local-panel-bar)] border-l border-[var(--local-panel-border)] flex flex-col overflow-hidden">
+              <div className="px-4 py-3 border-b border-[var(--local-panel-border)] flex items-start justify-between">
                 <div>
                   <div className="font-display font-bold text-[0.88rem] text-white">Inspector</div>
-                  <div className="flex items-center gap-1.5 mt-0.5 font-mono text-[0.56rem] text-[#3b82f6]">
+                  <div className="flex items-center gap-1.5 mt-0.5 font-mono text-[0.56rem] text-[var(--local-accent)]">
                     <span className="font-bold">■ HERO</span>
-                    <span className="text-[#1e3a5f]">|</span>
-                    <span className="text-[#334155]">LOCAL</span>
+                    <span className="text-[var(--local-panel-text-faint)]">|</span>
+                    <span className="text-[var(--local-panel-text-faint)]">LOCAL</span>
                   </div>
                 </div>
-                <span className="font-mono text-[0.58rem] text-[#3b82f6]">+ Add section</span>
+                <span className="font-mono text-[0.58rem] text-[var(--local-accent)]">+ Add section</span>
               </div>
               {/* Layers */}
-              <div className="border-b border-[rgba(255,255,255,0.05)]">
-                <div className="px-4 py-1.5 font-mono text-[0.54rem] uppercase tracking-widest text-[#1e3a5f] flex justify-between">
-                  <span>Page Layers</span><span className="text-[#334155]">(8)</span>
+              <div className="border-b border-[var(--local-panel-border)]">
+                <div className="px-4 py-1.5 font-mono text-[0.54rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] flex justify-between">
+                  <span>Page Layers</span><span className="text-[var(--local-panel-text-faint)]">(8)</span>
                 </div>
                 {[
                   { type: 'HERO',  label: 'The Sovereign Shell.',    active: true,  opacity: '' },
@@ -2226,11 +2257,11 @@ export const CmsIce: React.FC<{ data: CmsIceData; settings?: CmsIceSettings }> =
                   { type: 'GIT',   label: 'Your content is code.',   active: false, opacity: 'opacity-45' },
                   { type: 'DEVEX', label: 'App.tsx is incredibly thin.', active: false, opacity: 'opacity-35' },
                 ].map(({ type, label, active, opacity }) => (
-                  <div key={type} className={`flex items-center gap-2 px-4 py-1.5 ${active ? 'bg-[rgba(59,130,246,0.08)]' : ''} ${opacity}`}>
-                    <span className="text-[#1e3a5f] text-[0.58rem]">⠿</span>
-                    <span className={`font-mono text-[0.52rem] uppercase tracking-wide w-10 flex-shrink-0 ${active ? 'text-[#3b82f6]' : 'text-[#1e3a5f]'}`}>{type}</span>
-                    <span className={`font-sans text-[0.65rem] flex-1 truncate ${active ? 'text-[#e2e8f0] font-semibold' : 'text-[#475569]'}`}>{label}</span>
-                    <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-[#22c55e]' : 'bg-[#334155] opacity-40'}`} />
+                  <div key={type} className={`flex items-center gap-2 px-4 py-1.5 ${active ? 'bg-[var(--local-accent-soft)]' : ''} ${opacity}`}>
+                    <span className="text-[var(--local-panel-text-faint)] text-[0.58rem]">⠿</span>
+                    <span className={`font-mono text-[0.52rem] uppercase tracking-wide w-10 flex-shrink-0 ${active ? 'text-[var(--local-accent)]' : 'text-[var(--local-panel-text-faint)]'}`}>{type}</span>
+                    <span className={`font-sans text-[0.65rem] flex-1 truncate ${active ? 'text-[var(--local-text)] font-semibold' : 'text-[var(--local-panel-text-soft)]'}`}>{label}</span>
+                    <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-[var(--local-primary)]' : 'bg-[var(--local-panel-border)] opacity-40'}`} />
                   </div>
                 ))}
               </div>
@@ -2242,41 +2273,41 @@ export const CmsIce: React.FC<{ data: CmsIceData; settings?: CmsIceSettings }> =
                   { label: 'Badge',    val: 'Architecture v1.2',         active: false },
                 ].map(({ label, val, active }) => (
                   <div key={label}>
-                    <div className="font-mono text-[0.52rem] uppercase tracking-widest text-[#334155] mb-1">{label}</div>
-                    <div className={`rounded px-2.5 py-1.5 font-mono text-[0.60rem] truncate ${active
-                      ? 'bg-[rgba(59,130,246,0.05)] border border-[rgba(59,130,246,0.45)] text-[#e2e8f0]'
-                      : 'bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.07)] text-[#94a3b8]'}`}
+                    <div className="font-mono text-[0.52rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] mb-1">{label}</div>
+                    <div className={`rounded-[var(--local-radius-sm)] px-2.5 py-1.5 font-mono text-[0.60rem] truncate ${active
+                      ? 'bg-[var(--local-accent-soft)] border border-[var(--local-panel-border-strong)] text-[var(--local-text)]'
+                      : 'bg-[var(--local-panel-bg)] border border-[var(--local-panel-border)] text-[var(--local-panel-text-soft)]'}`}
                     >{val}</div>
                   </div>
                 ))}
                 <div>
-                  <div className="font-mono text-[0.52rem] uppercase tracking-widest text-[#334155] mb-1 flex justify-between">
-                    <span>CTAs (2)</span><span className="text-[#3b82f6]">+ Add Item</span>
+                  <div className="font-mono text-[0.52rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] mb-1 flex justify-between">
+                    <span>CTAs (2)</span><span className="text-[var(--local-accent)]">+ Add Item</span>
                   </div>
-                  <div className="border border-[rgba(255,255,255,0.05)] rounded overflow-hidden">
+                  <div className="border border-[var(--local-panel-border)] rounded-[var(--local-radius-sm)] overflow-hidden">
                     {[{ lbl: 'Read the Docs', tag: 'primary' }, { lbl: 'View on NPM', tag: 'secondary' }].map(({ lbl, tag }) => (
-                      <div key={lbl} className="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-[rgba(255,255,255,0.04)] last:border-b-0">
-                        <span className="text-[#3b82f6] text-[0.52rem]">▸</span>
-                        <span className="font-sans text-[0.60rem] text-[#475569] flex-1">{lbl}</span>
-                        <span className="font-mono text-[0.48rem] px-1 py-0.5 rounded bg-[rgba(59,130,246,0.08)] text-[#60a5fa]">{tag}</span>
+                      <div key={lbl} className="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-[var(--local-panel-border)] last:border-b-0">
+                        <span className="text-[var(--local-accent)] text-[0.52rem]">▸</span>
+                        <span className="font-sans text-[0.60rem] text-[var(--local-panel-text-soft)] flex-1">{lbl}</span>
+                        <span className="font-mono text-[0.48rem] px-1 py-0.5 rounded-[var(--local-radius-sm)] bg-[var(--local-accent-soft)] text-[var(--local-accent)]">{tag}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
               {/* Bottom bar */}
-              <div className="px-4 py-2.5 border-t border-[rgba(255,255,255,0.05)] bg-[#060e1c] flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
-                <span className="font-mono text-[0.52rem] text-[#475569]">All Changes Saved</span>
-                <div className="flex items-center gap-1.5 ml-1 font-mono text-[0.52rem] text-[#334155]">
-                  <div className="w-5 h-2.5 bg-[#3b82f6] rounded-full relative flex-shrink-0">
+              <div className="px-4 py-2.5 border-t border-[var(--local-panel-border)] bg-[var(--local-panel-bg)] flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--local-primary)]" />
+                <span className="font-mono text-[0.52rem] text-[var(--local-panel-text-soft)]">All Changes Saved</span>
+                <div className="flex items-center gap-1.5 ml-1 font-mono text-[0.52rem] text-[var(--local-panel-text-faint)]">
+                  <div className="w-5 h-2.5 bg-[var(--local-primary)] rounded-full relative flex-shrink-0">
                     <div className="absolute top-[1.5px] right-[1.5px] w-[9px] h-[9px] bg-white rounded-full" />
                   </div>
                   Autosave
                 </div>
                 <div className="ml-auto flex gap-1.5">
-                  <span className="font-mono text-[0.50rem] px-1.5 py-0.5 rounded border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.12)] text-[#60a5fa] flex items-center gap-1">⬡ HTML</span>
-                  <span className="font-mono text-[0.50rem] px-1.5 py-0.5 rounded border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] text-[#94a3b8] opacity-50">{'{}'} JSON</span>
+                  <span className="font-mono text-[0.50rem] px-1.5 py-0.5 rounded-[var(--local-radius-sm)] border border-[var(--local-panel-border-strong)] bg-[var(--local-accent-soft)] text-[var(--local-accent)] flex items-center gap-1">⬡ HTML</span>
+                  <span className="font-mono text-[0.50rem] px-1.5 py-0.5 rounded-[var(--local-radius-sm)] border border-[var(--local-panel-border)] bg-[var(--local-panel-bg)] text-[var(--local-panel-text-soft)] opacity-50">{'{}'} JSON</span>
                 </div>
               </div>
             </div>
@@ -2289,11 +2320,11 @@ export const CmsIce: React.FC<{ data: CmsIceData; settings?: CmsIceSettings }> =
             {data.callouts.map((c, idx) => (
               <div
                 key={c.id ?? idx}
-                className="border border-[rgba(255,255,255,0.06)] rounded-[12px] p-8 bg-[rgba(255,255,255,0.015)] hover:border-[rgba(59,130,246,0.2)] hover:bg-[rgba(59,130,246,0.03)] transition-all duration-200"
+                className="border border-[var(--local-panel-border)] rounded-[var(--local-radius-lg)] p-8 bg-[var(--local-panel-bg)] hover:border-[var(--local-panel-border-strong)] hover:bg-[var(--local-accent-soft)] transition-all duration-200"
                 data-jp-item-id={c.id ?? `legacy-${idx}`}
                 data-jp-item-field="callouts"
               >
-                <div className="w-9 h-9 rounded-[8px] bg-[rgba(59,130,246,0.10)] flex items-center justify-center text-[1.1rem] mb-4">
+                <div className="w-9 h-9 rounded-[var(--local-radius-md)] bg-[var(--local-accent-soft)] flex items-center justify-center text-[1.1rem] mb-4">
                   {c.icon}
                 </div>
                 <h4 className="font-display font-bold text-[1.05rem] text-[var(--local-text)] mb-2">{c.title}</h4>
@@ -2364,7 +2395,7 @@ export const CodeBlock: React.FC<{ data: CodeBlockData; settings?: CodeBlockSett
         '--local-border': 'var(--border)',
         '--local-text': 'var(--foreground)',
         '--local-accent': 'var(--primary)',
-        '--local-radius-lg': 'var(--radius)',
+        '--local-radius-lg': 'var(--theme-radius-lg)',
       } as React.CSSProperties}
       className="py-16 bg-[var(--local-surface)]"
     >
@@ -2458,13 +2489,19 @@ export const CtaBanner: React.FC<{ data: CtaBannerData; settings?: CtaBannerSett
         '--local-text':       'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary':    'var(--primary)',
-        '--local-accent':     'var(--color-accent, #60a5fa)',
-        '--local-cyan':       'var(--color-secondary, #22d3ee)',
+        '--local-accent':     'var(--accent)',
+        '--local-cyan':       'var(--secondary)',
+        '--local-radius-md':  'var(--theme-radius-md)',
+        '--local-radius-lg':  'var(--theme-radius-lg)',
+        '--local-panel-bg':   'var(--demo-surface-deep)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-accent-soft': 'var(--demo-accent-soft)',
       } as React.CSSProperties}
       className="relative py-28 bg-[var(--local-bg)] overflow-hidden text-center"
     >
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[48px] h-[2px] bg-gradient-to-r from-[var(--local-primary)] to-[var(--local-cyan)]" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] bg-[radial-gradient(circle,rgba(59,130,246,0.06)_0%,transparent_60%)] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] bg-[radial-gradient(circle,var(--local-accent-soft)_0%,transparent_60%)] pointer-events-none" />
       <div className="relative max-w-[960px] mx-auto px-8">
         <h2
           className="font-display text-[clamp(3rem,7vw,6.5rem)] font-black text-[var(--local-text)] leading-[1.0] tracking-tight mb-6"
@@ -2482,11 +2519,11 @@ export const CtaBanner: React.FC<{ data: CtaBannerData; settings?: CtaBannerSett
         )}
         {data.cliCommand && (
           <div
-            className="inline-flex items-center gap-4 bg-[rgba(0,0,0,0.5)] border border-[rgba(255,255,255,0.12)] rounded-[12px] px-6 py-4 font-mono text-[0.88rem] text-[var(--local-text-muted)] mb-10"
+            className="inline-flex items-center gap-4 bg-[var(--local-panel-bg)] border border-[var(--local-panel-border)] rounded-[var(--local-radius-lg)] px-6 py-4 font-mono text-[0.88rem] text-[var(--local-text-muted)] mb-10"
             data-jp-field="cliCommand"
           >
             <span className="text-[var(--local-primary)]">$</span>
-            <span className="text-white">{data.cliCommand}</span>
+            <span className="text-[var(--local-text)]">{data.cliCommand}</span>
           </div>
         )}
         {data.ctas && data.ctas.length > 0 && (
@@ -2498,10 +2535,10 @@ export const CtaBanner: React.FC<{ data: CtaBannerData; settings?: CtaBannerSett
                 data-jp-item-id={cta.id ?? `legacy-${idx}`}
                 data-jp-item-field="ctas"
                 className={cn(
-                  'inline-flex items-center gap-2 px-9 py-3.5 rounded-[7px] font-semibold text-[1rem] transition-all duration-200 no-underline',
+                  'inline-flex items-center gap-2 px-9 py-3.5 rounded-[var(--local-radius-md)] font-semibold text-[1rem] transition-all duration-200 no-underline',
                   cta.variant === 'primary'
-                    ? 'bg-[var(--local-primary)] text-white hover:brightness-110 hover:-translate-y-0.5 shadow-[0_0_32px_rgba(59,130,246,0.25)]'
-                    : 'bg-transparent text-[var(--local-text)] border border-[rgba(255,255,255,0.12)] hover:border-[rgba(255,255,255,0.3)] hover:bg-[rgba(255,255,255,0.04)]'
+                    ? 'bg-[var(--local-primary)] text-white hover:brightness-110 hover:-translate-y-0.5 shadow-[0_0_32px_var(--local-accent-soft)]'
+                    : 'bg-transparent text-[var(--local-text)] border border-[var(--local-panel-border)] hover:border-[var(--local-panel-border-strong)] hover:bg-[var(--local-accent-soft)]'
                 )}
               >
                 {cta.label}
@@ -2566,10 +2603,10 @@ const APP_TSX_LINES = [
 ] as const;
 
 const tokenClass: Record<string, string> = {
-  cm: 'text-[#5c6370] italic',
-  kw: 'text-[#c678dd]',
-  fn: 'text-[#61afef]',
-  pl: 'text-[#cbd5e1]',
+  cm: 'text-[var(--local-panel-text-faint)] italic',
+  kw: 'text-[var(--local-accent)]',
+  fn: 'text-[var(--local-primary)]',
+  pl: 'text-[var(--local-panel-text-soft)]',
 };
 
 export const Devex: React.FC<{ data: DevexData; settings?: DevexSettings }> = ({ data }) => {
@@ -2580,12 +2617,19 @@ export const Devex: React.FC<{ data: DevexData; settings?: DevexSettings }> = ({
         '--local-text':       'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary':    'var(--primary)',
-        '--local-accent':     'var(--color-accent, #60a5fa)',
+        '--local-accent':     'var(--accent)',
         '--local-border':     'var(--border)',
+        '--local-radius-lg':  'var(--theme-radius-lg)',
+        '--local-panel-bg':   'var(--demo-surface)',
+        '--local-panel-deep': 'var(--demo-surface-deep)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-panel-text-soft': 'var(--demo-text-soft)',
+        '--local-panel-text-faint': 'var(--demo-text-faint)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
       <div className="max-w-[1200px] mx-auto px-8 grid grid-cols-2 gap-24 items-center">
 
         {/* LEFT */}
@@ -2612,11 +2656,11 @@ export const Devex: React.FC<{ data: DevexData; settings?: DevexSettings }> = ({
               {data.features.map((f, idx) => (
                 <li
                   key={f.id ?? idx}
-                  className="flex items-center gap-3.5 text-[0.9rem] text-[var(--local-text-muted)] py-3.5 border-b border-[rgba(255,255,255,0.06)] last:border-b-0 hover:text-[var(--local-text)] hover:pl-1.5 transition-all"
+                  className="flex items-center gap-3.5 text-[0.9rem] text-[var(--local-text-muted)] py-3.5 border-b border-[var(--local-panel-border)] last:border-b-0 hover:text-[var(--local-text)] hover:pl-1.5 transition-all"
                   data-jp-item-id={f.id ?? `legacy-${idx}`}
                   data-jp-item-field="features"
                 >
-                  <svg className="w-4 h-4 text-[#22c55e] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-[var(--local-primary)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   {f.text}
@@ -2627,14 +2671,14 @@ export const Devex: React.FC<{ data: DevexData; settings?: DevexSettings }> = ({
         </div>
 
         {/* RIGHT — code window */}
-        <div className="rounded-[12px] overflow-hidden border border-[rgba(255,255,255,0.10)] shadow-[0_30px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(59,130,246,0.06)]">
-          <div className="bg-[#0d1828] px-4 py-2.5 flex items-center gap-1.5 border-b border-[rgba(255,255,255,0.05)]">
+        <div className="rounded-[var(--local-radius-lg)] overflow-hidden border border-[var(--local-panel-border)] shadow-[0_30px_60px_rgba(0,0,0,0.5),0_0_40px_rgba(59,130,246,0.06)]">
+          <div className="bg-[var(--local-panel-bg)] px-4 py-2.5 flex items-center gap-1.5 border-b border-[var(--local-panel-border)]">
             <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
             <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
             <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]" />
-            <span className="ml-auto font-mono text-[0.62rem] text-[rgba(255,255,255,0.25)]">src/App.tsx</span>
+            <span className="ml-auto font-mono text-[0.62rem] text-[var(--local-panel-text-faint)]">src/App.tsx</span>
           </div>
-          <div className="bg-[#030609] px-8 py-7 font-mono text-[0.80rem] leading-[2] overflow-x-auto">
+          <div className="bg-[var(--local-panel-deep)] px-8 py-7 font-mono text-[0.80rem] leading-[2] overflow-x-auto">
             {APP_TSX_LINES.map((ln, i) => (
               <div key={i}>
                 <span className={tokenClass[ln.t]}>{ln.c || '\u00A0'}</span>
@@ -2702,7 +2746,7 @@ function renderInline(text: string): React.ReactNode {
 
 /* ── block renderer ───────────────────────────────────────── */
 function DocBlock({ block, idx }: { block: Block; idx: number }) {
-  const inlineCls = '[&_strong]:text-[var(--local-text)] [&_strong]:font-semibold [&_code]:font-mono [&_code]:text-[0.84em] [&_code]:bg-[rgba(255,255,255,0.07)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-[3px] [&_code]:text-[var(--local-accent)]';
+  const inlineCls = '[&_strong]:text-[var(--local-text)] [&_strong]:font-semibold [&_code]:font-mono [&_code]:text-[0.84em] [&_code]:bg-[var(--local-inline-code-bg)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-[var(--local-radius-sm)] [&_code]:text-[var(--local-accent)]';
 
   switch (block.type) {
     case 'heading':
@@ -2713,16 +2757,16 @@ function DocBlock({ block, idx }: { block: Block; idx: number }) {
 
     case 'code':
       return (
-        <div key={idx} className="mb-6 rounded-[10px] overflow-hidden border border-[rgba(255,255,255,0.08)] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+        <div key={idx} className="mb-6 rounded-[var(--local-radius-lg)] overflow-hidden border border-[var(--local-panel-border)] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
           {block.codeFilename && (
-            <div className="bg-[#0d1828] px-4 py-2.5 flex items-center gap-2 border-b border-[rgba(255,255,255,0.05)]">
+            <div className="bg-[var(--local-panel-bar)] px-4 py-2.5 flex items-center gap-2 border-b border-[var(--local-panel-border)]">
               <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]" />
-              <span className="ml-3 font-mono text-[0.65rem] text-[rgba(255,255,255,0.28)]">{block.codeFilename}</span>
+              <span className="ml-3 font-mono text-[0.65rem] text-[var(--local-panel-text-faint)]">{block.codeFilename}</span>
             </div>
           )}
-          <pre className="bg-[#020508] px-6 py-5 font-mono text-[0.78rem] leading-[1.9] overflow-x-auto text-[#cbd5e1] m-0 whitespace-pre">
+          <pre className="bg-[var(--local-panel-deep)] px-6 py-5 font-mono text-[0.78rem] leading-[1.9] overflow-x-auto text-[var(--local-panel-text-soft)] m-0 whitespace-pre">
             <code>{block.content}</code>
           </pre>
         </div>
@@ -2742,17 +2786,17 @@ function DocBlock({ block, idx }: { block: Block; idx: number }) {
 
     case 'table':
       return (
-        <div key={idx} className="mb-6 overflow-hidden rounded-[10px] border border-[rgba(255,255,255,0.06)]">
+        <div key={idx} className="mb-6 overflow-hidden rounded-[var(--local-radius-lg)] border border-[var(--local-panel-border)]">
           <table className="w-full text-[0.88rem]">
             <thead>
-              <tr className="bg-[rgba(59,130,246,0.06)] border-b border-[rgba(255,255,255,0.06)]">
+              <tr className="bg-[var(--local-accent-soft)] border-b border-[var(--local-panel-border)]">
                 <th className="px-5 py-3 text-left font-mono text-[0.66rem] uppercase tracking-widest text-[var(--local-accent)] w-[200px]">Cosa</th>
                 <th className="px-5 py-3 text-left font-mono text-[0.66rem] uppercase tracking-widest text-[var(--local-accent)]">Azione</th>
               </tr>
             </thead>
             <tbody>
               {(block.rows ?? []).map((row, i) => (
-                <tr key={row.id ?? i} className="border-b border-[rgba(255,255,255,0.04)] last:border-0 hover:bg-[rgba(59,130,246,0.025)] transition-colors">
+                <tr key={row.id ?? i} className="border-b border-[var(--local-panel-border)] last:border-0 hover:bg-[var(--local-accent-soft)] transition-colors">
                   <td className={`px-5 py-4 text-[var(--local-text)] font-semibold align-top text-[0.88rem] ${inlineCls}`}>
                     {renderInline(row.col1)}
                   </td>
@@ -2768,7 +2812,7 @@ function DocBlock({ block, idx }: { block: Block; idx: number }) {
 
     case 'callout':
       return (
-        <div key={idx} className={`mb-5 rounded-[10px] border border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.05)] px-5 py-4 ${inlineCls}`}>
+        <div key={idx} className={`mb-5 rounded-[var(--local-radius-lg)] border border-[var(--local-panel-border-strong)] bg-[var(--local-accent-soft)] px-5 py-4 ${inlineCls}`}>
           <div className="flex items-start gap-3">
             <span className="text-[var(--local-accent)] font-mono text-[0.9rem] flex-shrink-0 mt-0.5 leading-none">ℹ</span>
             <p className="text-[0.90rem] text-[var(--local-text-muted)] leading-[1.8] m-0">{renderInline(block.content)}</p>
@@ -2778,9 +2822,9 @@ function DocBlock({ block, idx }: { block: Block; idx: number }) {
 
     case 'note':
       return (
-        <div key={idx} className={`mb-5 rounded-[10px] border border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.04)] px-5 py-4 ${inlineCls}`}>
+        <div key={idx} className={`mb-5 rounded-[var(--local-radius-lg)] border border-[var(--local-panel-border-strong)] bg-[var(--local-accent-soft)] px-5 py-4 ${inlineCls}`}>
           <div className="flex items-start gap-3">
-            <span className="text-[#f87171] font-mono text-[0.9rem] flex-shrink-0 mt-0.5 leading-none">⚠</span>
+            <span className="text-[var(--local-accent)] font-mono text-[0.9rem] flex-shrink-0 mt-0.5 leading-none">⚠</span>
             <p className="text-[0.90rem] text-[var(--local-text-muted)] leading-[1.8] m-0">{renderInline(block.content)}</p>
           </div>
         </div>
@@ -2834,22 +2878,33 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
         '--local-text':       'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary':    'var(--primary)',
-        '--local-accent':     'var(--color-accent, #60a5fa)',
-        '--local-cyan':       'var(--color-secondary, #22d3ee)',
+        '--local-accent':     'var(--accent)',
+        '--local-cyan':       'var(--secondary)',
         '--local-border':     'var(--border)',
         '--local-surface':    'var(--card)',
+        '--local-radius-sm':  'var(--theme-radius-sm)',
+        '--local-radius-md':  'var(--theme-radius-md)',
+        '--local-radius-lg':  'var(--theme-radius-lg)',
+        '--local-panel-bar':  'var(--demo-surface)',
+        '--local-panel-deep': 'var(--demo-surface-deep)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-panel-text-soft': 'var(--demo-text-soft)',
+        '--local-panel-text-faint': 'var(--demo-text-faint)',
+        '--local-accent-soft': 'var(--demo-accent-soft)',
+        '--local-inline-code-bg': 'var(--demo-surface)',
       } as React.CSSProperties}
       className="relative z-0 min-h-screen bg-[var(--local-bg)]"
     >
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.15)] to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
 
       {/* ── Page hero ──────────────────────────────────── */}
       <div className="max-w-[1200px] mx-auto px-8 pt-28 pb-12">
         <div
-          className="inline-flex items-center gap-2 bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.18)] px-3.5 py-1 rounded-full font-mono text-[0.66rem] font-semibold text-[var(--local-accent)] mb-5 tracking-widest uppercase"
+          className="inline-flex items-center gap-2 bg-[var(--local-accent-soft)] border border-[var(--local-panel-border-strong)] px-3.5 py-1 rounded-full font-mono text-[0.66rem] font-semibold text-[var(--local-accent)] mb-5 tracking-widest uppercase"
           data-jp-field="version"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--local-primary)]" />
           {data.version ?? 'v1.2'}
         </div>
         <h1
@@ -2866,7 +2921,7 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
             {data.pageSubtitle}
           </p>
         )}
-        <div className="mt-8 h-px bg-gradient-to-r from-[rgba(59,130,246,0.3)] via-[rgba(59,130,246,0.06)] to-transparent" />
+        <div className="mt-8 h-px bg-gradient-to-r from-[var(--local-panel-border-strong)] via-[var(--local-accent-soft)] to-transparent" />
       </div>
 
       {/* ── Sidebar + Content ──────────────────────────── */}
@@ -2885,11 +2940,11 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
                     href={`#${group.anchor}`}
                     onClick={scrollTo(group.anchor)}
                     className={`
-                      flex items-center gap-2 px-3 py-2 rounded-[6px] font-display font-bold text-[0.80rem]
+                      flex items-center gap-2 px-3 py-2 rounded-[var(--local-radius-md)] font-display font-bold text-[0.80rem]
                       transition-all duration-150 no-underline
                       ${groupActive
-                        ? 'text-[var(--local-text)] bg-[rgba(255,255,255,0.04)]'
-                        : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[rgba(255,255,255,0.03)]'}
+                        ? 'text-[var(--local-text)] bg-[var(--local-panel-bar)]'
+                        : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[var(--local-panel-bar)]'}
                       ${activeAnchor === group.anchor ? 'border-l-2 border-[var(--local-primary)] pl-[10px] text-[var(--local-accent)]' : ''}
                     `}
                   >
@@ -2903,14 +2958,14 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
                         href={`#${s.anchor}`}
                         onClick={scrollTo(s.anchor)}
                         className={`
-                          flex items-center gap-2.5 pl-[22px] pr-3 py-1.5 rounded-[5px]
+                          flex items-center gap-2.5 pl-[22px] pr-3 py-1.5 rounded-[var(--local-radius-sm)]
                           font-sans text-[0.76rem] transition-all duration-120 no-underline ml-0.5
                           ${activeAnchor === s.anchor
-                            ? 'text-[var(--local-accent)] font-semibold bg-[rgba(59,130,246,0.07)]'
-                            : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[rgba(255,255,255,0.025)]'}
+                            ? 'text-[var(--local-accent)] font-semibold bg-[var(--local-accent-soft)]'
+                            : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[var(--local-panel-bar)]'}
                         `}
                       >
-                        <span className={`w-[5px] h-[5px] rounded-full flex-shrink-0 transition-colors ${activeAnchor === s.anchor ? 'bg-[var(--local-accent)]' : 'bg-[rgba(255,255,255,0.12)]'}`} />
+                        <span className={`w-[5px] h-[5px] rounded-full flex-shrink-0 transition-colors ${activeAnchor === s.anchor ? 'bg-[var(--local-accent)]' : 'bg-[var(--local-panel-border)]'}`} />
                         {s.title}
                       </a>
                     ))}
@@ -2921,7 +2976,7 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
           </nav>
 
           {/* Divider + back to top */}
-          <div className="mt-6 pt-5 border-t border-[rgba(255,255,255,0.05)]">
+          <div className="mt-6 pt-5 border-t border-[var(--local-panel-border)]">
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="flex items-center gap-2 font-mono text-[0.62rem] uppercase tracking-widest text-[var(--local-text-muted)] hover:text-[var(--local-accent)] transition-colors px-3"
@@ -2938,7 +2993,7 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
 
               {/* Group header */}
               <div id={group.anchor} className="scroll-mt-[88px] flex items-center gap-3 mb-2">
-                <div className="w-7 h-7 rounded-[7px] bg-[rgba(59,130,246,0.12)] border border-[rgba(59,130,246,0.18)] flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 rounded-[var(--local-radius-md)] bg-[var(--local-accent-soft)] border border-[var(--local-panel-border-strong)] flex items-center justify-center flex-shrink-0">
                   <span className="font-mono text-[var(--local-accent)] text-[0.66rem] font-bold">{gi + 1}</span>
                 </div>
                 <h2
@@ -2949,7 +3004,7 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
                   {group.label}
                 </h2>
               </div>
-              <div className="h-px bg-[rgba(255,255,255,0.05)] mb-10 ml-10" />
+              <div className="h-px bg-[var(--local-panel-border)] mb-10 ml-10" />
 
               {/* Sections */}
               {(group.sections ?? []).map((section, si) => (
@@ -2963,7 +3018,7 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
                   {/* Section title */}
                   <div className="flex items-center gap-2.5 mb-6">
                     {section.tag && (
-                      <span className="font-mono text-[0.60rem] uppercase tracking-widest text-[var(--local-accent)] bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.15)] px-2 py-0.5 rounded-[4px] flex-shrink-0">
+                      <span className="font-mono text-[0.60rem] uppercase tracking-widest text-[var(--local-accent)] bg-[var(--local-accent-soft)] border border-[var(--local-panel-border-strong)] px-2 py-0.5 rounded-[var(--local-radius-sm)] flex-shrink-0">
                         {section.tag}
                       </span>
                     )}
@@ -2982,7 +3037,7 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
 
                   {/* Section divider */}
                   {si < (group.sections ?? []).length - 1 && (
-                    <div className="mt-12 h-px bg-[rgba(255,255,255,0.035)]" />
+                    <div className="mt-12 h-px bg-[var(--local-panel-border)]" />
                   )}
                 </div>
               ))}
@@ -2991,9 +3046,9 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
 
           {/* EOF marker */}
           <div className="mt-16 flex items-center gap-4 opacity-30">
-            <div className="flex-1 h-px bg-[rgba(255,255,255,0.08)]" />
+            <div className="flex-1 h-px bg-[var(--local-panel-border)]" />
             <span className="font-mono text-[0.60rem] uppercase tracking-widest text-[var(--local-text-muted)]">End of document</span>
-            <div className="flex-1 h-px bg-[rgba(255,255,255,0.08)]" />
+            <div className="flex-1 h-px bg-[var(--local-panel-border)]" />
           </div>
         </div>
 
@@ -3080,8 +3135,8 @@ export const FeatureGrid: React.FC<{ data: FeatureGridData; settings?: FeatureGr
     '--local-surface': 'var(--card)',
     '--local-surface-alt': 'var(--muted)',
     '--local-border': 'var(--border)',
-    '--local-radius-lg': 'var(--radius)',
-    '--local-radius-md': 'calc(var(--radius) - 2px)',
+    '--local-radius-lg': 'var(--theme-radius-lg)',
+    '--local-radius-md': 'var(--theme-radius-md)',
   } as React.CSSProperties;
 
   return (
@@ -3175,8 +3230,8 @@ export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> =
         '--local-bg': 'var(--background)',
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
-        '--local-border': 'rgba(255,255,255,0.05)',
+        '--local-accent': 'var(--accent)',
+        '--local-border': 'color-mix(in oklch, var(--foreground) 8%, transparent)',
       } as React.CSSProperties}
       className="py-12 border-t border-[var(--local-border)] bg-[var(--local-bg)] relative z-0"
     >
@@ -3262,13 +3317,22 @@ export const GitSection: React.FC<{ data: GitSectionData; settings?: GitSectionS
         '--local-text':       'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary':    'var(--primary)',
-        '--local-accent':     'var(--color-accent, #60a5fa)',
-        '--local-cyan':       'var(--color-secondary, #22d3ee)',
+        '--local-accent':     'var(--accent)',
+        '--local-cyan':       'var(--secondary)',
         '--local-border':     'var(--border)',
+        '--local-radius-sm':  'var(--theme-radius-sm)',
+        '--local-radius-lg':  'var(--theme-radius-lg)',
+        '--local-panel-bg': 'var(--demo-surface-soft)',
+        '--local-panel-bar': 'var(--demo-surface)',
+        '--local-panel-deep': 'var(--demo-surface-deep)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-panel-text-soft': 'var(--demo-text-soft)',
+        '--local-panel-text-faint': 'var(--demo-text-faint)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
       <div className="max-w-[1200px] mx-auto px-8 grid grid-cols-2 gap-24 items-center">
 
         {/* LEFT — copy */}
@@ -3300,7 +3364,7 @@ export const GitSection: React.FC<{ data: GitSectionData; settings?: GitSectionS
               {data.points.map((p, idx) => (
                 <li
                   key={p.id ?? idx}
-                  className="flex items-start gap-3.5 text-[0.9rem] text-[var(--local-text-muted)] py-3.5 border-b border-[rgba(255,255,255,0.06)] last:border-b-0 hover:text-[var(--local-text)] transition-colors leading-[1.5]"
+                  className="flex items-start gap-3.5 text-[0.9rem] text-[var(--local-text-muted)] py-3.5 border-b border-[var(--local-panel-border)] last:border-b-0 hover:text-[var(--local-text)] transition-colors leading-[1.5]"
                   data-jp-item-id={p.id ?? `legacy-${idx}`}
                   data-jp-item-field="points"
                 >
@@ -3313,21 +3377,21 @@ export const GitSection: React.FC<{ data: GitSectionData; settings?: GitSectionS
         </div>
 
         {/* RIGHT — git diff panel (decorative, content-driven commits) */}
-        <div className="rounded-[12px] overflow-hidden border border-[rgba(255,255,255,0.10)] shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-          <div className="bg-[#0d1828] px-4 py-2.5 flex items-center gap-1.5 border-b border-[rgba(255,255,255,0.05)]">
+        <div className="rounded-[var(--local-radius-lg)] overflow-hidden border border-[var(--local-panel-border)] shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+          <div className="bg-[var(--local-panel-bar)] px-4 py-2.5 flex items-center gap-1.5 border-b border-[var(--local-panel-border)]">
             <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
             <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
             <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]" />
-            <span className="ml-auto font-mono text-[0.62rem] text-[rgba(255,255,255,0.25)]">src/data/pages/home.json</span>
+            <span className="ml-auto font-mono text-[0.62rem] text-[var(--local-panel-text-faint)]">src/data/pages/home.json</span>
           </div>
           {/* Tabs */}
-          <div className="bg-[#0a1624] border-b border-[rgba(255,255,255,0.05)] flex">
-            <div className="font-mono text-[0.60rem] px-4 py-2 text-white border-b-2 border-[#3b82f6]">Changes</div>
-            <div className="font-mono text-[0.60rem] px-4 py-2 text-[#475569]">History</div>
-            <div className="font-mono text-[0.60rem] px-4 py-2 text-[#475569]">Blame</div>
+          <div className="bg-[var(--local-panel-bg)] border-b border-[var(--local-panel-border)] flex">
+            <div className="font-mono text-[0.60rem] px-4 py-2 text-[var(--local-text)] border-b-2 border-[var(--local-primary)]">Changes</div>
+            <div className="font-mono text-[0.60rem] px-4 py-2 text-[var(--local-panel-text-faint)]">History</div>
+            <div className="font-mono text-[0.60rem] px-4 py-2 text-[var(--local-panel-text-faint)]">Blame</div>
           </div>
           {/* Diff */}
-          <div className="bg-[#030609] px-4 py-4 font-mono text-[0.73rem] leading-[1.9] overflow-x-auto">
+          <div className="bg-[var(--local-panel-deep)] px-4 py-4 font-mono text-[0.73rem] leading-[1.9] overflow-x-auto">
             {[
               { t: 'ctx', g: '12', s: ' ', c: '  "type": "hero",'                                },
               { t: 'ctx', g: '13', s: ' ', c: '  "data": {'                                       },
@@ -3338,28 +3402,28 @@ export const GitSection: React.FC<{ data: GitSectionData; settings?: GitSectionS
               { t: 'ctx', g: '16', s: ' ', c: '    "badge": "Architecture v1.2",'                },
               { t: 'ctx', g: '17', s: ' ', c: '  }'                                               },
             ].map((ln, i) => (
-              <div key={i} className={`flex gap-3 px-1 rounded-[2px] ${
-                ln.t === 'add' ? 'bg-[rgba(34,197,94,0.07)]' :
-                ln.t === 'del' ? 'bg-[rgba(239,68,68,0.07)]' :
+              <div key={i} className={`flex gap-3 px-1 rounded-[var(--local-radius-sm)] ${
+                ln.t === 'add' ? 'bg-[var(--local-panel-bg)]' :
+                ln.t === 'del' ? 'bg-[var(--local-panel-bg)]' :
                 'opacity-45'}`}
               >
-                <span className="text-[#334155] min-w-[18px] text-right select-none">{ln.g}</span>
-                <span className={`min-w-[12px] ${ln.t === 'add' ? 'text-[#22c55e]' : ln.t === 'del' ? 'text-[#ef4444]' : 'text-[#334155]'}`}>{ln.s}</span>
-                <span className={`whitespace-pre ${ln.t === 'add' ? 'text-[#86efac]' : ln.t === 'del' ? 'text-[#fca5a5]' : 'text-[#cbd5e1]'}`}>{ln.c}</span>
+                <span className="text-[var(--local-panel-text-faint)] min-w-[18px] text-right select-none">{ln.g}</span>
+                <span className={`min-w-[12px] ${ln.t === 'add' ? 'text-[var(--local-primary)]' : ln.t === 'del' ? 'text-[var(--local-accent)]' : 'text-[var(--local-panel-text-faint)]'}`}>{ln.s}</span>
+                <span className={`whitespace-pre ${ln.t === 'add' ? 'text-[var(--local-primary)]' : ln.t === 'del' ? 'text-[var(--local-accent)]' : 'text-[var(--local-panel-text-soft)]'}`}>{ln.c}</span>
               </div>
             ))}
           </div>
           {/* Commits */}
-          <div className="bg-[#050d1c] border-t border-[rgba(255,255,255,0.05)] px-4 py-3 flex flex-col gap-2.5">
+          <div className="bg-[var(--local-panel-bg)] border-t border-[var(--local-panel-border)] px-4 py-3 flex flex-col gap-2.5">
             {[
               { hash: 'a3f9c12', msg: 'feat(home): update hero headline copy',      time: '2m ago',  op: 1   },
               { hash: '8b21e04', msg: 'content(home): add 3 metrics to hero',        time: '1h ago',  op: 0.6 },
               { hash: 'cc70a91', msg: 'feat(home): initial page structure',           time: '2d ago',  op: 0.4 },
             ].map(({ hash, msg, time, op }) => (
               <div key={hash} className="flex items-center gap-3" style={{ opacity: op }}>
-                <span className="font-mono text-[0.58rem] text-[#3b82f6] min-w-[52px]">{hash}</span>
-                <span className="font-sans text-[0.70rem] text-[#475569] flex-1 truncate">{msg}</span>
-                <span className="font-mono text-[0.56rem] text-[#334155]">{time}</span>
+                <span className="font-mono text-[0.58rem] text-[var(--local-accent)] min-w-[52px]">{hash}</span>
+                <span className="font-sans text-[0.70rem] text-[var(--local-panel-text-soft)] flex-1 truncate">{msg}</span>
+                <span className="font-mono text-[0.56rem] text-[var(--local-panel-text-faint)]">{time}</span>
               </div>
             ))}
           </div>
@@ -3430,12 +3494,13 @@ export const Header: React.FC<{
   return (
     <header
       style={{
-        '--local-bg': 'rgba(6,13,27,0.92)',
+        '--local-bg': 'color-mix(in oklch, var(--background) 88%, transparent)',
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary': 'var(--primary)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
-        '--local-border': 'rgba(59,130,246,0.08)',
+        '--local-accent': 'var(--accent)',
+        '--local-border': 'color-mix(in oklch, var(--primary) 18%, transparent)',
+        '--local-radius-md': 'var(--theme-radius-md)',
       } as React.CSSProperties}
       className={cn(
         'w-full py-4 transition-all duration-300 z-0',
@@ -3474,7 +3539,7 @@ export const Header: React.FC<{
               className={cn(
                 'no-underline text-sm font-medium transition-colors',
                 item.isCta
-                  ? 'bg-[var(--local-primary)] text-white px-5 py-2 rounded-lg font-semibold hover:brightness-110 hover:-translate-y-px'
+                  ? 'bg-[var(--local-primary)] text-white px-5 py-2 rounded-[var(--local-radius-md)] font-semibold hover:brightness-110 hover:-translate-y-px'
                   : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)]'
               )}
             >
@@ -3589,19 +3654,26 @@ export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ da
         '--local-text':        'var(--foreground)',
         '--local-text-muted':  'var(--muted-foreground)',
         '--local-primary':     'var(--primary)',
-        '--local-accent':      'var(--color-accent, #60a5fa)',
-        '--local-cyan':        'var(--color-secondary, #22d3ee)',
+        '--local-accent':      'var(--accent)',
+        '--local-cyan':        'var(--secondary)',
         '--local-border':      'var(--border)',
         '--local-surface':     'var(--card)',
         '--local-radius-sm':   'var(--theme-radius-sm)',
         '--local-radius-md':   'var(--theme-radius-md)',
         '--local-radius-lg':   'var(--theme-radius-lg)',
+        '--local-panel-bg':    'var(--demo-surface)',
+        '--local-panel-deep':  'var(--demo-surface-deep)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-panel-text-soft': 'var(--demo-text-soft)',
+        '--local-panel-text-faint': 'var(--demo-text-faint)',
+        '--local-accent-soft': 'var(--demo-accent-soft)',
       } as React.CSSProperties}
       className="jp-hero relative min-h-screen flex items-center overflow-hidden pt-24 pb-0 bg-[var(--local-bg)]"
     >
       {/* Background glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[650px] bg-[radial-gradient(ellipse_at_50%_0%,rgba(59,130,246,0.13),transparent_65%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[image:linear-gradient(rgba(59,130,246,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.04)_1px,transparent_1px)] bg-[size:80px_80px] [mask-image:radial-gradient(ellipse_at_50%_0%,black_25%,transparent_75%)] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[650px] bg-[radial-gradient(ellipse_at_50%_0%,var(--local-accent-soft),transparent_65%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[image:linear-gradient(var(--local-accent-soft)_1px,transparent_1px),linear-gradient(90deg,var(--local-accent-soft)_1px,transparent_1px)] bg-[size:80px_80px] [mask-image:radial-gradient(ellipse_at_50%_0%,black_25%,transparent_75%)] pointer-events-none" />
 
       <div className="relative z-0 max-w-[1200px] mx-auto px-8 w-full">
         <div className="grid grid-cols-2 gap-16 items-center pb-20">
@@ -3610,10 +3682,10 @@ export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ da
           <div>
             {data.badge && (
               <div
-                className="inline-flex items-center gap-2 bg-[rgba(59,130,246,0.10)] border border-[rgba(59,130,246,0.20)] px-4 py-1.5 rounded-full text-[0.70rem] font-mono font-semibold text-[var(--local-accent)] mb-8 tracking-widest uppercase jp-animate-in"
+                className="inline-flex items-center gap-2 bg-[var(--local-accent-soft)] border border-[var(--local-panel-border-strong)] px-4 py-1.5 rounded-full text-[0.70rem] font-mono font-semibold text-[var(--local-accent)] mb-8 tracking-widest uppercase jp-animate-in"
                 data-jp-field="badge"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] jp-pulse-dot" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--local-primary)] jp-pulse-dot" />
                 {data.badge}
               </div>
             )}
@@ -3656,8 +3728,8 @@ export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ da
                     className={cn(
                       'inline-flex items-center gap-2 px-7 py-3 rounded-[var(--local-radius-md)] font-semibold text-[0.95rem] transition-all duration-200 no-underline',
                       cta.variant === 'primary'
-                        ? 'bg-[var(--local-primary)] text-white hover:brightness-110 hover:-translate-y-0.5 shadow-[0_0_24px_rgba(59,130,246,0.25)]'
-                        : 'bg-transparent text-[var(--local-text)] border border-[rgba(255,255,255,0.12)] hover:border-[rgba(255,255,255,0.3)] hover:bg-[rgba(255,255,255,0.04)]'
+                        ? 'bg-[var(--local-primary)] text-white hover:brightness-110 hover:-translate-y-0.5 shadow-[0_0_24px_var(--local-accent-soft)]'
+                        : 'bg-transparent text-[var(--local-text)] border border-[var(--local-panel-border)] hover:border-[var(--local-panel-border-strong)] hover:bg-[var(--local-panel-bg)]'
                     )}
                   >
                     {cta.label}
@@ -3667,7 +3739,7 @@ export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ da
             )}
 
             {data.metrics && data.metrics.length > 0 && (
-              <div className="flex gap-10 mt-14 pt-10 border-t border-[rgba(255,255,255,0.06)] flex-wrap jp-animate-in jp-d4">
+              <div className="flex gap-10 mt-14 pt-10 border-t border-[var(--local-panel-border)] flex-wrap jp-animate-in jp-d4">
                 {data.metrics.map((metric, idx) => (
                   <div
                     key={(metric as { id?: string }).id ?? idx}
@@ -3687,102 +3759,102 @@ export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ da
           </div>
 
           {/* RIGHT — ICE mini-mockup */}
-          <div className="jp-animate-in jp-d2 rounded-[var(--local-radius-lg)] overflow-hidden border border-[rgba(255,255,255,0.10)] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_40px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(59,130,246,0.08)]">
+          <div className="jp-animate-in jp-d2 rounded-[var(--local-radius-lg)] overflow-hidden border border-[var(--local-panel-border)] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_40px_80px_rgba(0,0,0,0.6),0_0_60px_rgba(59,130,246,0.08)]">
             {/* Browser bar */}
-            <div className="bg-[#0f1923] px-3 py-2.5 flex items-center gap-1.5 border-b border-[rgba(255,255,255,0.05)]">
+            <div className="bg-[var(--local-panel-bg)] px-3 py-2.5 flex items-center gap-1.5 border-b border-[var(--local-panel-border)]">
               <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]" />
-              <span className="mx-auto font-mono text-[0.60rem] text-[rgba(255,255,255,0.20)] bg-[rgba(255,255,255,0.04)] px-3 py-0.5 rounded-[var(--local-radius-sm)]">localhost:5173 · Studio</span>
+              <span className="mx-auto font-mono text-[0.60rem] text-[var(--local-panel-text-faint)] bg-[var(--local-panel-deep)] px-3 py-0.5 rounded-[var(--local-radius-sm)]">localhost:5173 · Studio</span>
             </div>
             {/* Split: canvas + inspector */}
-            <div className="grid grid-cols-[1fr_260px] h-[360px] bg-[#060d1b]">
+            <div className="grid grid-cols-[1fr_260px] h-[360px] bg-[var(--local-panel-deep)]">
               {/* Canvas */}
-              <div className="relative bg-gradient-to-br from-[#04090f] to-[#07112a] p-8 flex flex-col justify-center">
-                <span className="absolute top-2 right-2 font-mono text-[0.48rem] font-bold tracking-widest uppercase bg-[#3b82f6] text-white px-1.5 py-0.5">HERO | LOCAL</span>
-                <div className="absolute inset-0 border-2 border-[#3b82f6] pointer-events-none" />
-                <div className="inline-flex items-center gap-1.5 bg-[rgba(255,255,255,0.07)] border border-[rgba(255,255,255,0.10)] rounded-full px-2.5 py-1 font-mono text-[0.52rem] text-[#94a3b8] mb-3 w-fit">
-                  <span className="w-1 h-1 rounded-full bg-[#22c55e]" />
+              <div className="relative bg-gradient-to-br from-[var(--local-panel-deep)] to-[var(--local-panel-bg)] p-8 flex flex-col justify-center">
+                <span className="absolute top-2 right-2 font-mono text-[0.48rem] font-bold tracking-widest uppercase bg-[var(--local-primary)] text-white px-1.5 py-0.5 rounded-[var(--local-radius-sm)]">HERO | LOCAL</span>
+                <div className="absolute inset-0 border-2 border-[var(--local-primary)] pointer-events-none" />
+                <div className="inline-flex items-center gap-1.5 bg-[var(--local-panel-bg)] border border-[var(--local-panel-border)] rounded-full px-2.5 py-1 font-mono text-[0.52rem] text-[var(--local-panel-text-soft)] mb-3 w-fit">
+                  <span className="w-1 h-1 rounded-full bg-[var(--local-primary)]" />
                   {data.badge ?? 'Architecture v1.2'}
                 </div>
                 <div className="font-display font-black text-[1.5rem] leading-none text-white mb-0.5">
                   {data.title}
                 </div>
                 {data.titleHighlight && (
-                  <div className="font-display font-black text-[1.5rem] leading-none bg-gradient-to-r from-[#60a5fa] to-[#22d3ee] bg-clip-text text-transparent mb-3">
+                  <div className="font-display font-black text-[1.5rem] leading-none bg-gradient-to-r from-[var(--local-accent)] to-[var(--local-cyan)] bg-clip-text text-transparent mb-3">
                     {data.titleHighlight}
                   </div>
                 )}
-                <p className="text-[0.65rem] text-[#475569] leading-[1.6] max-w-[220px] mb-3">
+                <p className="text-[0.65rem] text-[var(--local-panel-text-faint)] leading-[1.6] max-w-[220px] mb-3">
                   {data.description?.slice(0, 100)}…
                 </p>
                 <div className="flex gap-1.5">
-                  <span className="text-[0.58rem] font-semibold bg-[#3b82f6] text-white px-2.5 py-1 rounded-[var(--local-radius-sm)]">Read the Docs</span>
-                  <span className="text-[0.58rem] border border-[rgba(255,255,255,0.15)] text-[#94a3b8] px-2.5 py-1 rounded-[var(--local-radius-sm)]">View on NPM</span>
+                  <span className="text-[0.58rem] font-semibold bg-[var(--local-primary)] text-white px-2.5 py-1 rounded-[var(--local-radius-sm)]">Read the Docs</span>
+                  <span className="text-[0.58rem] border border-[var(--local-panel-border)] text-[var(--local-panel-text-soft)] px-2.5 py-1 rounded-[var(--local-radius-sm)]">View on NPM</span>
                 </div>
-                <div className="flex gap-4 mt-3 pt-3 border-t border-[rgba(255,255,255,0.05)]">
+                <div className="flex gap-4 mt-3 pt-3 border-t border-[var(--local-panel-border)]">
                   {(data.metrics ?? []).map((m, i) => (
                     <div key={i}>
                       <div className="font-display font-black text-[1rem] text-white leading-none">{m.val}</div>
-                      <div className="font-mono text-[0.44rem] uppercase tracking-widest text-[#334155] mt-0.5">{m.label}</div>
+                      <div className="font-mono text-[0.44rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] mt-0.5">{m.label}</div>
                     </div>
                   ))}
                 </div>
               </div>
               {/* Inspector */}
-              <div className="bg-[#08121f] border-l border-[rgba(255,255,255,0.06)] flex flex-col">
-                <div className="px-3.5 py-2.5 border-b border-[rgba(255,255,255,0.05)] flex items-start justify-between">
+              <div className="bg-[var(--local-panel-bg)] border-l border-[var(--local-panel-border)] flex flex-col">
+                <div className="px-3.5 py-2.5 border-b border-[var(--local-panel-border)] flex items-start justify-between">
                   <div>
                     <div className="font-display font-bold text-[0.80rem] text-white">Inspector</div>
-                    <div className="flex items-center gap-1.5 mt-0.5 font-mono text-[0.54rem] text-[#3b82f6]">
+                    <div className="flex items-center gap-1.5 mt-0.5 font-mono text-[0.54rem] text-[var(--local-accent)]">
                       <span className="font-bold">■ HERO</span>
-                      <span className="text-[#1e3a5f]">|</span>
-                      <span className="text-[#334155]">LOCAL</span>
+                      <span className="text-[var(--local-panel-text-faint)]">|</span>
+                      <span className="text-[var(--local-panel-text-faint)]">LOCAL</span>
                     </div>
                   </div>
-                  <span className="font-mono text-[0.55rem] text-[#3b82f6]">+ Add section</span>
+                  <span className="font-mono text-[0.55rem] text-[var(--local-accent)]">+ Add section</span>
                 </div>
                 {/* Layers */}
-                <div className="border-b border-[rgba(255,255,255,0.05)]">
-                  <div className="px-3.5 py-1.5 font-mono text-[0.50rem] uppercase tracking-widest text-[#1e3a5f] flex justify-between">
-                    <span>Page Layers</span><span className="text-[#334155]">(8)</span>
+                <div className="border-b border-[var(--local-panel-border)]">
+                  <div className="px-3.5 py-1.5 font-mono text-[0.50rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] flex justify-between">
+                    <span>Page Layers</span><span className="text-[var(--local-panel-text-faint)]">(8)</span>
                   </div>
-                  <div className="flex items-center gap-2 px-3.5 py-1.5 bg-[rgba(59,130,246,0.08)]">
-                    <span className="font-mono text-[0.50rem] uppercase tracking-wide text-[#3b82f6] w-9">HERO</span>
-                    <span className="font-sans text-[0.60rem] text-[#e2e8f0] font-semibold flex-1 truncate">{data.title}</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
+                  <div className="flex items-center gap-2 px-3.5 py-1.5 bg-[var(--local-accent-soft)]">
+                    <span className="font-mono text-[0.50rem] uppercase tracking-wide text-[var(--local-accent)] w-9">HERO</span>
+                    <span className="font-sans text-[0.60rem] text-[var(--local-text)] font-semibold flex-1 truncate">{data.title}</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--local-primary)]" />
                   </div>
                   <div className="flex items-center gap-2 px-3.5 py-1.5 opacity-50">
-                    <span className="font-mono text-[0.50rem] uppercase tracking-wide text-[#1e3a5f] w-9">SOC</span>
-                    <span className="font-sans text-[0.60rem] text-[#334155] flex-1 truncate">Separation of Concerns</span>
+                    <span className="font-mono text-[0.50rem] uppercase tracking-wide text-[var(--local-panel-text-faint)] w-9">SOC</span>
+                    <span className="font-sans text-[0.60rem] text-[var(--local-panel-text-faint)] flex-1 truncate">Separation of Concerns</span>
                   </div>
                   <div className="flex items-center gap-2 px-3.5 py-1.5 opacity-35">
-                    <span className="font-mono text-[0.50rem] uppercase tracking-wide text-[#1e3a5f] w-9">CMS</span>
-                    <span className="font-sans text-[0.60rem] text-[#334155] flex-1 truncate">In-Context Editing</span>
+                    <span className="font-mono text-[0.50rem] uppercase tracking-wide text-[var(--local-panel-text-faint)] w-9">CMS</span>
+                    <span className="font-sans text-[0.60rem] text-[var(--local-panel-text-faint)] flex-1 truncate">In-Context Editing</span>
                   </div>
                 </div>
                 {/* Fields */}
                 <div className="flex-1 px-3.5 py-3 flex flex-col gap-2.5 overflow-hidden">
                   <div>
-                    <div className="font-mono text-[0.50rem] uppercase tracking-widest text-[#334155] mb-1">Title</div>
-                    <div className="bg-[rgba(59,130,246,0.05)] border border-[rgba(59,130,246,0.45)] rounded-[var(--local-radius-sm)] px-2 py-1.5 font-mono text-[0.58rem] text-[#e2e8f0] truncate">{data.title}</div>
+                    <div className="font-mono text-[0.50rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] mb-1">Title</div>
+                    <div className="bg-[var(--local-accent-soft)] border border-[var(--local-panel-border-strong)] rounded-[var(--local-radius-sm)] px-2 py-1.5 font-mono text-[0.58rem] text-[var(--local-text)] truncate">{data.title}</div>
                   </div>
                   <div>
-                    <div className="font-mono text-[0.50rem] uppercase tracking-widest text-[#334155] mb-1">Subtitle</div>
-                    <div className="bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.07)] rounded-[var(--local-radius-sm)] px-2 py-1.5 font-mono text-[0.58rem] text-[#94a3b8] truncate">{data.titleHighlight}</div>
+                    <div className="font-mono text-[0.50rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] mb-1">Subtitle</div>
+                    <div className="bg-[var(--local-panel-bg)] border border-[var(--local-panel-border)] rounded-[var(--local-radius-sm)] px-2 py-1.5 font-mono text-[0.58rem] text-[var(--local-panel-text-soft)] truncate">{data.titleHighlight}</div>
                   </div>
                   <div>
-                    <div className="font-mono text-[0.50rem] uppercase tracking-widest text-[#334155] mb-1">Badge</div>
-                    <div className="bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.07)] rounded-[var(--local-radius-sm)] px-2 py-1.5 font-mono text-[0.58rem] text-[#94a3b8] truncate">{data.badge}</div>
+                    <div className="font-mono text-[0.50rem] uppercase tracking-widest text-[var(--local-panel-text-faint)] mb-1">Badge</div>
+                    <div className="bg-[var(--local-panel-bg)] border border-[var(--local-panel-border)] rounded-[var(--local-radius-sm)] px-2 py-1.5 font-mono text-[0.58rem] text-[var(--local-panel-text-soft)] truncate">{data.badge}</div>
                   </div>
                 </div>
                 {/* Bottom bar */}
-                <div className="px-3.5 py-2 border-t border-[rgba(255,255,255,0.05)] bg-[#060e1c] flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
-                  <span className="font-mono text-[0.50rem] text-[#475569]">All Changes Saved</span>
+                <div className="px-3.5 py-2 border-t border-[var(--local-panel-border)] bg-[var(--local-panel-bg)] flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--local-primary)]" />
+                  <span className="font-mono text-[0.50rem] text-[var(--local-panel-text-soft)]">All Changes Saved</span>
                   <div className="ml-auto flex gap-1.5">
-                    <span className="font-mono text-[0.48rem] px-1.5 py-0.5 rounded-[var(--local-radius-sm)] border border-[rgba(59,130,246,0.3)] bg-[rgba(59,130,246,0.12)] text-[#60a5fa]">⬡ HTML</span>
-                    <span className="font-mono text-[0.48rem] px-1.5 py-0.5 rounded-[var(--local-radius-sm)] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] text-[#94a3b8] opacity-50">{ } JSON</span>
+                    <span className="font-mono text-[0.48rem] px-1.5 py-0.5 rounded-[var(--local-radius-sm)] border border-[var(--local-panel-border-strong)] bg-[var(--local-accent-soft)] text-[var(--local-accent)]">⬡ HTML</span>
+                    <span className="font-mono text-[0.48rem] px-1.5 py-0.5 rounded-[var(--local-radius-sm)] border border-[var(--local-panel-border)] bg-[var(--local-panel-bg)] text-[var(--local-panel-text-soft)] opacity-50">{ } JSON</span>
                   </div>
                 </div>
               </div>
@@ -3850,6 +3922,7 @@ export const ImageBreak: React.FC<{ data: ImageBreakData; settings?: ImageBreakS
         '--local-bg': 'var(--background)',
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
+        '--local-surface-overlay': 'color-mix(in oklch, var(--background) 78%, transparent)',
       } as React.CSSProperties}
       className="relative z-0 bg-[var(--local-bg)]"
     >
@@ -3864,10 +3937,10 @@ export const ImageBreak: React.FC<{ data: ImageBreakData; settings?: ImageBreakS
             />
             {data.caption && (
               <div
-                className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-sm px-6 py-4"
+                className="absolute bottom-0 inset-x-0 bg-[var(--local-surface-overlay)] backdrop-blur-sm px-6 py-4"
                 data-jp-field="caption"
               >
-                <p className="text-sm text-zinc-300 italic">{data.caption}</p>
+                <p className="text-sm text-[var(--local-text-muted)] italic">{data.caption}</p>
               </div>
             )}
           </div>
@@ -3928,13 +4001,19 @@ export const PaSection: React.FC<{ data: PaSectionData; settings?: PaSectionSett
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary': 'var(--primary)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
+        '--local-accent': 'var(--accent)',
         '--local-deep': 'var(--background)',
+        '--local-radius-md': 'var(--theme-radius-md)',
+        '--local-radius-lg': 'var(--theme-radius-lg)',
+        '--local-panel-bg': 'var(--demo-surface-soft)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-accent-soft': 'var(--demo-accent-soft)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
       <div className="max-w-[1200px] mx-auto px-8">
         {data.label && (
           <div className="jp-section-label inline-flex items-center gap-2 text-[0.72rem] font-bold uppercase tracking-[0.12em] text-[var(--local-accent)] mb-4" data-jp-field="label">
@@ -3960,7 +4039,7 @@ export const PaSection: React.FC<{ data: PaSectionData; settings?: PaSectionSett
                 {data.badges.map((badge, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 bg-[rgba(34,197,94,0.08)] border border-[rgba(34,197,94,0.2)] text-[#4ade80] px-3 py-1.5 rounded-md text-[0.78rem] font-semibold"
+                    className="inline-flex items-center gap-1.5 bg-[var(--local-accent-soft)] border border-[var(--local-panel-border-strong)] text-[var(--local-accent)] px-3 py-1.5 rounded-[var(--local-radius-md)] text-[0.78rem] font-semibold"
                     data-jp-item-id={(badge as { id?: string }).id ?? `legacy-${idx}`}
                     data-jp-item-field="badges"
                   >
@@ -3970,7 +4049,7 @@ export const PaSection: React.FC<{ data: PaSectionData; settings?: PaSectionSett
               </div>
             )}
           </div>
-          <div className="border border-[rgba(255,255,255,0.06)] rounded-lg p-12 bg-[rgba(255,255,255,0.02)] text-center">
+          <div className="border border-[var(--local-panel-border)] rounded-[var(--local-radius-lg)] p-12 bg-[var(--local-panel-bg)] text-center">
             {data.engines && data.engines.length >= 2 && (
               <div className="flex items-center justify-center gap-6 mb-8">
                 {data.engines.map((engine, idx) => (
@@ -3981,8 +4060,8 @@ export const PaSection: React.FC<{ data: PaSectionData; settings?: PaSectionSett
                     <div
                       className={
                         engine.variant === 'tailwind'
-                          ? 'px-6 py-4 rounded-xl font-bold text-[0.95rem] border bg-[rgba(59,130,246,0.08)] border-[rgba(59,130,246,0.2)] text-[#60a5fa]'
-                          : 'px-6 py-4 rounded-xl font-bold text-[0.95rem] border bg-[rgba(34,197,94,0.08)] border-[rgba(34,197,94,0.2)] text-[#4ade80]'
+                          ? 'px-6 py-4 rounded-[var(--local-radius-md)] font-bold text-[0.95rem] border bg-[var(--local-accent-soft)] border-[var(--local-panel-border-strong)] text-[var(--local-accent)]'
+                          : 'px-6 py-4 rounded-[var(--local-radius-md)] font-bold text-[0.95rem] border bg-[var(--local-panel-bg)] border-[var(--local-panel-border)] text-[var(--local-primary)]'
                       }
                       data-jp-item-id={(engine as { id?: string }).id ?? `legacy-${idx}`}
                       data-jp-item-field="engines"
@@ -3994,7 +4073,7 @@ export const PaSection: React.FC<{ data: PaSectionData; settings?: PaSectionSett
               </div>
             )}
             {data.codeSnippet && (
-              <div className="font-mono text-[0.85rem] text-[var(--local-text-muted)] bg-[var(--local-deep)] p-4 rounded-lg text-left border border-[rgba(255,255,255,0.04)]" data-jp-field="codeSnippet">
+              <div className="font-mono text-[0.85rem] text-[var(--local-text-muted)] bg-[var(--local-deep)] p-4 rounded-[var(--local-radius-lg)] text-left border border-[var(--local-panel-border)]" data-jp-field="codeSnippet">
                 <pre className="whitespace-pre-wrap m-0">{data.codeSnippet}</pre>
                 <div className="mt-4 text-[0.75rem] text-center opacity-50">
                   Same JSON. Different Render Engine.
@@ -4085,7 +4164,7 @@ export const Philosophy: React.FC<{ data: PhilosophyData; settings?: PhilosophyS
         '--local-bg': 'var(--background)',
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
+        '--local-accent': 'var(--accent)',
         '--local-primary': 'var(--primary)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
@@ -4156,15 +4235,15 @@ import { Icon, isIconName } from '@/lib/IconResolver';
 import type { PillarsGridData, PillarsGridSettings, PillarIconVariant, PillarTagVariant } from './types';
 
 const iconVariantStyles: Record<PillarIconVariant, string> = {
-  split: 'bg-[rgba(59,130,246,0.1)] text-[#60a5fa]',
-  registry: 'bg-[rgba(34,211,238,0.1)] text-[#22d3ee]',
-  federation: 'bg-[rgba(168,85,247,0.1)] text-[#c084fc]',
+  split: 'bg-[var(--local-accent-soft)] text-[var(--local-accent)]',
+  registry: 'bg-[var(--local-cyan-soft)] text-[var(--local-cyan)]',
+  federation: 'bg-[var(--local-panel-bg)] text-[var(--local-primary)]',
 };
 
 const tagVariantStyles: Record<PillarTagVariant, string> = {
-  core: 'bg-[rgba(59,130,246,0.1)] text-[#60a5fa]',
-  pattern: 'bg-[rgba(34,211,238,0.1)] text-[#22d3ee]',
-  enterprise: 'bg-[rgba(168,85,247,0.1)] text-[#c084fc]',
+  core: 'bg-[var(--local-accent-soft)] text-[var(--local-accent)]',
+  pattern: 'bg-[var(--local-cyan-soft)] text-[var(--local-cyan)]',
+  enterprise: 'bg-[var(--local-panel-bg)] text-[var(--local-primary)]',
 };
 
 export const PillarsGrid: React.FC<{ data: PillarsGridData; settings?: PillarsGridSettings }> = ({ data }) => {
@@ -4175,12 +4254,20 @@ export const PillarsGrid: React.FC<{ data: PillarsGridData; settings?: PillarsGr
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary': 'var(--primary)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
+        '--local-accent': 'var(--accent)',
+        '--local-cyan': 'var(--secondary)',
         '--local-border': 'var(--border)',
+        '--local-radius-md': 'var(--theme-radius-md)',
+        '--local-radius-lg': 'var(--theme-radius-lg)',
+        '--local-panel-bg': 'var(--demo-surface-soft)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-accent-soft': 'var(--demo-accent-soft)',
+        '--local-cyan-soft': 'color-mix(in oklch, var(--secondary) 14%, transparent)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.15)] to-transparent" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
       <div className="max-w-[1200px] mx-auto px-8">
         {data.label && (
           <div className="jp-section-label inline-flex items-center gap-2 text-[0.72rem] font-bold uppercase tracking-[0.12em] text-[var(--local-accent)] mb-4" data-jp-field="label">
@@ -4200,13 +4287,13 @@ export const PillarsGrid: React.FC<{ data: PillarsGridData; settings?: PillarsGr
           {data.pillars.map((pillar, idx) => (
             <div
               key={pillar.id ?? idx}
-              className="jp-pillar-card group relative border border-[rgba(255,255,255,0.06)] rounded-lg p-10 bg-[rgba(255,255,255,0.015)] transition-all duration-300 overflow-hidden hover:border-[rgba(59,130,246,0.2)] hover:-translate-y-1 hover:bg-[rgba(59,130,246,0.03)]"
+              className="jp-pillar-card group relative border border-[var(--local-panel-border)] rounded-[var(--local-radius-lg)] p-10 bg-[var(--local-panel-bg)] transition-all duration-300 overflow-hidden hover:border-[var(--local-panel-border-strong)] hover:-translate-y-1 hover:bg-[var(--local-accent-soft)]"
               data-jp-item-id={pillar.id ?? `legacy-${idx}`}
               data-jp-item-field="pillars"
             >
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[var(--local-primary)] to-[#22d3ee] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[var(--local-primary)] to-[var(--local-cyan)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className={cn(
-                'w-12 h-12 rounded-xl flex items-center justify-center mb-6 text-xl font-bold',
+                'w-12 h-12 rounded-[var(--local-radius-md)] flex items-center justify-center mb-6 text-xl font-bold',
                 iconVariantStyles[pillar.iconVariant]
               )}>
                 {pillar.icon && isIconName(pillar.icon) ? (
@@ -4288,10 +4375,10 @@ import { cn } from '@/lib/utils';
 import type { ProblemStatementData, ProblemStatementSettings, SiloBlockVariant } from './types';
 
 const variantStyles: Record<SiloBlockVariant, string> = {
-  red: 'bg-[rgba(239,68,68,0.08)] border-[rgba(239,68,68,0.3)] text-[#f87171]',
-  amber: 'bg-[rgba(245,158,11,0.08)] border-[rgba(245,158,11,0.3)] text-[#fbbf24]',
-  green: 'bg-[rgba(34,197,94,0.08)] border-[rgba(34,197,94,0.3)] text-[#4ade80]',
-  blue: 'bg-[rgba(59,130,246,0.08)] border-[rgba(59,130,246,0.3)] text-[#60a5fa]',
+  red: 'bg-[var(--local-panel-bg)] border-[var(--local-panel-border)] text-[var(--local-text-muted)]',
+  amber: 'bg-[var(--local-panel-bg)] border-[var(--local-panel-border)] text-[var(--local-text-muted)]',
+  green: 'bg-[var(--local-accent-soft)] border-[var(--local-panel-border-strong)] text-[var(--local-accent)]',
+  blue: 'bg-[var(--local-accent-soft)] border-[var(--local-panel-border-strong)] text-[var(--local-accent)]',
 };
 
 export const ProblemStatement: React.FC<{ data: ProblemStatementData; settings?: ProblemStatementSettings }> = ({ data }) => {
@@ -4303,12 +4390,19 @@ export const ProblemStatement: React.FC<{ data: ProblemStatementData; settings?:
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-border': 'var(--border)',
+        '--local-radius-md': 'var(--theme-radius-md)',
+        '--local-radius-lg': 'var(--theme-radius-lg)',
+        '--local-panel-bg': 'var(--demo-surface-soft)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-accent': 'var(--accent)',
+        '--local-accent-soft': 'var(--demo-accent-soft)',
       } as React.CSSProperties}
       className="jp-problem relative z-0 py-28 bg-gradient-to-b from-[var(--local-bg)] to-[var(--local-surface)]"
     >
       <div className="max-w-[1200px] mx-auto px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div className="relative h-[360px] border border-[rgba(255,255,255,0.06)] rounded-lg bg-[rgba(255,255,255,0.02)] overflow-hidden flex items-center justify-center">
+          <div className="relative h-[360px] border border-[var(--local-panel-border)] rounded-[var(--local-radius-lg)] bg-[var(--local-panel-bg)] overflow-hidden flex items-center justify-center">
             <div className="text-center p-8">
               {data.siloGroups.map((group, gIdx) => (
                 <div
@@ -4322,7 +4416,7 @@ export const ProblemStatement: React.FC<{ data: ProblemStatementData; settings?:
                       <span
                         key={(block as { id?: string }).id ?? bIdx}
                         className={cn(
-                          'inline-block px-4 py-2 rounded-lg text-[0.8rem] font-semibold border',
+                          'inline-block px-4 py-2 rounded-[var(--local-radius-md)] text-[0.8rem] font-semibold border',
                           variantStyles[block.variant]
                         )}
                         data-jp-item-id={(block as { id?: string }).id ?? `legacy-${bIdx}`}
@@ -4423,8 +4517,17 @@ export const ProductTriad: React.FC<{ data: ProductTriadData; settings?: Product
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary': 'var(--primary)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
+        '--local-accent': 'var(--accent)',
         '--local-border': 'var(--border)',
+        '--local-radius-sm': 'var(--theme-radius-sm)',
+        '--local-radius-md': 'var(--theme-radius-md)',
+        '--local-radius-lg': 'var(--theme-radius-lg)',
+        '--local-panel-bg': 'var(--demo-surface-soft)',
+        '--local-panel-bg-featured': 'var(--demo-accent-soft)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-panel-hover': 'var(--demo-accent-soft)',
+        '--local-panel-text-soft': 'var(--demo-text-soft)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
@@ -4450,10 +4553,10 @@ export const ProductTriad: React.FC<{ data: ProductTriadData; settings?: Product
             <div
               key={product.id ?? idx}
               className={cn(
-                'relative border rounded-lg p-10 transition-all duration-300 hover:-translate-y-1',
+                'relative border rounded-[var(--local-radius-lg)] p-10 transition-all duration-300 hover:-translate-y-1',
                 product.featured
-                  ? 'border-[rgba(59,130,246,0.3)] bg-gradient-to-b from-[rgba(59,130,246,0.06)] to-[rgba(59,130,246,0.01)] hover:border-[rgba(59,130,246,0.4)]'
-                  : 'border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.015)] hover:border-[rgba(59,130,246,0.2)]'
+                  ? 'border-[var(--local-panel-border-strong)] bg-[var(--local-panel-bg-featured)] hover:border-[var(--local-accent)]'
+                  : 'border-[var(--local-panel-border)] bg-[var(--local-panel-bg)] hover:border-[var(--local-panel-border-strong)]'
               )}
               data-jp-item-id={product.id ?? `legacy-${idx}`}
               data-jp-item-field="products"
@@ -4477,14 +4580,14 @@ export const ProductTriad: React.FC<{ data: ProductTriadData; settings?: Product
                   </span>
                 )}
               </div>
-              <div className="text-[0.85rem] text-[var(--local-text-muted)] mb-6 pb-6 border-b border-[rgba(255,255,255,0.06)]">
+              <div className="text-[0.85rem] text-[var(--local-text-muted)] mb-6 pb-6 border-b border-[var(--local-panel-border)]">
                 {product.delivery}
               </div>
               <ul className="mb-8 space-y-0">
                 {product.features.map((feature, fIdx) => (
                   <li
                     key={fIdx}
-                    className="text-[0.9rem] text-[#cbd5e1] py-1.5 pl-6 relative before:content-['✓'] before:absolute before:left-0 before:text-[var(--local-accent)] before:font-bold before:text-[0.8rem]"
+                    className="text-[0.9rem] text-[var(--local-panel-text-soft)] py-1.5 pl-6 relative before:content-['✓'] before:absolute before:left-0 before:text-[var(--local-accent)] before:font-bold before:text-[0.8rem]"
                   >
                     {feature.text}
                   </li>
@@ -4494,10 +4597,10 @@ export const ProductTriad: React.FC<{ data: ProductTriadData; settings?: Product
                 <a
                   href={product.ctaHref}
                   className={cn(
-                    'block text-center py-3 rounded-[5px] no-underline font-semibold text-[0.95rem] transition-all duration-200',
+                    'block text-center py-3 rounded-[var(--local-radius-md)] no-underline font-semibold text-[0.95rem] transition-all duration-200',
                     product.ctaVariant === 'primary'
                       ? 'bg-[var(--local-primary)] text-white hover:brightness-110 hover:-translate-y-px'
-                      : 'bg-[rgba(255,255,255,0.05)] text-[#e2e8f0] border border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.2)]'
+                      : 'bg-[var(--local-panel-bg)] text-[var(--local-panel-text-soft)] border border-[var(--local-panel-border)] hover:bg-[var(--local-panel-hover)] hover:border-[var(--local-panel-border-strong)]'
                   )}
                 >
                   {product.ctaLabel}
@@ -5921,10 +6024,10 @@ const Btn: React.FC<{
     onMouseDown={(e) => e.preventDefault()}
     onClick={onClick}
     className={[
-      'inline-flex h-7 min-w-7 items-center justify-center rounded-md px-2 text-xs transition-colors',
+      'inline-flex h-7 min-w-7 items-center justify-center rounded-[var(--local-radius-sm)] px-2 text-xs transition-colors',
       active
-        ? 'bg-zinc-700/70 text-zinc-100'
-        : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200',
+        ? 'bg-[var(--local-toolbar-active-bg)] text-[var(--local-text)]'
+        : 'text-[var(--local-toolbar-text)] hover:bg-[var(--local-toolbar-hover-bg)] hover:text-[var(--local-text)]',
     ].join(' ')}
   >
     {children}
@@ -5932,7 +6035,7 @@ const Btn: React.FC<{
 );
 
 const Sep: React.FC = () => (
-  <span className="mx-0.5 h-5 w-px shrink-0 bg-zinc-800" aria-hidden />
+  <span className="mx-0.5 h-5 w-px shrink-0 bg-[var(--local-toolbar-border)]" aria-hidden />
 );
 
 // ── Image extension with upload metadata ──────────────────────────────────────
@@ -6372,7 +6475,7 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
       {editor && (
         <div
           data-jp-ignore-select="true"
-          className="sticky top-0 z-[65] border-b border-zinc-800 bg-zinc-950"
+          className="sticky top-0 z-[65] border-b border-[var(--local-toolbar-border)] bg-[var(--local-toolbar-bg)]"
         >
           {/* ── Main toolbar ── */}
           <div className="flex flex-wrap items-center justify-center gap-1 p-2">
@@ -6505,8 +6608,8 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
 
           {/* ── Link popover row (replaces window.prompt) ── */}
           {linkOpen && (
-            <div className="flex items-center gap-2 border-t border-zinc-700 px-2 py-1.5">
-              <Link2 size={12} className="shrink-0 text-zinc-500" />
+            <div className="flex items-center gap-2 border-t border-[var(--local-toolbar-border)] px-2 py-1.5">
+              <Link2 size={12} className="shrink-0 text-[var(--local-toolbar-text)]" />
               <input
                 ref={linkInputRef}
                 type="url"
@@ -6520,13 +6623,13 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
                   if (e.key === 'Escape') setLinkOpen(false);
                 }}
                 placeholder="https://example.com"
-                className="min-w-0 flex-1 bg-transparent text-xs text-zinc-100 placeholder:text-zinc-500 outline-none"
+                className="min-w-0 flex-1 bg-transparent text-xs text-[var(--local-text)] placeholder:text-[var(--local-toolbar-text)] outline-none"
               />
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={applyLink}
-                className="shrink-0 rounded px-2 py-0.5 text-xs bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                className="shrink-0 rounded-[var(--local-radius-sm)] px-2 py-0.5 text-xs bg-[var(--local-primary)] hover:brightness-110 text-white transition-colors"
               >
                 Set
               </button>
@@ -6534,7 +6637,7 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => setLinkOpen(false)}
-                className="shrink-0 rounded px-2 py-0.5 text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-200 transition-colors"
+                className="shrink-0 rounded-[var(--local-radius-sm)] px-2 py-0.5 text-xs bg-[var(--local-toolbar-active-bg)] hover:bg-[var(--local-toolbar-hover-bg)] text-[var(--local-text)] transition-colors"
               >
                 Cancel
               </button>
@@ -6571,7 +6674,25 @@ const PublicTiptapContent: React.FC<{ content: string }> = ({ content }) => (
 export const Tiptap: React.FC<{ data: TiptapData; settings?: TiptapSettings }> = ({ data }) => {
   const { mode } = useStudio();
   return (
-    <section className="w-full py-12">
+    <section
+      style={{
+        '--local-bg': 'var(--background)',
+        '--local-text': 'var(--foreground)',
+        '--local-text-muted': 'var(--muted-foreground)',
+        '--local-primary': 'var(--primary)',
+        '--local-accent': 'var(--accent)',
+        '--local-border': 'var(--border)',
+        '--local-radius-sm': 'var(--theme-radius-sm)',
+        '--local-radius-md': 'var(--theme-radius-md)',
+        '--local-radius-lg': 'var(--theme-radius-lg)',
+        '--local-toolbar-bg': 'var(--demo-surface-strong)',
+        '--local-toolbar-hover-bg': 'var(--demo-surface)',
+        '--local-toolbar-active-bg': 'var(--demo-accent-soft)',
+        '--local-toolbar-border': 'var(--demo-border-soft)',
+        '--local-toolbar-text': 'var(--demo-text-faint)',
+      } as React.CSSProperties}
+      className="w-full py-12 bg-[var(--local-bg)]"
+    >
       <div className="container mx-auto px-6 max-w-3xl">
         {mode === 'studio' ? (
           <StudioTiptapEditor data={data} />
@@ -7233,9 +7354,9 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
     "id": "global-header",
     "type": "header",
     "data": {
-      "logoText": "Json",
-      "logoHighlight": "Pages",
-      "logoIconText": "{ }",
+      "logoText": "Olon",
+      "logoHighlight": "JS",
+      "logoIconText": "",
       "links": [
         {
           "label": "Architecture",
@@ -7300,7 +7421,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/theme.json"
       "primary": "#3b82f6",
       "secondary": "#22d3ee",
       "accent": "#60a5fa",
-      "background": "#060d1b",
+      "background": "#0f1115",
       "surface": "#0b1529",
       "surfaceAlt": "#101e38",
       "text": "#e2e8f0",
@@ -7312,13 +7433,13 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/theme.json"
         "primary": "'Instrument Sans', system-ui, sans-serif",
         "mono": "'JetBrains Mono', monospace",
         "display": "'Bricolage Grotesque', system-ui, sans-serif",
-        "display-2":"'Instrument Sans'"
+        "display-2": "'Instrument Sans'"
       }
     },
     "borderRadius": {
-      "sm": "4px",
-      "md": "8px",
-      "lg": "36px"
+      "sm": "3px",
+      "md": "6px",
+      "lg": "12px"
     }
   }
 }
@@ -8307,9 +8428,9 @@ cat << 'END_OF_FILE_CONTENT' > "src/index.css"
   --color-accent: var(--accent);
   --color-border: var(--border);
   
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-lg: var(--theme-radius-lg);
+  --radius-md: var(--theme-radius-md);
+  --radius-sm: var(--theme-radius-sm);
 
   --font-primary: var(--theme-font-primary);
   --font-mono: var(--theme-font-mono);
@@ -8338,7 +8459,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/index.css"
   --muted: var(--theme-surface-alt);
   --muted-foreground: var(--theme-text-muted);
   --border: var(--theme-border);
-  --radius: 3.45rem;
+  --radius: var(--theme-radius-lg);
 
   /* 
      🔧 ACCENT CHAIN — Forward-compatible workaround
@@ -8348,6 +8469,22 @@ cat << 'END_OF_FILE_CONTENT' > "src/index.css"
      Falls back to --theme-primary if accent is undefined.
   */
   --accent: var(--theme-accent, var(--theme-primary));
+
+  /*
+     Shared demo/mockup helpers
+     These are still theme-derived, but give the tenant a stable semantic
+     palette for browser/terminal/inspector style surfaces.
+  */
+  --demo-surface: color-mix(in oklch, var(--card) 86%, var(--background));
+  --demo-surface-soft: color-mix(in oklch, var(--card) 72%, var(--background));
+  --demo-surface-strong: color-mix(in oklch, var(--background) 82%, black);
+  --demo-surface-deep: color-mix(in oklch, var(--background) 70%, black);
+  --demo-border-soft: color-mix(in oklch, var(--foreground) 8%, transparent);
+  --demo-border-strong: color-mix(in oklch, var(--primary) 24%, transparent);
+  --demo-accent-soft: color-mix(in oklch, var(--primary) 10%, transparent);
+  --demo-accent-strong: color-mix(in oklch, var(--primary) 18%, transparent);
+  --demo-text-soft: color-mix(in oklch, var(--foreground) 88%, var(--muted-foreground));
+  --demo-text-faint: color-mix(in oklch, var(--muted-foreground) 72%, transparent);
 }
 
 @layer base {
@@ -8488,12 +8625,12 @@ html {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.875em;
   background: color-mix(in oklch, var(--foreground) 8%, transparent);
-  border-radius: 0.25em;
+  border-radius: var(--theme-radius-sm);
   padding: 0.1em 0.35em;
 }
 .jp-tiptap-content pre {
   background: color-mix(in oklch, var(--background) 60%, black);
-  border-radius: 0.5em;
+  border-radius: var(--theme-radius-lg);
   padding: 1em 1.25em;
   overflow-x: auto;
 }
@@ -8517,7 +8654,7 @@ html {
   margin: 1.5em 0;
 }
 
-.jp-tiptap-content img { max-width: 100%; height: auto; border-radius: 0.5rem; }
+.jp-tiptap-content img { max-width: 100%; height: auto; border-radius: var(--theme-radius-lg); }
 
 /* ==========================================================================
    TIPTAP / PROSEMIRROR — Editor typography
@@ -8548,12 +8685,12 @@ html {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.875em;
   background: color-mix(in oklch, var(--foreground) 8%, transparent);
-  border-radius: 0.25em;
+  border-radius: var(--theme-radius-sm);
   padding: 0.1em 0.35em;
 }
 .jp-simple-editor .ProseMirror pre {
   background: color-mix(in oklch, var(--background) 60%, black);
-  border-radius: 0.5em;
+  border-radius: var(--theme-radius-lg);
   padding: 1em 1.25em;
   overflow-x: auto;
 }
@@ -8583,18 +8720,18 @@ html {
 .jp-simple-editor .ProseMirror img {
   max-width: 100%;
   height: auto;
-  border-radius: 0.5rem;
+  border-radius: var(--theme-radius-lg);
 }
 
 .jp-simple-editor .ProseMirror img[data-uploading="true"] {
   opacity: 0.6;
   filter: grayscale(0.25);
-  outline: 2px dashed rgb(59 130 246 / 0.7);
+  outline: 2px dashed color-mix(in oklch, var(--primary) 70%, transparent);
   outline-offset: 2px;
 }
 
 .jp-simple-editor .ProseMirror img[data-upload-error="true"] {
-  outline: 2px solid rgb(239 68 68 / 0.8);
+  outline: 2px solid color-mix(in oklch, var(--accent) 70%, transparent);
   outline-offset: 2px;
 }
 
