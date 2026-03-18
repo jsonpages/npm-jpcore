@@ -4,15 +4,15 @@ import { Icon, isIconName } from '@/lib/IconResolver';
 import type { PillarsGridData, PillarsGridSettings, PillarIconVariant, PillarTagVariant } from './types';
 
 const iconVariantStyles: Record<PillarIconVariant, string> = {
-  split: 'bg-[rgba(59,130,246,0.1)] text-[#60a5fa]',
-  registry: 'bg-[rgba(34,211,238,0.1)] text-[#22d3ee]',
-  federation: 'bg-[rgba(168,85,247,0.1)] text-[#c084fc]',
+  split: 'bg-[var(--local-accent-soft)] text-[var(--local-accent)]',
+  registry: 'bg-[var(--local-cyan-soft)] text-[var(--local-cyan)]',
+  federation: 'bg-[var(--local-panel-bg)] text-[var(--local-primary)]',
 };
 
 const tagVariantStyles: Record<PillarTagVariant, string> = {
-  core: 'bg-[rgba(59,130,246,0.1)] text-[#60a5fa]',
-  pattern: 'bg-[rgba(34,211,238,0.1)] text-[#22d3ee]',
-  enterprise: 'bg-[rgba(168,85,247,0.1)] text-[#c084fc]',
+  core: 'bg-[var(--local-accent-soft)] text-[var(--local-accent)]',
+  pattern: 'bg-[var(--local-cyan-soft)] text-[var(--local-cyan)]',
+  enterprise: 'bg-[var(--local-panel-bg)] text-[var(--local-primary)]',
 };
 
 export const PillarsGrid: React.FC<{ data: PillarsGridData; settings?: PillarsGridSettings }> = ({ data }) => {
@@ -23,12 +23,20 @@ export const PillarsGrid: React.FC<{ data: PillarsGridData; settings?: PillarsGr
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary': 'var(--primary)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
+        '--local-accent': 'var(--accent)',
+        '--local-cyan': 'var(--secondary)',
         '--local-border': 'var(--border)',
+        '--local-radius-md': 'var(--theme-radius-md)',
+        '--local-radius-lg': 'var(--theme-radius-lg)',
+        '--local-panel-bg': 'var(--demo-surface-soft)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-accent-soft': 'var(--demo-accent-soft)',
+        '--local-cyan-soft': 'color-mix(in oklch, var(--secondary) 14%, transparent)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.15)] to-transparent" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
       <div className="max-w-[1200px] mx-auto px-8">
         {data.label && (
           <div className="jp-section-label inline-flex items-center gap-2 text-[0.72rem] font-bold uppercase tracking-[0.12em] text-[var(--local-accent)] mb-4" data-jp-field="label">
@@ -48,13 +56,13 @@ export const PillarsGrid: React.FC<{ data: PillarsGridData; settings?: PillarsGr
           {data.pillars.map((pillar, idx) => (
             <div
               key={pillar.id ?? idx}
-              className="jp-pillar-card group relative border border-[rgba(255,255,255,0.06)] rounded-lg p-10 bg-[rgba(255,255,255,0.015)] transition-all duration-300 overflow-hidden hover:border-[rgba(59,130,246,0.2)] hover:-translate-y-1 hover:bg-[rgba(59,130,246,0.03)]"
+              className="jp-pillar-card group relative border border-[var(--local-panel-border)] rounded-[var(--local-radius-lg)] p-10 bg-[var(--local-panel-bg)] transition-all duration-300 overflow-hidden hover:border-[var(--local-panel-border-strong)] hover:-translate-y-1 hover:bg-[var(--local-accent-soft)]"
               data-jp-item-id={pillar.id ?? `legacy-${idx}`}
               data-jp-item-field="pillars"
             >
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[var(--local-primary)] to-[#22d3ee] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[var(--local-primary)] to-[var(--local-cyan)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className={cn(
-                'w-12 h-12 rounded-xl flex items-center justify-center mb-6 text-xl font-bold',
+                'w-12 h-12 rounded-[var(--local-radius-md)] flex items-center justify-center mb-6 text-xl font-bold',
                 iconVariantStyles[pillar.iconVariant]
               )}>
                 {pillar.icon && isIconName(pillar.icon) ? (

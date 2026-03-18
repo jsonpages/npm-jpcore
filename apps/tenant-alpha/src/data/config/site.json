@@ -25,9 +25,9 @@
     "id": "global-header",
     "type": "header",
     "data": {
-      "logoText": "Json",
-      "logoHighlight": "Pages",
-      "logoIconText": "{ }",
+      "logoText": "Olon",
+      "logoHighlight": "JS",
+      "logoIconText": "",
       "links": [
         {
           "label": "Architecture",

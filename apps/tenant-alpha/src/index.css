@@ -24,9 +24,9 @@
   --color-accent: var(--accent);
   --color-border: var(--border);
   
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-lg: var(--theme-radius-lg);
+  --radius-md: var(--theme-radius-md);
+  --radius-sm: var(--theme-radius-sm);
 
   --font-primary: var(--theme-font-primary);
   --font-mono: var(--theme-font-mono);
@@ -55,7 +55,7 @@
   --muted: var(--theme-surface-alt);
   --muted-foreground: var(--theme-text-muted);
   --border: var(--theme-border);
-  --radius: 3.45rem;
+  --radius: var(--theme-radius-lg);
 
   /* 
      🔧 ACCENT CHAIN — Forward-compatible workaround
@@ -65,6 +65,22 @@
      Falls back to --theme-primary if accent is undefined.
   */
   --accent: var(--theme-accent, var(--theme-primary));
+
+  /*
+     Shared demo/mockup helpers
+     These are still theme-derived, but give the tenant a stable semantic
+     palette for browser/terminal/inspector style surfaces.
+  */
+  --demo-surface: color-mix(in oklch, var(--card) 86%, var(--background));
+  --demo-surface-soft: color-mix(in oklch, var(--card) 72%, var(--background));
+  --demo-surface-strong: color-mix(in oklch, var(--background) 82%, black);
+  --demo-surface-deep: color-mix(in oklch, var(--background) 70%, black);
+  --demo-border-soft: color-mix(in oklch, var(--foreground) 8%, transparent);
+  --demo-border-strong: color-mix(in oklch, var(--primary) 24%, transparent);
+  --demo-accent-soft: color-mix(in oklch, var(--primary) 10%, transparent);
+  --demo-accent-strong: color-mix(in oklch, var(--primary) 18%, transparent);
+  --demo-text-soft: color-mix(in oklch, var(--foreground) 88%, var(--muted-foreground));
+  --demo-text-faint: color-mix(in oklch, var(--muted-foreground) 72%, transparent);
 }
 
 @layer base {
@@ -205,12 +221,12 @@ html {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.875em;
   background: color-mix(in oklch, var(--foreground) 8%, transparent);
-  border-radius: 0.25em;
+  border-radius: var(--theme-radius-sm);
   padding: 0.1em 0.35em;
 }
 .jp-tiptap-content pre {
   background: color-mix(in oklch, var(--background) 60%, black);
-  border-radius: 0.5em;
+  border-radius: var(--theme-radius-lg);
   padding: 1em 1.25em;
   overflow-x: auto;
 }
@@ -234,7 +250,7 @@ html {
   margin: 1.5em 0;
 }
 
-.jp-tiptap-content img { max-width: 100%; height: auto; border-radius: 0.5rem; }
+.jp-tiptap-content img { max-width: 100%; height: auto; border-radius: var(--theme-radius-lg); }
 
 /* ==========================================================================
    TIPTAP / PROSEMIRROR — Editor typography
@@ -265,12 +281,12 @@ html {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.875em;
   background: color-mix(in oklch, var(--foreground) 8%, transparent);
-  border-radius: 0.25em;
+  border-radius: var(--theme-radius-sm);
   padding: 0.1em 0.35em;
 }
 .jp-simple-editor .ProseMirror pre {
   background: color-mix(in oklch, var(--background) 60%, black);
-  border-radius: 0.5em;
+  border-radius: var(--theme-radius-lg);
   padding: 1em 1.25em;
   overflow-x: auto;
 }
@@ -300,18 +316,18 @@ html {
 .jp-simple-editor .ProseMirror img {
   max-width: 100%;
   height: auto;
-  border-radius: 0.5rem;
+  border-radius: var(--theme-radius-lg);
 }
 
 .jp-simple-editor .ProseMirror img[data-uploading="true"] {
   opacity: 0.6;
   filter: grayscale(0.25);
-  outline: 2px dashed rgb(59 130 246 / 0.7);
+  outline: 2px dashed color-mix(in oklch, var(--primary) 70%, transparent);
   outline-offset: 2px;
 }
 
 .jp-simple-editor .ProseMirror img[data-upload-error="true"] {
-  outline: 2px solid rgb(239 68 68 / 0.8);
+  outline: 2px solid color-mix(in oklch, var(--accent) 70%, transparent);
   outline-offset: 2px;
 }
 

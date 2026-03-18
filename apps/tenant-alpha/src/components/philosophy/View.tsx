@@ -29,7 +29,7 @@ export const Philosophy: React.FC<{ data: PhilosophyData; settings?: PhilosophyS
         '--local-bg': 'var(--background)',
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
+        '--local-accent': 'var(--accent)',
         '--local-primary': 'var(--primary)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"

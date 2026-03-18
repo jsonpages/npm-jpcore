@@ -5,7 +5,7 @@
       "primary": "#3b82f6",
       "secondary": "#22d3ee",
       "accent": "#60a5fa",
-      "background": "#060d1b",
+      "background": "#0f1115",
       "surface": "#0b1529",
       "surfaceAlt": "#101e38",
       "text": "#e2e8f0",
@@ -17,13 +17,13 @@
         "primary": "'Instrument Sans', system-ui, sans-serif",
         "mono": "'JetBrains Mono', monospace",
         "display": "'Bricolage Grotesque', system-ui, sans-serif",
-        "display-2":"'Instrument Sans'"
+        "display-2": "'Instrument Sans'"
       }
     },
     "borderRadius": {
-      "sm": "4px",
-      "md": "8px",
-      "lg": "36px"
+      "sm": "3px",
+      "md": "6px",
+      "lg": "12px"
     }
   }
 }

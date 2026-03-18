@@ -14,7 +14,7 @@ function renderInline(text: string): React.ReactNode {
 
 /* ── block renderer ───────────────────────────────────────── */
 function DocBlock({ block, idx }: { block: Block; idx: number }) {
-  const inlineCls = '[&_strong]:text-[var(--local-text)] [&_strong]:font-semibold [&_code]:font-mono [&_code]:text-[0.84em] [&_code]:bg-[rgba(255,255,255,0.07)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-[3px] [&_code]:text-[var(--local-accent)]';
+  const inlineCls = '[&_strong]:text-[var(--local-text)] [&_strong]:font-semibold [&_code]:font-mono [&_code]:text-[0.84em] [&_code]:bg-[var(--local-inline-code-bg)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-[var(--local-radius-sm)] [&_code]:text-[var(--local-accent)]';
 
   switch (block.type) {
     case 'heading':
@@ -25,16 +25,16 @@ function DocBlock({ block, idx }: { block: Block; idx: number }) {
 
     case 'code':
       return (
-        <div key={idx} className="mb-6 rounded-[10px] overflow-hidden border border-[rgba(255,255,255,0.08)] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+        <div key={idx} className="mb-6 rounded-[var(--local-radius-lg)] overflow-hidden border border-[var(--local-panel-border)] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
           {block.codeFilename && (
-            <div className="bg-[#0d1828] px-4 py-2.5 flex items-center gap-2 border-b border-[rgba(255,255,255,0.05)]">
+            <div className="bg-[var(--local-panel-bar)] px-4 py-2.5 flex items-center gap-2 border-b border-[var(--local-panel-border)]">
               <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]" />
-              <span className="ml-3 font-mono text-[0.65rem] text-[rgba(255,255,255,0.28)]">{block.codeFilename}</span>
+              <span className="ml-3 font-mono text-[0.65rem] text-[var(--local-panel-text-faint)]">{block.codeFilename}</span>
             </div>
           )}
-          <pre className="bg-[#020508] px-6 py-5 font-mono text-[0.78rem] leading-[1.9] overflow-x-auto text-[#cbd5e1] m-0 whitespace-pre">
+          <pre className="bg-[var(--local-panel-deep)] px-6 py-5 font-mono text-[0.78rem] leading-[1.9] overflow-x-auto text-[var(--local-panel-text-soft)] m-0 whitespace-pre">
             <code>{block.content}</code>
           </pre>
         </div>
@@ -54,17 +54,17 @@ function DocBlock({ block, idx }: { block: Block; idx: number }) {
 
     case 'table':
       return (
-        <div key={idx} className="mb-6 overflow-hidden rounded-[10px] border border-[rgba(255,255,255,0.06)]">
+        <div key={idx} className="mb-6 overflow-hidden rounded-[var(--local-radius-lg)] border border-[var(--local-panel-border)]">
           <table className="w-full text-[0.88rem]">
             <thead>
-              <tr className="bg-[rgba(59,130,246,0.06)] border-b border-[rgba(255,255,255,0.06)]">
+              <tr className="bg-[var(--local-accent-soft)] border-b border-[var(--local-panel-border)]">
                 <th className="px-5 py-3 text-left font-mono text-[0.66rem] uppercase tracking-widest text-[var(--local-accent)] w-[200px]">Cosa</th>
                 <th className="px-5 py-3 text-left font-mono text-[0.66rem] uppercase tracking-widest text-[var(--local-accent)]">Azione</th>
               </tr>
             </thead>
             <tbody>
               {(block.rows ?? []).map((row, i) => (
-                <tr key={row.id ?? i} className="border-b border-[rgba(255,255,255,0.04)] last:border-0 hover:bg-[rgba(59,130,246,0.025)] transition-colors">
+                <tr key={row.id ?? i} className="border-b border-[var(--local-panel-border)] last:border-0 hover:bg-[var(--local-accent-soft)] transition-colors">
                   <td className={`px-5 py-4 text-[var(--local-text)] font-semibold align-top text-[0.88rem] ${inlineCls}`}>
                     {renderInline(row.col1)}
                   </td>
@@ -80,7 +80,7 @@ function DocBlock({ block, idx }: { block: Block; idx: number }) {
 
     case 'callout':
       return (
-        <div key={idx} className={`mb-5 rounded-[10px] border border-[rgba(59,130,246,0.22)] bg-[rgba(59,130,246,0.05)] px-5 py-4 ${inlineCls}`}>
+        <div key={idx} className={`mb-5 rounded-[var(--local-radius-lg)] border border-[var(--local-panel-border-strong)] bg-[var(--local-accent-soft)] px-5 py-4 ${inlineCls}`}>
           <div className="flex items-start gap-3">
             <span className="text-[var(--local-accent)] font-mono text-[0.9rem] flex-shrink-0 mt-0.5 leading-none">ℹ</span>
             <p className="text-[0.90rem] text-[var(--local-text-muted)] leading-[1.8] m-0">{renderInline(block.content)}</p>
@@ -90,9 +90,9 @@ function DocBlock({ block, idx }: { block: Block; idx: number }) {
 
     case 'note':
       return (
-        <div key={idx} className={`mb-5 rounded-[10px] border border-[rgba(239,68,68,0.20)] bg-[rgba(239,68,68,0.04)] px-5 py-4 ${inlineCls}`}>
+        <div key={idx} className={`mb-5 rounded-[var(--local-radius-lg)] border border-[var(--local-panel-border-strong)] bg-[var(--local-accent-soft)] px-5 py-4 ${inlineCls}`}>
           <div className="flex items-start gap-3">
-            <span className="text-[#f87171] font-mono text-[0.9rem] flex-shrink-0 mt-0.5 leading-none">⚠</span>
+            <span className="text-[var(--local-accent)] font-mono text-[0.9rem] flex-shrink-0 mt-0.5 leading-none">⚠</span>
             <p className="text-[0.90rem] text-[var(--local-text-muted)] leading-[1.8] m-0">{renderInline(block.content)}</p>
           </div>
         </div>
@@ -146,22 +146,33 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
         '--local-text':       'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary':    'var(--primary)',
-        '--local-accent':     'var(--color-accent, #60a5fa)',
-        '--local-cyan':       'var(--color-secondary, #22d3ee)',
+        '--local-accent':     'var(--accent)',
+        '--local-cyan':       'var(--secondary)',
         '--local-border':     'var(--border)',
         '--local-surface':    'var(--card)',
+        '--local-radius-sm':  'var(--theme-radius-sm)',
+        '--local-radius-md':  'var(--theme-radius-md)',
+        '--local-radius-lg':  'var(--theme-radius-lg)',
+        '--local-panel-bar':  'var(--demo-surface)',
+        '--local-panel-deep': 'var(--demo-surface-deep)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-panel-text-soft': 'var(--demo-text-soft)',
+        '--local-panel-text-faint': 'var(--demo-text-faint)',
+        '--local-accent-soft': 'var(--demo-accent-soft)',
+        '--local-inline-code-bg': 'var(--demo-surface)',
       } as React.CSSProperties}
       className="relative z-0 min-h-screen bg-[var(--local-bg)]"
     >
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.15)] to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
 
       {/* ── Page hero ──────────────────────────────────── */}
       <div className="max-w-[1200px] mx-auto px-8 pt-28 pb-12">
         <div
-          className="inline-flex items-center gap-2 bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.18)] px-3.5 py-1 rounded-full font-mono text-[0.66rem] font-semibold text-[var(--local-accent)] mb-5 tracking-widest uppercase"
+          className="inline-flex items-center gap-2 bg-[var(--local-accent-soft)] border border-[var(--local-panel-border-strong)] px-3.5 py-1 rounded-full font-mono text-[0.66rem] font-semibold text-[var(--local-accent)] mb-5 tracking-widest uppercase"
           data-jp-field="version"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--local-primary)]" />
           {data.version ?? 'v1.2'}
         </div>
         <h1
@@ -178,7 +189,7 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
             {data.pageSubtitle}
           </p>
         )}
-        <div className="mt-8 h-px bg-gradient-to-r from-[rgba(59,130,246,0.3)] via-[rgba(59,130,246,0.06)] to-transparent" />
+        <div className="mt-8 h-px bg-gradient-to-r from-[var(--local-panel-border-strong)] via-[var(--local-accent-soft)] to-transparent" />
       </div>
 
       {/* ── Sidebar + Content ──────────────────────────── */}
@@ -197,11 +208,11 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
                     href={`#${group.anchor}`}
                     onClick={scrollTo(group.anchor)}
                     className={`
-                      flex items-center gap-2 px-3 py-2 rounded-[6px] font-display font-bold text-[0.80rem]
+                      flex items-center gap-2 px-3 py-2 rounded-[var(--local-radius-md)] font-display font-bold text-[0.80rem]
                       transition-all duration-150 no-underline
                       ${groupActive
-                        ? 'text-[var(--local-text)] bg-[rgba(255,255,255,0.04)]'
-                        : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[rgba(255,255,255,0.03)]'}
+                        ? 'text-[var(--local-text)] bg-[var(--local-panel-bar)]'
+                        : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[var(--local-panel-bar)]'}
                       ${activeAnchor === group.anchor ? 'border-l-2 border-[var(--local-primary)] pl-[10px] text-[var(--local-accent)]' : ''}
                     `}
                   >
@@ -215,14 +226,14 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
                         href={`#${s.anchor}`}
                         onClick={scrollTo(s.anchor)}
                         className={`
-                          flex items-center gap-2.5 pl-[22px] pr-3 py-1.5 rounded-[5px]
+                          flex items-center gap-2.5 pl-[22px] pr-3 py-1.5 rounded-[var(--local-radius-sm)]
                           font-sans text-[0.76rem] transition-all duration-120 no-underline ml-0.5
                           ${activeAnchor === s.anchor
-                            ? 'text-[var(--local-accent)] font-semibold bg-[rgba(59,130,246,0.07)]'
-                            : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[rgba(255,255,255,0.025)]'}
+                            ? 'text-[var(--local-accent)] font-semibold bg-[var(--local-accent-soft)]'
+                            : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[var(--local-panel-bar)]'}
                         `}
                       >
-                        <span className={`w-[5px] h-[5px] rounded-full flex-shrink-0 transition-colors ${activeAnchor === s.anchor ? 'bg-[var(--local-accent)]' : 'bg-[rgba(255,255,255,0.12)]'}`} />
+                        <span className={`w-[5px] h-[5px] rounded-full flex-shrink-0 transition-colors ${activeAnchor === s.anchor ? 'bg-[var(--local-accent)]' : 'bg-[var(--local-panel-border)]'}`} />
                         {s.title}
                       </a>
                     ))}
@@ -233,7 +244,7 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
           </nav>
 
           {/* Divider + back to top */}
-          <div className="mt-6 pt-5 border-t border-[rgba(255,255,255,0.05)]">
+          <div className="mt-6 pt-5 border-t border-[var(--local-panel-border)]">
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="flex items-center gap-2 font-mono text-[0.62rem] uppercase tracking-widest text-[var(--local-text-muted)] hover:text-[var(--local-accent)] transition-colors px-3"
@@ -250,7 +261,7 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
 
               {/* Group header */}
               <div id={group.anchor} className="scroll-mt-[88px] flex items-center gap-3 mb-2">
-                <div className="w-7 h-7 rounded-[7px] bg-[rgba(59,130,246,0.12)] border border-[rgba(59,130,246,0.18)] flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 rounded-[var(--local-radius-md)] bg-[var(--local-accent-soft)] border border-[var(--local-panel-border-strong)] flex items-center justify-center flex-shrink-0">
                   <span className="font-mono text-[var(--local-accent)] text-[0.66rem] font-bold">{gi + 1}</span>
                 </div>
                 <h2
@@ -261,7 +272,7 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
                   {group.label}
                 </h2>
               </div>
-              <div className="h-px bg-[rgba(255,255,255,0.05)] mb-10 ml-10" />
+              <div className="h-px bg-[var(--local-panel-border)] mb-10 ml-10" />
 
               {/* Sections */}
               {(group.sections ?? []).map((section, si) => (
@@ -275,7 +286,7 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
                   {/* Section title */}
                   <div className="flex items-center gap-2.5 mb-6">
                     {section.tag && (
-                      <span className="font-mono text-[0.60rem] uppercase tracking-widest text-[var(--local-accent)] bg-[rgba(59,130,246,0.08)] border border-[rgba(59,130,246,0.15)] px-2 py-0.5 rounded-[4px] flex-shrink-0">
+                      <span className="font-mono text-[0.60rem] uppercase tracking-widest text-[var(--local-accent)] bg-[var(--local-accent-soft)] border border-[var(--local-panel-border-strong)] px-2 py-0.5 rounded-[var(--local-radius-sm)] flex-shrink-0">
                         {section.tag}
                       </span>
                     )}
@@ -294,7 +305,7 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
 
                   {/* Section divider */}
                   {si < (group.sections ?? []).length - 1 && (
-                    <div className="mt-12 h-px bg-[rgba(255,255,255,0.035)]" />
+                    <div className="mt-12 h-px bg-[var(--local-panel-border)]" />
                   )}
                 </div>
               ))}
@@ -303,9 +314,9 @@ export const DocsLayout: React.FC<{ data: DocsLayoutData; settings?: DocsLayoutS
 
           {/* EOF marker */}
           <div className="mt-16 flex items-center gap-4 opacity-30">
-            <div className="flex-1 h-px bg-[rgba(255,255,255,0.08)]" />
+            <div className="flex-1 h-px bg-[var(--local-panel-border)]" />
             <span className="font-mono text-[0.60rem] uppercase tracking-widest text-[var(--local-text-muted)]">End of document</span>
-            <div className="flex-1 h-px bg-[rgba(255,255,255,0.08)]" />
+            <div className="flex-1 h-px bg-[var(--local-panel-border)]" />
           </div>
         </div>
 

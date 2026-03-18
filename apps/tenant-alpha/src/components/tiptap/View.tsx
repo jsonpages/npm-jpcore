@@ -32,10 +32,10 @@ const Btn: React.FC<{
     onMouseDown={(e) => e.preventDefault()}
     onClick={onClick}
     className={[
-      'inline-flex h-7 min-w-7 items-center justify-center rounded-md px-2 text-xs transition-colors',
+      'inline-flex h-7 min-w-7 items-center justify-center rounded-[var(--local-radius-sm)] px-2 text-xs transition-colors',
       active
-        ? 'bg-zinc-700/70 text-zinc-100'
-        : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200',
+        ? 'bg-[var(--local-toolbar-active-bg)] text-[var(--local-text)]'
+        : 'text-[var(--local-toolbar-text)] hover:bg-[var(--local-toolbar-hover-bg)] hover:text-[var(--local-text)]',
     ].join(' ')}
   >
     {children}
@@ -43,7 +43,7 @@ const Btn: React.FC<{
 );
 
 const Sep: React.FC = () => (
-  <span className="mx-0.5 h-5 w-px shrink-0 bg-zinc-800" aria-hidden />
+  <span className="mx-0.5 h-5 w-px shrink-0 bg-[var(--local-toolbar-border)]" aria-hidden />
 );
 
 // ── Image extension with upload metadata ──────────────────────────────────────
@@ -483,7 +483,7 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
       {editor && (
         <div
           data-jp-ignore-select="true"
-          className="sticky top-0 z-[65] border-b border-zinc-800 bg-zinc-950"
+          className="sticky top-0 z-[65] border-b border-[var(--local-toolbar-border)] bg-[var(--local-toolbar-bg)]"
         >
           {/* ── Main toolbar ── */}
           <div className="flex flex-wrap items-center justify-center gap-1 p-2">
@@ -616,8 +616,8 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
 
           {/* ── Link popover row (replaces window.prompt) ── */}
           {linkOpen && (
-            <div className="flex items-center gap-2 border-t border-zinc-700 px-2 py-1.5">
-              <Link2 size={12} className="shrink-0 text-zinc-500" />
+            <div className="flex items-center gap-2 border-t border-[var(--local-toolbar-border)] px-2 py-1.5">
+              <Link2 size={12} className="shrink-0 text-[var(--local-toolbar-text)]" />
               <input
                 ref={linkInputRef}
                 type="url"
@@ -631,13 +631,13 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
                   if (e.key === 'Escape') setLinkOpen(false);
                 }}
                 placeholder="https://example.com"
-                className="min-w-0 flex-1 bg-transparent text-xs text-zinc-100 placeholder:text-zinc-500 outline-none"
+                className="min-w-0 flex-1 bg-transparent text-xs text-[var(--local-text)] placeholder:text-[var(--local-toolbar-text)] outline-none"
               />
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={applyLink}
-                className="shrink-0 rounded px-2 py-0.5 text-xs bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                className="shrink-0 rounded-[var(--local-radius-sm)] px-2 py-0.5 text-xs bg-[var(--local-primary)] hover:brightness-110 text-white transition-colors"
               >
                 Set
               </button>
@@ -645,7 +645,7 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => setLinkOpen(false)}
-                className="shrink-0 rounded px-2 py-0.5 text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-200 transition-colors"
+                className="shrink-0 rounded-[var(--local-radius-sm)] px-2 py-0.5 text-xs bg-[var(--local-toolbar-active-bg)] hover:bg-[var(--local-toolbar-hover-bg)] text-[var(--local-text)] transition-colors"
               >
                 Cancel
               </button>
@@ -682,7 +682,25 @@ const PublicTiptapContent: React.FC<{ content: string }> = ({ content }) => (
 export const Tiptap: React.FC<{ data: TiptapData; settings?: TiptapSettings }> = ({ data }) => {
   const { mode } = useStudio();
   return (
-    <section className="w-full py-12">
+    <section
+      style={{
+        '--local-bg': 'var(--background)',
+        '--local-text': 'var(--foreground)',
+        '--local-text-muted': 'var(--muted-foreground)',
+        '--local-primary': 'var(--primary)',
+        '--local-accent': 'var(--accent)',
+        '--local-border': 'var(--border)',
+        '--local-radius-sm': 'var(--theme-radius-sm)',
+        '--local-radius-md': 'var(--theme-radius-md)',
+        '--local-radius-lg': 'var(--theme-radius-lg)',
+        '--local-toolbar-bg': 'var(--demo-surface-strong)',
+        '--local-toolbar-hover-bg': 'var(--demo-surface)',
+        '--local-toolbar-active-bg': 'var(--demo-accent-soft)',
+        '--local-toolbar-border': 'var(--demo-border-soft)',
+        '--local-toolbar-text': 'var(--demo-text-faint)',
+      } as React.CSSProperties}
+      className="w-full py-12 bg-[var(--local-bg)]"
+    >
       <div className="container mx-auto px-6 max-w-3xl">
         {mode === 'studio' ? (
           <StudioTiptapEditor data={data} />

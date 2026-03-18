@@ -12,6 +12,7 @@ export const ImageBreak: React.FC<{ data: ImageBreakData; settings?: ImageBreakS
         '--local-bg': 'var(--background)',
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
+        '--local-surface-overlay': 'color-mix(in oklch, var(--background) 78%, transparent)',
       } as React.CSSProperties}
       className="relative z-0 bg-[var(--local-bg)]"
     >
@@ -26,10 +27,10 @@ export const ImageBreak: React.FC<{ data: ImageBreakData; settings?: ImageBreakS
             />
             {data.caption && (
               <div
-                className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-sm px-6 py-4"
+                className="absolute bottom-0 inset-x-0 bg-[var(--local-surface-overlay)] backdrop-blur-sm px-6 py-4"
                 data-jp-field="caption"
               >
-                <p className="text-sm text-zinc-300 italic">{data.caption}</p>
+                <p className="text-sm text-[var(--local-text-muted)] italic">{data.caption}</p>
               </div>
             )}
           </div>

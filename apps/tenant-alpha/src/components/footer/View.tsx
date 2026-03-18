@@ -8,8 +8,8 @@ export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> =
         '--local-bg': 'var(--background)',
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
-        '--local-border': 'rgba(255,255,255,0.05)',
+        '--local-accent': 'var(--accent)',
+        '--local-border': 'color-mix(in oklch, var(--foreground) 8%, transparent)',
       } as React.CSSProperties}
       className="py-12 border-t border-[var(--local-border)] bg-[var(--local-bg)] relative z-0"
     >

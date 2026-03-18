@@ -10,8 +10,17 @@ export const ProductTriad: React.FC<{ data: ProductTriadData; settings?: Product
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary': 'var(--primary)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
+        '--local-accent': 'var(--accent)',
         '--local-border': 'var(--border)',
+        '--local-radius-sm': 'var(--theme-radius-sm)',
+        '--local-radius-md': 'var(--theme-radius-md)',
+        '--local-radius-lg': 'var(--theme-radius-lg)',
+        '--local-panel-bg': 'var(--demo-surface-soft)',
+        '--local-panel-bg-featured': 'var(--demo-accent-soft)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-panel-hover': 'var(--demo-accent-soft)',
+        '--local-panel-text-soft': 'var(--demo-text-soft)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
@@ -37,10 +46,10 @@ export const ProductTriad: React.FC<{ data: ProductTriadData; settings?: Product
             <div
               key={product.id ?? idx}
               className={cn(
-                'relative border rounded-lg p-10 transition-all duration-300 hover:-translate-y-1',
+                'relative border rounded-[var(--local-radius-lg)] p-10 transition-all duration-300 hover:-translate-y-1',
                 product.featured
-                  ? 'border-[rgba(59,130,246,0.3)] bg-gradient-to-b from-[rgba(59,130,246,0.06)] to-[rgba(59,130,246,0.01)] hover:border-[rgba(59,130,246,0.4)]'
-                  : 'border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.015)] hover:border-[rgba(59,130,246,0.2)]'
+                  ? 'border-[var(--local-panel-border-strong)] bg-[var(--local-panel-bg-featured)] hover:border-[var(--local-accent)]'
+                  : 'border-[var(--local-panel-border)] bg-[var(--local-panel-bg)] hover:border-[var(--local-panel-border-strong)]'
               )}
               data-jp-item-id={product.id ?? `legacy-${idx}`}
               data-jp-item-field="products"
@@ -64,14 +73,14 @@ export const ProductTriad: React.FC<{ data: ProductTriadData; settings?: Product
                   </span>
                 )}
               </div>
-              <div className="text-[0.85rem] text-[var(--local-text-muted)] mb-6 pb-6 border-b border-[rgba(255,255,255,0.06)]">
+              <div className="text-[0.85rem] text-[var(--local-text-muted)] mb-6 pb-6 border-b border-[var(--local-panel-border)]">
                 {product.delivery}
               </div>
               <ul className="mb-8 space-y-0">
                 {product.features.map((feature, fIdx) => (
                   <li
                     key={fIdx}
-                    className="text-[0.9rem] text-[#cbd5e1] py-1.5 pl-6 relative before:content-['✓'] before:absolute before:left-0 before:text-[var(--local-accent)] before:font-bold before:text-[0.8rem]"
+                    className="text-[0.9rem] text-[var(--local-panel-text-soft)] py-1.5 pl-6 relative before:content-['✓'] before:absolute before:left-0 before:text-[var(--local-accent)] before:font-bold before:text-[0.8rem]"
                   >
                     {feature.text}
                   </li>
@@ -81,10 +90,10 @@ export const ProductTriad: React.FC<{ data: ProductTriadData; settings?: Product
                 <a
                   href={product.ctaHref}
                   className={cn(
-                    'block text-center py-3 rounded-[5px] no-underline font-semibold text-[0.95rem] transition-all duration-200',
+                    'block text-center py-3 rounded-[var(--local-radius-md)] no-underline font-semibold text-[0.95rem] transition-all duration-200',
                     product.ctaVariant === 'primary'
                       ? 'bg-[var(--local-primary)] text-white hover:brightness-110 hover:-translate-y-px'
-                      : 'bg-[rgba(255,255,255,0.05)] text-[#e2e8f0] border border-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.2)]'
+                      : 'bg-[var(--local-panel-bg)] text-[var(--local-panel-text-soft)] border border-[var(--local-panel-border)] hover:bg-[var(--local-panel-hover)] hover:border-[var(--local-panel-border-strong)]'
                   )}
                 >
                   {product.ctaLabel}

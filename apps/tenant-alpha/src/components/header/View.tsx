@@ -20,12 +20,13 @@ export const Header: React.FC<{
   return (
     <header
       style={{
-        '--local-bg': 'rgba(6,13,27,0.92)',
+        '--local-bg': 'color-mix(in oklch, var(--background) 88%, transparent)',
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary': 'var(--primary)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
-        '--local-border': 'rgba(59,130,246,0.08)',
+        '--local-accent': 'var(--accent)',
+        '--local-border': 'color-mix(in oklch, var(--primary) 18%, transparent)',
+        '--local-radius-md': 'var(--theme-radius-md)',
       } as React.CSSProperties}
       className={cn(
         'w-full py-4 transition-all duration-300 z-0',
@@ -64,7 +65,7 @@ export const Header: React.FC<{
               className={cn(
                 'no-underline text-sm font-medium transition-colors',
                 item.isCta
-                  ? 'bg-[var(--local-primary)] text-white px-5 py-2 rounded-lg font-semibold hover:brightness-110 hover:-translate-y-px'
+                  ? 'bg-[var(--local-primary)] text-white px-5 py-2 rounded-[var(--local-radius-md)] font-semibold hover:brightness-110 hover:-translate-y-px'
                   : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)]'
               )}
             >

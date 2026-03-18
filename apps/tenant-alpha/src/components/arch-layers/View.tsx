@@ -3,18 +3,18 @@ import { cn } from '@/lib/utils';
 import type { ArchLayersData, ArchLayersSettings, ArchLayerLevel, SyntaxTokenType } from './types';
 
 const layerBgStyles: Record<ArchLayerLevel, string> = {
-  l0: 'bg-[#3b82f6]',
-  l1: 'bg-[rgba(59,130,246,0.6)]',
-  l2: 'bg-[rgba(59,130,246,0.35)]',
+  l0: 'bg-[var(--local-primary)]',
+  l1: 'bg-[var(--local-accent-strong)]',
+  l2: 'bg-[var(--local-accent-soft)]',
 };
 
 const tokenStyles: Record<SyntaxTokenType, string> = {
-  plain: 'text-[#cbd5e1]',
-  keyword: 'text-[#60a5fa]',
-  type: 'text-[#22d3ee]',
-  string: 'text-[#4ade80]',
-  comment: 'text-[#64748b] italic',
-  operator: 'text-[#f472b6]',
+  plain: 'text-[var(--local-demo-text)]',
+  keyword: 'text-[var(--local-accent)]',
+  type: 'text-[var(--local-cyan)]',
+  string: 'text-[var(--local-primary)]',
+  comment: 'text-[var(--local-demo-text-faint)] italic',
+  operator: 'text-[var(--local-accent)]',
 };
 
 export const ArchLayers: React.FC<{ data: ArchLayersData; settings?: ArchLayersSettings }> = ({ data }) => {
@@ -25,14 +25,25 @@ export const ArchLayers: React.FC<{ data: ArchLayersData; settings?: ArchLayersS
         '--local-text': 'var(--foreground)',
         '--local-text-muted': 'var(--muted-foreground)',
         '--local-primary': 'var(--primary)',
-        '--local-accent': 'var(--color-accent, #60a5fa)',
+        '--local-accent': 'var(--accent)',
+        '--local-cyan': 'var(--secondary)',
         '--local-border': 'var(--border)',
         '--local-deep': 'var(--background)',
+        '--local-radius-md': 'var(--theme-radius-md)',
+        '--local-radius-lg': 'var(--theme-radius-lg)',
+        '--local-panel-bg': 'var(--demo-surface-soft)',
+        '--local-panel-bar': 'var(--demo-surface)',
+        '--local-panel-border': 'var(--demo-border-soft)',
+        '--local-panel-border-strong': 'var(--demo-border-strong)',
+        '--local-accent-soft': 'var(--demo-accent-soft)',
+        '--local-accent-strong': 'var(--demo-accent-strong)',
+        '--local-demo-text': 'var(--demo-text-soft)',
+        '--local-demo-text-faint': 'var(--demo-text-faint)',
       } as React.CSSProperties}
       className="relative z-0 py-28 bg-[var(--local-bg)]"
     >
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[rgba(59,130,246,0.1)] to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--local-panel-border-strong)] to-transparent" />
       <div className="max-w-[1200px] mx-auto px-8">
         <div className="text-center">
           {data.label && (
@@ -54,12 +65,12 @@ export const ArchLayers: React.FC<{ data: ArchLayersData; settings?: ArchLayersS
           {data.layers.map((layer, idx) => (
             <div
               key={layer.id ?? idx}
-              className="group border border-[rgba(255,255,255,0.06)] rounded-[7px] p-8 mb-4 bg-[rgba(255,255,255,0.015)] flex items-start gap-6 transition-all duration-300 hover:border-[rgba(59,130,246,0.2)] hover:translate-x-1.5"
+              className="group border border-[var(--local-panel-border)] rounded-[var(--local-radius-md)] p-8 mb-4 bg-[var(--local-panel-bg)] flex items-start gap-6 transition-all duration-300 hover:border-[var(--local-panel-border-strong)] hover:translate-x-1.5"
               data-jp-item-id={layer.id ?? `legacy-${idx}`}
               data-jp-item-field="layers"
             >
               <div className={cn(
-                'shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-mono text-[0.85rem] font-bold text-white',
+                'shrink-0 w-9 h-9 rounded-[var(--local-radius-md)] flex items-center justify-center font-mono text-[0.85rem] font-bold text-white',
                 layerBgStyles[layer.layerLevel]
               )}>
                 {layer.number}
@@ -77,8 +88,8 @@ export const ArchLayers: React.FC<{ data: ArchLayersData; settings?: ArchLayersS
         </div>
         {data.codeLines && data.codeLines.length > 0 && (
           <div className="mt-12 max-w-[740px] mx-auto">
-            <div className="border border-[rgba(255,255,255,0.08)] rounded-[7px] overflow-hidden bg-[var(--local-deep)]">
-              <div className="flex items-center gap-2 px-5 py-3 bg-[rgba(255,255,255,0.03)] border-b border-[rgba(255,255,255,0.06)]">
+            <div className="border border-[var(--local-panel-border)] rounded-[var(--local-radius-md)] overflow-hidden bg-[var(--local-deep)]">
+              <div className="flex items-center gap-2 px-5 py-3 bg-[var(--local-panel-bar)] border-b border-[var(--local-panel-border)]">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
                 <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
                 <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]" />

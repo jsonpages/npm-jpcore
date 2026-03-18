@@ -15,7 +15,7 @@ export const CodeBlock: React.FC<{ data: CodeBlockData; settings?: CodeBlockSett
         '--local-border': 'var(--border)',
         '--local-text': 'var(--foreground)',
         '--local-accent': 'var(--primary)',
-        '--local-radius-lg': 'var(--radius)',
+        '--local-radius-lg': 'var(--theme-radius-lg)',
       } as React.CSSProperties}
       className="py-16 bg-[var(--local-surface)]"
     >

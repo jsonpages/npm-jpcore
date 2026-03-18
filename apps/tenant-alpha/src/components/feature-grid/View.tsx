@@ -21,8 +21,8 @@ export const FeatureGrid: React.FC<{ data: FeatureGridData; settings?: FeatureGr
     '--local-surface': 'var(--card)',
     '--local-surface-alt': 'var(--muted)',
     '--local-border': 'var(--border)',
-    '--local-radius-lg': 'var(--radius)',
-    '--local-radius-md': 'calc(var(--radius) - 2px)',
+    '--local-radius-lg': 'var(--theme-radius-lg)',
+    '--local-radius-md': 'var(--theme-radius-md)',
   } as React.CSSProperties;
 
   return (
