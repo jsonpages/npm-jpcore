@@ -3,555 +3,1600 @@ set -e
 
 echo "Starting project reconstruction..."
 
-mkdir -p "docs"
-echo "Creating docs/01-Onboarding_Client_completo_aggiornato.md..."
-cat << 'END_OF_FILE_CONTENT' > "docs/01-Onboarding_Client_completo_aggiornato.md"
-# Onboarding — Percorso Client (senza CMS) — Versione completa
+mkdir -p ".cursor"
+mkdir -p ".cursor/skills-cursor"
+mkdir -p ".cursor/skills-cursor/create-rule"
+echo "Creating .cursor/skills-cursor/create-rule/SKILL.md..."
+cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/create-rule/SKILL.md"
+---
+name: create-rule
+description: >-
+  Create Cursor rules for persistent AI guidance. Use when you want to create a
+  rule, add coding standards, set up project conventions, configure
+  file-specific patterns, create RULE.md files, or asks about .cursor/rules/ or
+  AGENTS.md.
+---
+# Creating Cursor Rules
 
-**Per chi:** Sviluppo grafico e dati quando **non** usi il CMS (Studio/ICE). Il sito è un **client**: i dati arrivano da JSON locali, da API o da un CMS esterno; tu ti occupi di layout, design e rendering.
+Create project rules in `.cursor/rules/` to provide persistent context for the AI agent.
 
-**Riferimento spec:** OlonJS Architecture v1.2 (legacy alias: JSONPAGES) — solo le parti che riguardano struttura sito, componenti e dati. Ignori: Studio, ICE, Form Factory, IDAC, TOCC, AddSectionConfig, schema obbligatori per l'editor.
+## Gather Requirements
+
+Before creating a rule, determine:
+
+1. **Purpose**: What should this rule enforce or teach?
+2. **Scope**: Should it always apply, or only for specific files?
+3. **File patterns**: If file-specific, which glob patterns?
+
+### Inferring from Context
+
+If you have previous conversation context, infer rules from what was discussed. You can create multiple rules if the conversation covers distinct topics or patterns. Don't ask redundant questions if the context already provides the answers.
+
+### Required Questions
+
+If the user hasn't specified scope, ask:
+- "Should this rule always apply, or only when working with specific files?"
+
+If they mentioned specific files and haven't provided concrete patterns, ask:
+- "Which file patterns should this rule apply to?" (e.g., `**/*.ts`, `backend/**/*.py`)
+
+It's very important that we get clarity on the file patterns.
+
+Use the AskQuestion tool when available to gather this efficiently.
 
 ---
 
-## 1. Cosa fai tu (in sintesi)
-
-- **Grafico:** Layout e stili delle section (View + CSS / design tokens se vuoi).
-- **Dati:** Da dove prendono i dati le pagine (file JSON, API, altro CMS) e come vengono passati al motore (config + pages).
-
-Non devi: tipizzare tutto per l'editor, esporre schema Zod al Form Factory, gestire overlay Studio, Add Section, ecc. Puoi usare tipi minimi o anche `unknown`/`any` sui dati se non ti serve type-safety forte.
-
----
-
-## 2. Struttura progetto (minima)
-
-- **`src/data/config/site.json`** — Identità, header, footer (blocchi con `id`, `type`, `data`, `settings`).
-- **`src/data/config/menu.json`** — Menu (es. `{ main: [{ label, href }] }`).
-- **`src/data/config/theme.json`** — (Opzionale) Token tema (colori, font, radius).
-- **`src/data/pages/<slug>.json`** — Una pagina = `slug`, `meta`, `sections[]` (array di blocchi `id`, `type`, `data`, `settings`). **Per creare una nuova pagina** basta aggiungere un file `<slug>.json` in `src/data/pages/`; lo slug del nome file diventa il path della pagina (es. `chi-siamo.json` → `/chi-siamo`).
-- **`src/components/<sectionType>/`** — Una cartella per tipo di blocco (hero, header, footer, feature-grid, …).
-- **`src/App.tsx`** — Carica site, menu, theme, pages; costruisce la config; renderizza **`<JsonPagesEngine config={config} />` *(from `@olonjs/core`, legacy alias: `@jsonpages/core`)***.
-
-Il motore (Core) si aspetta comunque un **registry** (mappa tipo → componente) e le **pagine** nel formato previsto (slug → page con `sections`). Come popoli i JSON (a mano, da script, da altro CMS) è fuori dall'editor.
-
-**Perché servono (struttura):** Path e forma (site, menu, theme, pages con sections) sono il contratto minimo che il Core usa per routing e rendering; rispettarli permette di cambiare in seguito fonte dati (JSON → API) senza riscrivere la logica. Vedi spec §2 (JSP), Appendix A.4.
-
----
-
-## 3. Componenti (solo View)
-
-- Ogni **section type** ha almeno una **View**: riceve `data` e, se serve, `settings`. L'header riceve anche `menu` (array di `{ label, href }`).
-- **Niente obbligo di capsule "piene":** puoi avere solo `View.tsx` (e magari un `index.ts` che esporta la View). Schema Zod e types servono solo se vuoi type-safety in sviluppo o se in futuro attivi il CMS.
-- **Stili:** Puoi usare classi Tailwind "libere" o un set di variabili CSS (es. `--local-bg`, `--local-text`) per coerenza. Le spec CIP (solo variabili, niente utility nude) sono per il percorso governance; qui puoi adattare alle tue convenzioni.
-- **Asset:** Se il Core espone `resolveAssetUrl(path, tenantId)`, usalo per le immagini; altrimenti path relativi o URL assoluti.
-
-**Perché servono (componenti):** Il registry deve avere un componente per ogni `type` usato nei JSON; la View deve ricevere `data` (e `settings`/`menu` dove previsto) così il Core può renderizzare senza conoscere i dettagli. Senza registry coerente con i dati, il motore non saprebbe cosa montare. Vedi spec §3 (TBP), §4 (CIP) per il percorso completo.
-
----
-
-## 3.1 Image e campi immagine (se usi schema in seguito)
-
-Se più avanti aggiungi schema Zod per type-safety o per attivare Studio, i **campi immagine** vanno modellati così:
-
-- **Schema:** Il campo immagine è un **oggetto** (non una stringa) con almeno `url` e opzionalmente `alt`. Lo schema di questo oggetto va marcato con **`.describe('ui:image-picker')`** così il Form Factory (Inspector) mostra il widget Image Picker. Esempio: uno sub-schema `ImageSelectionSchema = z.object({ url: z.string(), alt: z.string().optional() }).describe('ui:image-picker')` usato come `image: ImageSelectionSchema.default({ url: '', alt: '' })`.
-- **View:** Per il `src` dell'immagine usa **`resolveAssetUrl(data.image.url, tenantId)`**; sul nodo che rappresenta l'immagine imposta **`data-jp-field="image"`** (così l'Inspector lega correttamente il campo).
-
-**Riferimento:** componente `image-break` in `apps/tenant-alpha/src/components/image-break/` (schema.ts, View.tsx) come esempio completo.
-
----
-
-## 4. Dati: da dove arrivano
-
-- **Solo JSON locali:** Leggi `site.json`, `menu.json`, `theme.json`, `pages/*.json` e li passi in `config` (siteConfig, menuConfig, themeConfig, pages). Nessun CMS.
-- **CMS esterno / API:** Invece di importare i JSON, fai fetch (o SSR) e costruisci gli stessi oggetti (siteConfig, menuConfig, pages) e li passi a `JsonPagesEngine`. La forma delle pagine resta: `{ slug, meta?, sections[] }`; ogni section: `{ id, type, data, settings? }`.
-- **Ibrido:** Header/footer da `site.json`, body da API o da altro CMS: costruisci un unico `pages[slug]` con `sections` che rispettano i tipi di blocco che hai nel registry.
-
-Non devi registrare schema o AddSectionConfig a meno che non attivi Studio.
-
-**Perché servono (dati):** La forma `sections[]` con `id`, `type`, `data`, `settings?` è ciò che il SectionRenderer e il Core si aspettano; mantenere quella forma anche quando i dati arrivano da API o altro CMS evita adattatori fragili e permette di attivare Studio in seguito senza rifare i dati. Vedi spec Appendix A.2 (PageConfig, SiteConfig, MenuConfig).
-
----
-
-## 5. Registry e config (minimo)
-
-- **Registry:** Un oggetto che mappa ogni `sectionType` (stringa) al componente React che renderizza quel tipo. Es.: `{ header: Header, footer: Footer, hero: Hero, ... }`. Se non usi Studio, puoi tipizzare in modo lasco (es. `Record<string, React.FC<any>>` o comunque compatibile con quanto si aspetta `JsonPagesConfig['registry']` from `@olonjs/core`).
-- **Config da passare a JsonPagesEngine:**  
-  `tenantId`, `registry`, `pages`, `siteConfig`, `menuConfig`, `themeConfig` (o oggetto vuoto), `themeCss: { tenant: cssString }`.  
-  Se **non** usi Studio, **schemas** e **addSection** possono essere placeholder (oggetto vuoto / no-op) se il Core lo permette; altrimenti fornisci il minimo (es. schemas = `{}`, addSection = `{ addableSectionTypes: [], sectionTypeLabels: {}, getDefaultSectionData: () => ({}) }`) per non rompere l'engine.
-
-Verifica nella doc o nel tipo `JsonPagesConfig` se `schemas` e `addSection` sono opzionali quando Studio non è in uso.
-
-**Perché servono (registry e config):** Il Core deve risolvere ogni section a un componente (registry) e avere pagine, site, menu, theme e CSS tenant per renderizzare e, se serve, iniettare lo Stage in iframe; i campi obbligatori di config sono il minimo per far funzionare l'engine. Placeholder per schemas/addSection evitano errori quando Studio non è usato. Vedi spec §10 (JEB), Appendix A.
-
----
-
-## 6. Checklist rapida (sviluppo grafico e dati, senza CMS)
-
-| Cosa | Azione |
-|------|--------|
-| **Layout / grafico** | Implementare le View (una per section type) e gli stili (CSS / Tailwind / variabili). |
-| **Dati** | Decidere fonte (JSON locali, API, altro CMS); costruire `siteConfig`, `menuConfig`, `pages` nella forma attesa e passarli in `config`. |
-| **Registry** | Mappare ogni tipo di blocco usato nei JSON al componente corrispondente. |
-| **Header / menu** | Header component riceve `data`, `settings`, `menu`; `menu` viene da `menuConfig` (es. `menuConfig.main`). |
-| **Pagine** | Ogni pagina = un entry in `pages` con `sections[]`; ogni section ha `id`, `type`, `data`, `settings?`. |
-| **Nuova pagina** | Aggiungere un file `<slug>.json` in `src/data/pages/` (lo slug diventa il path della pagina). |
-| **Image (se schema)** | Campo immagine = oggetto `{ url, alt? }` con schema `.describe('ui:image-picker')`; View usa `resolveAssetUrl` e `data-jp-field="image"`. |
-| **Studio / ICE** | Non usati: niente schema obbligatori, niente data-jp-*, niente overlay CSS, niente Add Section. |
-
----
-
-## 7. Quando passi al percorso "Governance"
-
-Se più avanti vuoi l'editor (Studio) e la governance (tipi, schema, Add Section, overlay): usa l'onboarding **02-Onboarding_Governance_completo.md** e allinea il progetto a tipi, capsule piene (View + schema + types), IDAC, TOCC, AddSectionConfig e Appendix A delle spec v1.2.
-
-END_OF_FILE_CONTENT
-echo "Creating docs/01-Onboarding_Governance_naked.md..."
-cat << 'END_OF_FILE_CONTENT' > "docs/01-Onboarding_Governance_naked.md"
-### 📄 File 1: Client Path (No CMS)
-
-
-
-# Onboarding — Client Path (No CMS) — Complete Version
-
-**Target:** Frontend Developers & Data Entry staff who **do not** use the CMS (Studio/ICE). The site acts as a **client**: data comes from local JSON, APIs, or an external CMS; you are responsible for layout, design, and rendering.
-
-**Spec Reference:** JSONPAGES Architecture v1.2 — only the parts regarding site structure, components, and data. You ignore: Studio, ICE, Form Factory, IDAC, TOCC, AddSectionConfig, and mandatory schemas for the editor.
-
----
-
-## 1. Your Role (Summary)
-
--   **Visuals:** Layout and styling of sections (View + CSS / design tokens).
--   **Data:** Where pages get their data (JSON files, API, external CMS) and how they are passed to the engine (config + pages).
-
-You **do not** need to: type everything for the editor, expose Zod schemas to the Form Factory, handle Studio overlays, Add Section logic, etc. You can use minimal types or even `unknown`/`any` on data if strong type-safety is not required.
-
----
-
-## 2. Project Structure (Minimal)
-
--   **`src/data/config/site.json`** — Identity, header, footer (blocks with `id`, `type`, `data`, `settings`).
--   **`src/data/config/menu.json`** — Menu (e.g., `{ main: [{ label, href }] }`).
--   **`src/data/config/theme.json`** — (Optional) Theme tokens (colors, fonts, radius).
--   **`src/data/pages/<slug>.json`** — One page = `slug`, `meta`, `sections[]` (array of blocks `id`, `type`, `data`, `settings`). **To create a new page**, simply add a `<slug>.json` file in `src/data/pages/`; the filename slug becomes the page path (e.g., `about-us.json` → `/about-us`).
--   **`src/components/<sectionType>/`** — One folder per block type (hero, header, footer, feature-grid, …).
--   **`src/App.tsx`** — Loads site, menu, theme, pages; builds the config; renders **`<JsonPagesEngine config={config} />`**.
-
-The Engine (Core) still expects a **registry** (type → component map) and **pages** in the expected format (slug → page with `sections`). How you populate the JSONs (manually, via script, from another CMS) is outside the editor's scope.
-
-**Why this matters (Structure):** Paths and shape (site, menu, theme, pages with sections) are the minimal contract the Core uses for routing and rendering; respecting them allows you to switch data sources (JSON → API) later without rewriting logic. See Spec §2 (JSP), Appendix A.4.
-
----
-
-## 3. Components (View Only)
-
--   Every **section type** has at least one **View**: it receives `data` and, if needed, `settings`. The header also receives `menu` (array of `{ label, href }`).
--   **No "Full Capsule" requirement:** you can have just `View.tsx` (and maybe an `index.ts` exporting the View). Zod schemas and types are only needed if you want dev-time type-safety or plan to activate the CMS later.
--   **Styles:** You can use "free" Tailwind classes or a set of CSS variables (e.g., `--local-bg`, `--local-text`) for consistency. CIP specs (variables only, no naked utilities) are for the Governance path; here you can adapt to your conventions.
--   **Assets:** If the Core exposes `resolveAssetUrl(path, tenantId)`, use it for images; otherwise, use relative paths or absolute URLs.
-
-**Why this matters (Components):** The registry must have a component for every `type` used in the JSONs; the View must receive `data` (and `settings`/`menu` where expected) so the Core can render without knowing details. Without a registry consistent with data, the engine wouldn't know what to mount. See Spec §3 (TBP), §4 (CIP) for the full path.
-
----
-
-## 3.1 Images and Image Fields (If using Schema later)
-
-If you later add Zod schemas for type-safety or to activate Studio, **image fields** must be modeled as follows:
-
--   **Schema:** The image field is an **object** (not a string) with at least `url` and optionally `alt`. This object's schema must be marked with **`.describe('ui:image-picker')`** so the Form Factory (Inspector) shows the Image Picker widget. Example: a sub-schema `ImageSelectionSchema = z.object({ url: z.string(), alt: z.string().optional() }).describe('ui:image-picker')` used as `image: ImageSelectionSchema.default({ url: '', alt: '' })`.
--   **View:** For the image `src`, use **`resolveAssetUrl(data.image.url, tenantId)`**; on the node representing the image, set **`data-jp-field="image"`** (so the Inspector binds the field correctly).
-
-**Reference:** See the `image-break` component in `apps/tenant-alpha/src/components/image-break/` (schema.ts, View.tsx) for a complete example.
-
----
-
-## 4. Data: Where it comes from
-
--   **Local JSONs only:** Read `site.json`, `menu.json`, `theme.json`, `pages/*.json` and pass them into `config` (siteConfig, menuConfig, themeConfig, pages). No CMS.
--   **External CMS / API:** Instead of importing JSONs, fetch (or SSR) and build the same objects (siteConfig, menuConfig, pages) and pass them to `JsonPagesEngine`. The page shape remains: `{ slug, meta?, sections[] }`; each section: `{ id, type, data, settings? }`.
--   **Hybrid:** Header/footer from `site.json`, body from API or another CMS: build a single `pages[slug]` with `sections` that respect the block types you have in the registry.
-
-You do not need to register schemas or AddSectionConfig unless you activate Studio.
-
-**Why this matters (Data):** The `sections[]` shape with `id`, `type`, `data`, `settings?` is what the SectionRenderer and Core expect; maintaining this shape even when data comes from an API or another CMS avoids fragile adapters and allows activating Studio later without redoing data. See Spec Appendix A.2 (PageConfig, SiteConfig, MenuConfig).
-
----
-
-## 5. Registry and Config (Minimal)
-
--   **Registry:** An object mapping every `sectionType` (string) to the React component rendering that type. E.g.: `{ header: Header, footer: Footer, hero: Hero, ... }`. If not using Studio, you can type loosely (e.g., `Record<string, React.FC<any>>` or whatever is compatible with `JsonPagesConfig['registry']`).
--   **Config passed to JsonPagesEngine:**
-    `tenantId`, `registry`, `pages`, `siteConfig`, `menuConfig`, `themeConfig` (or empty object), `themeCss: { tenant: cssString }`.
-    If you are **not** using Studio, **schemas** and **addSection** can be placeholders (empty object / no-op) if the Core allows it; otherwise, provide the minimum (e.g., schemas = `{}`, addSection = `{ addableSectionTypes: [], sectionTypeLabels: {}, getDefaultSectionData: () => ({}) }`) to prevent engine errors.
-
-Check docs or `JsonPagesConfig` type to see if `schemas` and `addSection` are optional when Studio is unused.
-
-**Why this matters (Registry & Config):** The Core must resolve every section to a component (registry) and have pages, site, menu, theme, and tenant CSS to render and, if needed, inject the Stage iframe; mandatory config fields are the minimum to make the engine work. Placeholders for schemas/addSection avoid errors when Studio is not used. See Spec §10 (JEB), Appendix A.
-
----
-
-## 6. Quick Checklist (Visual Dev & Data, No CMS)
-
-| Item | Action |
-|------|--------|
-| **Layout / Visuals** | Implement Views (one per section type) and styles (CSS / Tailwind / variables). |
-| **Data** | Decide source (Local JSON, API, other CMS); build `siteConfig`, `menuConfig`, `pages` in the expected shape and pass to `config`. |
-| **Registry** | Map every block type used in JSONs to the corresponding component. |
-| **Header / Menu** | Header component receives `data`, `settings`, `menu`; `menu` comes from `menuConfig` (e.g., `menuConfig.main`). |
-| **Pages** | Each page = one entry in `pages` with `sections[]`; each section has `id`, `type`, `data`, `settings?`. |
-| **New Page** | Add a `<slug>.json` file in `src/data/pages/` (slug becomes page path). |
-| **Image (if schema)** | Image field = object `{ url, alt? }` with schema `.describe('ui:image-picker')`; View uses `resolveAssetUrl` and `data-jp-field="image"`. |
-| **Studio / ICE** | Not used: no mandatory schemas, no data-jp-*, no overlay CSS, no Add Section. |
-
----
-
-## 7. Switching to the "Governance" Path
-
-If you later want the editor (Studio) and governance (types, schema, Add Section, overlay): use the onboarding guide **02-Onboarding_Governance.md** and align the project with types, full capsules (View + schema + types), IDAC, TOCC, AddSectionConfig, and Appendix A of Spec v1.2.
-
-
-END_OF_FILE_CONTENT
-echo "Creating docs/02-Onboarding_Governance_CMS.md..."
-cat << 'END_OF_FILE_CONTENT' > "docs/02-Onboarding_Governance_CMS.md"
-
-# Onboarding — Governance Path (With CMS) — Complete Version
-
-**Target:** Lead Developers & Architects setting up the **CMS** (Studio, ICE, Form Factory): in-app authoring, strong typing, content and component governance.
-
-**Spec Reference:** OlonJS Architecture Specifications v1.2 (legacy alias: JSONPAGES) + Appendix A — Tenant Type & Code-Generation Annex.
-
----
-
-## 1. What "Governance" Implies
-
--   **Types:** Every section type is declared in `SectionDataRegistry` / `SectionSettingsRegistry` (module augmentation) and in `SectionComponentPropsMap`. Registry and config are strictly typed.
--   **Schema:** Every section type has a Zod schema (data, and optionally settings) used by the Form Factory to generate the editor in the Inspector. Schemas are aggregated in `SECTION_SCHEMAS`.
--   **Studio/ICE:** The editor (Inspector) hooks into the DOM via **data-jp-field** and **data-jp-item-id** / **data-jp-item-field**. The selection overlay in the iframe requires the **tenant** to provide the CSS (TOCC).
--   **Add Section:** The tenant exposes **AddSectionConfig** (addable types, labels, default data) so the user can add sections from the library in Studio.
--   **Design Tokens:** Views use CSS variables (`--local-*`) and no "naked" utilities (CIP) for consistency and compatibility with themes and overlays.
-
-**Why this matters (Summary):** Types and schemas allow the Core and Form Factory to operate without knowing Tenant details; IDAC allows the Inspector to link Stage clicks to the active row in the sidebar (including active/inactive opacity); TOCC makes the overlay visible; AddSectionConfig defines the "Add Section" library; tokens and z-index avoid conflicts with the editing UI. Detailed "Whys" for each spec: see Spec v1.2 (§1–§10, JAP, Appendix A).
-
----
-
-## 1.1 The Value of Typing: Governance vs. CMS UX
-
-Typing (TypeScript types + Zod schema) serves **two levels**: Governance (Developer/Architecture) and **CMS UX** (Author using Studio).
-
-**Governance:** Typed registry, SectionComponentPropsMap, SiteConfig/PageConfig shape, audits, code-generation → consistency across tenants, no drift, safe refactoring, spec-based tooling.
-
-**CMS UX:** The Zod schema drives the **Form Factory** (which widget for which field: text, textarea, select, list, icon-picker, **image-picker**); **data-jp-field** and **data-jp-item-id/field** bind Stage clicks to Inspector forms; **AddSectionConfig** provides addable types, labels, and defaults. Result for the author: consistent forms, "Add Section" with sensible names and initial data, correct selection (click → right form), validation with clear errors. Without schema and typed contracts, the Inspector wouldn't know which fields to show or how to validate. Thus: for governance, typing guarantees **contracts**; for CMS UX, it defines the **editing experience**. Both must be specified.
-
----
-
-## 2. Project Structure (Complete)
-
--   **`src/data/config/site.json`** — SiteConfig (identity, pages[], header block, footer block).
--   **`src/data/config/menu.json`** — MenuConfig (e.g., `main: MenuItem[]`).
--   **`src/data/config/theme.json`** — ThemeConfig (tokens).
--   **`src/data/pages/<slug>.json`** — PageConfig (slug, meta, sections[]). **To create a new page**, simply add a `<slug>.json` file in `src/data/pages/`; the filename slug becomes the page path (e.g., `about-us.json` → `/about-us`).
--   **`src/components/<sectionType>/`** — **Full Capsule:** View.tsx, schema.ts, types.ts, index.ts.
--   **`src/lib/base-schemas.ts`** — BaseSectionData, BaseArrayItem, BaseSectionSettingsSchema.
--   **`src/lib/schemas.ts`** — SECTION_SCHEMAS (aggregate of data schemas per type) + export SectionType.
--   **`src/lib/ComponentRegistry.tsx`** — Typed Registry: `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }`.
--   **`src/lib/addSectionConfig.ts`** — AddSectionConfig (addableSectionTypes, sectionTypeLabels, getDefaultSectionData).
--   **`src/types.ts`** — SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **module augmentation** for SectionDataRegistry and SectionSettingsRegistry; re-export from `@olonjs/core`.
--   **`src/App.tsx`** — Bootstrap: config (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection); `<JsonPagesEngine config={config} />`.
--   **Global CSS** — Includes TOCC selectors for overlay (hover/selected/type label).
-
----
-
-## 3. Components (Capsules + IDAC + Tokens)
-
--   **Capsule:** Every section type has View, schema (Zod), types (inferred), index. The **data** schema extends BaseSectionData; array items extend BaseArrayItem.
--   **View:** Receives `data` and `settings` (and `menu` for header). Does not import Zod. Uses **only** CSS variables for colors/radii (e.g., `bg-[var(--local-bg)]`), root section with `z-index` ≤ 1.
--   **IDAC (ICE):** On every editable scalar field: **`data-jp-field="<fieldKey>"`**. On every editable array item: **`data-jp-item-id="<stableId>"`** and **`data-jp-item-field="<arrayKey>"`**. This allows the Inspector to bind selection and forms to the correct paths.
--   **Schema:** Use UI vocabulary (ECIP): `.describe('ui:text')`, `ui:textarea`, `ui:select`, `ui:number`, `ui:list`, `ui:icon-picker`, **`ui:image-picker`** (see §3.1). Editable object arrays: every object must have an `id` (BaseArrayItem).
-
-**Why this matters (Components):** **data-jp-field** and **data-jp-item-*** are needed because the Stage is in an iframe, and the Core needs to know which field/item corresponds to a click without knowing the Tenant's DOM: this allows the sidebar to highlight the active row (even with active/inactive opacity), open the form on the right field, and handle lists (reorder, delete). Without IDAC, clicks on the canvas are not reflected in the sidebar. Schema with `ui:*` and BaseArrayItem are needed for the Form Factory to generate the right widgets and maintain stable keys (reorder/delete). Tokens and z-index prevent content from covering the overlay. See Spec §6 (IDAC), §5 (ECIP), §4 (CIP).
-
----
-
-## 3.1 Image Picker: Correct Usage in Schema (Example `image-break`)
-
-For **image fields**, the Form Factory exposes the **Image Picker** widget only if the schema is modeled correctly.
-
-### Rule
-
--   The image field is not a **string** (`z.string()`), but an **object** with at least `url` and, optionally, `alt`.
--   The **schema of this object** (the sub-schema) must be marked with **`.describe('ui:image-picker')`**. The Form Factory recognizes `ui:image-picker` only on **ZodObject** (object schema), not on string fields.
-
-### Example (`image-break` capsule)
-
-**Schema (`schema.ts`):**
-
-```ts
-import { z } from 'zod';
-import { BaseSectionData } from '@/lib/base-schemas';
-
-const ImageSelectionSchema = z
-  .object({
-    url: z.string(),
-    alt: z.string().optional(),
-  })
-  .describe('ui:image-picker');
-
-export const ImageBreakSchema = BaseSectionData.extend({
-  label: z.string().optional().describe('ui:text'),
-  image: ImageSelectionSchema.default({ url: '', alt: '' }),
-  caption: z.string().optional().describe('ui:textarea'),
-});
+## Rule File Format
+
+Rules are `.mdc` files in `.cursor/rules/` with YAML frontmatter:
+
+```
+.cursor/rules/
+  typescript-standards.mdc
+  react-patterns.mdc
+  api-conventions.mdc
 ```
 
--   **ImageSelectionSchema** is a `z.object({ url, alt })` with **`.describe('ui:image-picker')`** on the object.
--   The **`image`** field in the section data uses that schema (with default), so the Inspector shows the Image Picker widget for `image`.
+### File Structure
 
-**View (`View.tsx`):**
-
--   For the image `src`: **`resolveAssetUrl(data.image.url, tenantId)`** (multi-tenant and relative paths).
--   On the node representing the image (e.g., the `<img>` or a wrapper): **`data-jp-field="image"`** so the Stage click binds the Inspector to the `image` field.
--   Other editable fields (caption, label) with **`data-jp-field="caption"`** and **`data-jp-field="label"`** where appropriate.
-
-**Full Reference:** `apps/tenant-alpha/src/components/image-break/` (schema.ts, types.ts, View.tsx, index.ts).
-
-### What to Avoid
-
--   **Do not** use `.describe('ui:image-picker')` on a **string** field (e.g., `imageUrl: z.string().describe('ui:image-picker')`): the Image Picker widget expects an object `{ url, alt? }`.
--   **Do not** forget `data-jp-field="image"` on the corresponding DOM node, otherwise Inspector ↔ Stage binding won't work for that field.
-
+```markdown
+---
+description: Brief description of what this rule does
+globs: **/*.ts  # File pattern for file-specific rules
+alwaysApply: false  # Set to true if rule should always apply
 ---
 
-## 4. Data: Shape and Responsibility
+# Rule Title
 
--   **site.json / menu.json / theme.json / pages/*.json** — Exact shape as in Appendix A (SiteConfig, MenuConfig, ThemeConfig, PageConfig). These are the Source of Truth when the user saves from Studio (Working Draft → persist to these files or API generating them).
--   **Studio** updates the Working Draft; sync with the iframe and "Bake" use the same structure. Therefore, data passed to JsonPagesEngine (siteConfig, menuConfig, pages) must be compatible with what the editor modifies.
-
-If data comes from an external CMS, you must synchronize: e.g., export from Studio → push to CMS, or CMS as source and Studio in read-only; in any case, the **shape** of pages (sections with id, type, data, settings) remains that of the spec.
-
----
-
-## 5. Registry, Schemas, Types, AddSection
-
--   **types.ts:** Single point of **module augmentation** and definition of SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig. Header: `{ data, settings?, menu: MenuItem[] }`; all others: `{ data, settings? }`.
--   **ComponentRegistry:** Every SectionType key has the corresponding component; type: `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }`.
--   **SECTION_SCHEMAS:** Every SectionType key has the **data Zod schema** (same order as registry). Base schemas re-exported from base-schemas.ts.
--   **addSectionConfig:** addableSectionTypes (only types the user can add from the library), sectionTypeLabels, getDefaultSectionData(type) returning valid `data` for that schema.
-
-**Why this matters (registry, schemas, types, addSection):** A single augmentation point (types.ts) and a single SECTION_SCHEMAS avoid duplication and ensure registry, Form Factory, and config use the same types. AddSectionConfig is the single source of truth for "which sections can be added" and "with what defaults"; without it, the "Add Section" modal wouldn't have valid names or initial data. See Spec §9 (ASC), Appendix A.2–A.3.
-
----
-
-## 6. Overlay and CSS (TOCC)
-
--   The Core injects the overlay markup (wrapper with `data-section-id`, sibling with `data-jp-section-overlay`). The **tenant** must provide the CSS so that:
-    -   `[data-jp-section-overlay]` covers the section, `pointer-events: none`, high z-index (e.g., 9999).
-    -   Hover and selected states are visible (dashed/solid border, optional tint).
-    -   The type label (e.g., `[data-jp-section-overlay] > div`) is positioned and visible on hover/selected.
-
-Without this, the overlay is invisible in the Studio iframe.
-
-**Why this matters (TOCC):** The Stage iframe loads only Tenant CSS; the Core injects overlay markup but not styles. Without TOCC selectors in Tenant CSS, hover/selected borders and type labels are invisible: the author cannot see which section is selected. See Spec §7 (TOCC).
-
----
-
-## 7. Quick Checklist (Visual Dev & Data, With CMS)
-
-| Item | Action |
-|------|--------|
-| **Layout / Visuals** | View with `--local-*` variables, z-index ≤ 1, no naked utilities. |
-| **Data (Shape)** | SiteConfig, MenuConfig, ThemeConfig, PageConfig as in Appendix A; JSON in `data/config` and `data/pages`. |
-| **Capsules** | View + schema (with `ui:*`) + types + index; data schema extends BaseSectionData; array item with id. |
-| **IDAC** | `data-jp-field` on editable scalar fields; `data-jp-item-id` and `data-jp-item-field` on array items. |
-| **types.ts** | SectionComponentPropsMap (header with menu), augmentation, PageConfig, SiteConfig, MenuConfig, ThemeConfig. |
-| **Registry** | All types mapped to component; registry type as in Appendix A. |
-| **SECTION_SCHEMAS** | One entry per type (data schema); re-export base schemas. |
-| **addSectionConfig** | addableSectionTypes, sectionTypeLabels, getDefaultSectionData. |
-| **Config** | tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection. |
-| **TOCC** | CSS overlay for `[data-jp-section-overlay]`, hover, selected, type label. |
-
----
-
-## 8. Spec References
-
--   **Architecture and ICE:** §1–§10 (MTRP, JSP, TBP, CIP, ECIP, IDAC, TOCC, BSDS, ASC, JEB).
--   **Types and Code-Generation:** Appendix A (Core types, Tenant types, Schema contract, File paths, Integration checklist).
--   **Admin:** JAP (Studio topology, Working Draft, Bake, overlay, Green Build).
-
-Using this path gives you full **governance**: types, schema, editor, Add Section, and overlay aligned with Spec v1.2. For versions with all "Why this matters" explanations, use the file **JSONPAGES_Specs_v1.2_completo.md**.
-
---- END OF FILE docs/02-Onboarding_Governance.md ---
-END_OF_FILE_CONTENT
-echo "Creating docs/02-Onboarding_Governance_completo_aggiornato.md..."
-cat << 'END_OF_FILE_CONTENT' > "docs/02-Onboarding_Governance_completo_aggiornato.md"
-# Onboarding — Percorso Governance (con CMS) — Versione completa
-
-**Per chi:** Sviluppo grafico e dati quando vuoi il **CMS** (Studio, ICE, Form Factory): authoring in-app, tipizzazione forte, governance dei contenuti e dei componenti.
-
-**Riferimento spec:** OlonJS Architecture Specifications v1.2 (legacy alias: JSONPAGES) + Appendix A — Tenant Type & Code-Generation Annex.
-
----
-
-## 1. Cosa implica "governance"
-
-- **Tipi:** Ogni section type è dichiarato in `SectionDataRegistry` / `SectionSettingsRegistry` (module augmentation) e in `SectionComponentPropsMap`. Registry e config sono tipizzati.
-- **Schema:** Ogni section type ha uno schema Zod (data, e opzionalmente settings) usato dal Form Factory per generare l'editor nell'Inspector. Gli schema sono aggregati in `SECTION_SCHEMAS`.
-- **Studio/ICE:** L'editor (Inspector) si aggancia al DOM tramite **data-jp-field** e **data-jp-item-id** / **data-jp-item-field**. L'overlay di selezione in iframe richiede che il **tenant** fornisca il CSS (TOCC).
-- **Add Section:** Il tenant espone **AddSectionConfig** (tipi addabili, label, default data) così in Studio l'utente può aggiungere section dalla libreria.
-- **Design tokens:** Le View usano variabili CSS (`--local-*`) e nessuna utility "nuda" (CIP) per coerenza e compatibilità con tema e overlay.
-
-**Perché servono (in sintesi):** Tipi e schema permettono al Core e al Form Factory di operare senza conoscere i dettagli del Tenant; IDAC permette all'Inspector di legare click in Stage e riga attiva nella sidebar (inclusa opacità attivo/inattivo); TOCC rende visibile l'overlay; AddSectionConfig definisce la libreria "Aggiungi sezione"; token e z-index evitano conflitti con l'UI di editing. Dettaglio sui "perché" per ogni specifica: spec v1.2 (§1–§10, JAP, Appendix A), dove ogni sezione ha un paragrafo **Perché servono**.
-
----
-
-## 1.1 Valore della tipizzazione: governance e CMS UX
-
-La tipizzazione (tipi TypeScript + schema Zod) serve a **due livelli**: governance (sviluppatore/architettura) e **UX del CMS** (autore che usa Studio). Spesso si menziona solo il primo.
-
-**Governance:** registry tipizzato, SectionComponentPropsMap, forma di SiteConfig/PageConfig, audit, code-generation → coerenza tra tenant, niente drift, refactor sicuro, tooling basato su spec.
-
-**CMS UX:** lo schema Zod guida il **Form Factory** (quali widget per ogni campo: text, textarea, select, list, icon-picker, **image-picker**); **data-jp-field** e **data-jp-item-id/field** legano click in Stage e form nell'Inspector; **AddSectionConfig** dà tipi addabili, label e default. Risultato per l'autore: form coerenti, "Aggiungi sezione" con nomi e dati iniziali sensati, selezione corretta (click → form giusto), validazione con errori chiari. Senza schema e contratto tipizzato l'Inspector non saprebbe quali campi mostrare né come validare. Quindi: per la governance la tipizzazione garantisce contratti; per la **CMS UX** definisce l'**esperienza di editing** (controlli, label, default, binding). Va specificato entrambi.
-
----
-
-## 2. Struttura progetto (completa)
-
-- **`src/data/config/site.json`** — SiteConfig (identity, pages[], header block, footer block).
-- **`src/data/config/menu.json`** — MenuConfig (es. `main: MenuItem[]`).
-- **`src/data/config/theme.json`** — ThemeConfig (tokens).
-- **`src/data/pages/<slug>.json`** — PageConfig (slug, meta, sections[]). **Per creare una nuova pagina** basta aggiungere un file `<slug>.json` in `src/data/pages/`; lo slug del nome file diventa il path della pagina (es. `chi-siamo.json` → `/chi-siamo`).
-- **`src/components/<sectionType>/`** — **Capsula piena:** View.tsx, schema.ts, types.ts, index.ts.
-- **`src/lib/base-schemas.ts`** — BaseSectionData, BaseArrayItem, BaseSectionSettingsSchema.
-- **`src/lib/schemas.ts`** — SECTION_SCHEMAS (aggregato degli schema data per tipo) + export SectionType.
-- **`src/lib/ComponentRegistry.tsx`** — Registry tipizzato: `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }`.
-- **`src/lib/addSectionConfig.ts`** — AddSectionConfig (addableSectionTypes, sectionTypeLabels, getDefaultSectionData).
-- **`src/types.ts`** — SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **module augmentation** per SectionDataRegistry e SectionSettingsRegistry; re-export da `@olonjs/core`.
-- **`src/App.tsx`** — Bootstrap: config (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection); `<JsonPagesEngine config={config} />`.
-- **CSS globale** — Include i selettori TOCC per overlay (hover/selected/type label).
-
----
-
-## 3. Componenti (capsule + IDAC + token)
-
-- **Capsula:** Ogni section type ha View, schema (Zod), types (inferiti), index. Lo schema **data** estende BaseSectionData; gli item degli array estendono BaseArrayItem.
-- **View:** Riceve `data` e `settings` (e `menu` per header). Non importa Zod. Usa **solo** variabili CSS per colori/raggi (es. `bg-[var(--local-bg)]`), sezione root con `z-index` ≤ 1.
-- **IDAC (ICE):** Su ogni campo editabile in modo scalare: **`data-jp-field="<fieldKey>"`**. Su ogni item di array editabile: **`data-jp-item-id="<stableId>"`** e **`data-jp-item-field="<arrayKey>"`**. Così l'Inspector può legare selezione e form ai path corretti.
-- **Schema:** Usa il vocabolario UI (ECIP): `.describe('ui:text')`, `ui:textarea`, `ui:select`, `ui:number`, `ui:list`, `ui:icon-picker`, **`ui:image-picker`** (vedi §3.1). Array di oggetti editabili: ogni oggetto con `id` (BaseArrayItem).
-
-**Perché servono (componenti):** **data-jp-field** e **data-jp-item-*** servono perché lo Stage è in un iframe e il Core deve sapere quale campo/item corrisponde al click senza conoscere il DOM del Tenant: così la sidebar può evidenziare la riga attiva (anche con opacità diversa per attivo/inattivo), aprire il form sul campo giusto e gestire liste (reorder, delete). Senza IDAC, click sul canvas non si riflette nella sidebar. Schema con `ui:*` e BaseArrayItem servono al Form Factory per generare i widget giusti e mantenere chiavi stabili (reorder/delete). Token e z-index evitano che il contenuto copra l'overlay. Vedi spec §6 (IDAC), §5 (ECIP), §4 (CIP).
-
----
-
-## 3.1 Image Picker: uso corretto nello schema (esempio `image-break`)
-
-Per i **campi immagine** il Form Factory espone il widget **Image Picker** solo se lo schema è modellato correttamente.
-
-### Regola
-
-- Il campo immagine non è una **stringa** (`z.string()`), ma un **oggetto** con almeno `url` e, opzionalmente, `alt`.
-- Lo **schema di questo oggetto** (il sub-schema) va marcato con **`.describe('ui:image-picker')`**. Il Form Factory riconosce `ui:image-picker` solo su **ZodObject** (schema oggetto), non su campi stringa.
-
-### Esempio (capsula `image-break`)
-
-**Schema (`schema.ts`):**
-
-```ts
-import { z } from 'zod';
-import { BaseSectionData } from '@/lib/base-schemas';
-
-const ImageSelectionSchema = z
-  .object({
-    url: z.string(),
-    alt: z.string().optional(),
-  })
-  .describe('ui:image-picker');
-
-export const ImageBreakSchema = BaseSectionData.extend({
-  label: z.string().optional().describe('ui:text'),
-  image: ImageSelectionSchema.default({ url: '', alt: '' }),
-  caption: z.string().optional().describe('ui:textarea'),
-});
+Your rule content here...
 ```
 
-- **ImageSelectionSchema** è un `z.object({ url, alt })` con **`.describe('ui:image-picker')`** sull'oggetto.
-- Il campo **`image`** nella section data usa quel schema (con default) così l'Inspector mostra il widget Image Picker per `image`.
+### Frontmatter Fields
 
-**View (`View.tsx`):**
-
-- Per il `src` dell'immagine: **`resolveAssetUrl(data.image.url, tenantId)`** (multi-tenant e path relativi).
-- Sul nodo che rappresenta l'immagine (es. il `<img>` o un wrapper): **`data-jp-field="image"`** così il click in Stage lega l'Inspector al campo `image`.
-- Altri campi editabili (caption, label) con **`data-jp-field="caption"`** e **`data-jp-field="label"`** dove appropriato.
-
-**Riferimento completo:** `apps/tenant-alpha/src/components/image-break/` (schema.ts, types.ts, View.tsx, index.ts).
-
-### Cosa evitare
-
-- **Non** usare `.describe('ui:image-picker')` su un campo **stringa** (es. `imageUrl: z.string().describe('ui:image-picker')`): il widget Image Picker si aspetta un oggetto `{ url, alt? }`.
-- **Non** dimenticare `data-jp-field="image"` sul nodo corrispondente nel DOM, altrimenti il binding Inspector ↔ Stage non funziona per quel campo.
+| Field | Type | Description |
+|-------|------|-------------|
+| `description` | string | What the rule does (shown in rule picker) |
+| `globs` | string | File pattern - rule applies when matching files are open |
+| `alwaysApply` | boolean | If true, applies to every session |
 
 ---
 
-## 4. Dati: forma e responsabilità
+## Rule Configurations
 
-- **site.json / menu.json / theme.json / pages/*.json** — Forma esatta come in Appendix A (SiteConfig, MenuConfig, ThemeConfig, PageConfig). Sono la source of truth quando l'utente salva da Studio (Working Draft → persist su questi file o su API che li generano).
-- **Studio** aggiorna il Working Draft; il sync con l'iframe e il "Bake" usano la stessa struttura. Quindi i dati che passi a JsonPagesEngine (siteConfig, menuConfig, pages) devono essere compatibili con ciò che l'editor modifica.
+### Always Apply
 
-Se i dati arrivano da un CMS esterno, tocca a te sincronizzare: es. export da Studio → push su CMS, oppure CMS come source e Studio in read-only; in ogni caso la **forma** delle pagine (sections con id, type, data, settings) resta quella della spec.
+For universal standards that should apply to every conversation:
+
+```yaml
+---
+description: Core coding standards for the project
+alwaysApply: true
+---
+```
+
+### Apply to Specific Files
+
+For rules that apply when working with certain file types:
+
+```yaml
+---
+description: TypeScript conventions for this project
+globs: **/*.ts
+alwaysApply: false
+---
+```
 
 ---
 
-## 5. Registry, schemas, types, addSection
+## Best Practices
 
-- **types.ts:** Unico punto di **module augmentation** e definizione di SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig. Header: `{ data, settings?, menu: MenuItem[] }`; tutti gli altri: `{ data, settings? }`.
-- **ComponentRegistry:** Ogni chiave di SectionType ha il componente corrispondente; tipo: `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }`.
-- **SECTION_SCHEMAS:** Ogni chiave di SectionType ha lo **schema Zod della data** (stesso ordine del registry). Base schemas re-exportati da base-schemas.ts.
-- **addSectionConfig:** addableSectionTypes (solo i tipi che l'utente può aggiungere dalla libreria), sectionTypeLabels, getDefaultSectionData(type) che restituisce `data` valido per quello schema.
+### Keep Rules Concise
 
-**Perché servono (registry, schemas, types, addSection):** Un solo punto di augmentation (types.ts) e un solo SECTION_SCHEMAS evita duplicazioni e garantisce che registry, Form Factory e config usino gli stessi tipi. AddSectionConfig è l'unica fonte di verità per "quali section si possono aggiungere" e "con quali default"; senza, il modal "Aggiungi sezione" non avrebbe nomi né dati iniziali validi. Vedi spec §9 (ASC), Appendix A.2–A.3.
-
----
-
-## 6. Overlay e CSS (TOCC)
-
-- Il Core inietta il markup dell'overlay (wrapper con `data-section-id`, sibling con `data-jp-section-overlay`). Il **tenant** deve fornire il CSS in modo che:
-  - `[data-jp-section-overlay]` copra la section, `pointer-events: none`, z-index alto (es. 9999).
-  - Hover e selected siano visibili (bordo tratteggiato / pieno, eventuale tint).
-  - Il type label (es. `[data-jp-section-overlay] > div`) sia posizionato e visibile su hover/selected.
-
-Senza questo, in Studio l'overlay non si vede nell'iframe.
-
-**Perché servono (TOCC):** L'iframe dello Stage carica solo il CSS del Tenant; il Core inietta il markup dell'overlay ma non gli stili. Senza i selettori TOCC nel CSS tenant, bordo hover/selected e type label non sono visibili: l'autore non vede quale section è selezionata. Vedi spec §7 (TOCC).
+- **Under 50 lines**: Rules should be concise and to the point
+- **One concern per rule**: Split large rules into focused pieces
+- **Actionable**: Write like clear internal docs
+- **Concrete examples**: Ideally provide concrete examples of how to fix issues
 
 ---
 
-## 7. Checklist rapida (sviluppo grafico e dati, con CMS)
+## Example Rules
 
-| Cosa | Azione |
-|------|--------|
-| **Layout / grafico** | View con variabili `--local-*`, z-index ≤ 1, nessuna utility naked. |
-| **Dati (forma)** | SiteConfig, MenuConfig, ThemeConfig, PageConfig come in Appendix A; JSON in `data/config` e `data/pages`. |
-| **Nuova pagina** | Aggiungere un file `<slug>.json` in `src/data/pages/` (lo slug diventa il path della pagina). |
-| **Capsule** | View + schema (con ui:*) + types + index; data schema estende BaseSectionData; array item con id. |
-| **IDAC** | data-jp-field su campi scalari editabili; data-jp-item-id e data-jp-item-field su item di array. |
-| **Image Picker** | Campo immagine = oggetto `{ url, alt? }` con sub-schema `.describe('ui:image-picker')`; View con `resolveAssetUrl` e `data-jp-field="image"`. Esempio: `image-break`. |
-| **types.ts** | SectionComponentPropsMap (header con menu), augmentation, PageConfig, SiteConfig, MenuConfig, ThemeConfig. |
-| **Registry** | Tutti i tipi mappati al componente; tipo registry come in Appendix A. |
-| **SECTION_SCHEMAS** | Un entry per tipo (schema data); re-export base schemas. |
-| **addSectionConfig** | addableSectionTypes, sectionTypeLabels, getDefaultSectionData. |
-| **Config** | tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection. |
-| **TOCC** | CSS overlay per [data-jp-section-overlay], hover, selected, type label. |
+### TypeScript Standards
+
+```markdown
+---
+description: TypeScript coding standards
+globs: **/*.ts
+alwaysApply: false
+---
+
+# Error Handling
+
+\`\`\`typescript
+// ❌ BAD
+try {
+  await fetchData();
+} catch (e) {}
+
+// ✅ GOOD
+try {
+  await fetchData();
+} catch (e) {
+  logger.error('Failed to fetch', { error: e });
+  throw new DataFetchError('Unable to retrieve data', { cause: e });
+}
+\`\`\`
+```
+
+### React Patterns
+
+```markdown
+---
+description: React component patterns
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# React Patterns
+
+- Use functional components
+- Extract custom hooks for reusable logic
+- Colocate styles with components
+```
 
 ---
 
-## 8. Riferimenti spec
+## Checklist
 
-- **Architettura e ICE:** §1–§10 (MTRP, JSP, TBP, CIP, ECIP, IDAC, TOCC, BSDS, ASC, JEB).
-- **Tipi e code-generation:** Appendix A (Core types, Tenant types, Schema contract, File paths, Integration checklist).
-- **Admin:** JAP (Studio topology, Working Draft, Bake, overlay, Green Build).
-
-Usando questo percorso hai **governance** piena: tipi, schema, editor, Add Section e overlay allineati alle spec v1.2. Per le versioni con tutti i "Perché servono" usa il file **JSONPAGES_Specs_v1.2_completo.md**.
+- [ ] File is `.mdc` format in `.cursor/rules/`
+- [ ] Frontmatter configured correctly
+- [ ] Content under 500 lines
+- [ ] Includes concrete examples
 
 END_OF_FILE_CONTENT
-mkdir -p "docs/ver"
+mkdir -p ".cursor/skills-cursor/create-skill"
+echo "Creating .cursor/skills-cursor/create-skill/SKILL.md..."
+cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/create-skill/SKILL.md"
+---
+name: create-skill
+description: >-
+  Guides users through creating effective Agent Skills for Cursor. Use when you
+  want to create, write, or author a new skill, or asks about skill structure,
+  best practices, or SKILL.md format.
+---
+# Creating Skills in Cursor
+
+This skill guides you through creating effective Agent Skills for Cursor. Skills are markdown files that teach the agent how to perform specific tasks: reviewing PRs using team standards, generating commit messages in a preferred format, querying database schemas, or any specialized workflow.
+
+## Before You Begin: Gather Requirements
+
+Before creating a skill, gather essential information from the user about:
+
+1. **Purpose and scope**: What specific task or workflow should this skill help with?
+2. **Target location**: Should this be a personal skill (~/.cursor/skills/) or project skill (.cursor/skills/)?
+3. **Trigger scenarios**: When should the agent automatically apply this skill?
+4. **Key domain knowledge**: What specialized information does the agent need that it wouldn't already know?
+5. **Output format preferences**: Are there specific templates, formats, or styles required?
+6. **Existing patterns**: Are there existing examples or conventions to follow?
+
+### Inferring from Context
+
+If you have previous conversation context, infer the skill from what was discussed. You can create skills based on workflows, patterns, or domain knowledge that emerged in the conversation.
+
+### Gathering Additional Information
+
+If you need clarification, use the AskQuestion tool when available:
+
+```
+Example AskQuestion usage:
+- "Where should this skill be stored?" with options like ["Personal (~/.cursor/skills/)", "Project (.cursor/skills/)"]
+- "Should this skill include executable scripts?" with options like ["Yes", "No"]
+```
+
+If the AskQuestion tool is not available, ask these questions conversationally.
+
+---
+
+## Skill File Structure
+
+### Directory Layout
+
+Skills are stored as directories containing a `SKILL.md` file:
+
+```
+skill-name/
+├── SKILL.md              # Required - main instructions
+├── reference.md          # Optional - detailed documentation
+├── examples.md           # Optional - usage examples
+└── scripts/              # Optional - utility scripts
+    ├── validate.py
+    └── helper.sh
+```
+
+### Storage Locations
+
+| Type | Path | Scope |
+|------|------|-------|
+| Personal | ~/.cursor/skills/skill-name/ | Available across all your projects |
+| Project | .cursor/skills/skill-name/ | Shared with anyone using the repository |
+
+**IMPORTANT**: Never create skills in `~/.cursor/skills-cursor/`. This directory is reserved for Cursor's internal built-in skills and is managed automatically by the system.
+
+### SKILL.md Structure
+
+Every skill requires a `SKILL.md` file with YAML frontmatter and markdown body:
+
+```markdown
+---
+name: your-skill-name
+description: Brief description of what this skill does and when to use it
+---
+
+# Your Skill Name
+
+## Instructions
+Clear, step-by-step guidance for the agent.
+
+## Examples
+Concrete examples of using this skill.
+```
+
+### Required Metadata Fields
+
+| Field | Requirements | Purpose |
+|-------|--------------|---------|
+| `name` | Max 64 chars, lowercase letters/numbers/hyphens only | Unique identifier for the skill |
+| `description` | Max 1024 chars, non-empty | Helps agent decide when to apply the skill |
+
+---
+
+## Writing Effective Descriptions
+
+The description is **critical** for skill discovery. The agent uses it to decide when to apply your skill.
+
+### Description Best Practices
+
+1. **Write in third person** (the description is injected into the system prompt):
+   - ✅ Good: "Processes Excel files and generates reports"
+   - ❌ Avoid: "I can help you process Excel files"
+   - ❌ Avoid: "You can use this to process Excel files"
+
+2. **Be specific and include trigger terms**:
+   - ✅ Good: "Extract text and tables from PDF files, fill forms, merge documents. Use when working with PDF files or when the user mentions PDFs, forms, or document extraction."
+   - ❌ Vague: "Helps with documents"
+
+3. **Include both WHAT and WHEN**:
+   - WHAT: What the skill does (specific capabilities)
+   - WHEN: When the agent should use it (trigger scenarios)
+
+### Description Examples
+
+```yaml
+# PDF Processing
+description: Extract text and tables from PDF files, fill forms, merge documents. Use when working with PDF files or when the user mentions PDFs, forms, or document extraction.
+
+# Excel Analysis
+description: Analyze Excel spreadsheets, create pivot tables, generate charts. Use when analyzing Excel files, spreadsheets, tabular data, or .xlsx files.
+
+# Git Commit Helper
+description: Generate descriptive commit messages by analyzing git diffs. Use when the user asks for help writing commit messages or reviewing staged changes.
+
+# Code Review
+description: Review code for quality, security, and best practices following team standards. Use when reviewing pull requests, code changes, or when the user asks for a code review.
+```
+
+---
+
+## Core Authoring Principles
+
+### 1. Concise is Key
+
+The context window is shared with conversation history, other skills, and requests. Every token competes for space.
+
+**Default assumption**: The agent is already very smart. Only add context it doesn't already have.
+
+Challenge each piece of information:
+- "Does the agent really need this explanation?"
+- "Can I assume the agent knows this?"
+- "Does this paragraph justify its token cost?"
+
+**Good (concise)**:
+```markdown
+## Extract PDF text
+
+Use pdfplumber for text extraction:
+
+\`\`\`python
+import pdfplumber
+
+with pdfplumber.open("file.pdf") as pdf:
+    text = pdf.pages[0].extract_text()
+\`\`\`
+```
+
+**Bad (verbose)**:
+```markdown
+## Extract PDF text
+
+PDF (Portable Document Format) files are a common file format that contains
+text, images, and other content. To extract text from a PDF, you'll need to
+use a library. There are many libraries available for PDF processing, but we
+recommend pdfplumber because it's easy to use and handles most cases well...
+```
+
+### 2. Keep SKILL.md Under 500 Lines
+
+For optimal performance, the main SKILL.md file should be concise. Use progressive disclosure for detailed content.
+
+### 3. Progressive Disclosure
+
+Put essential information in SKILL.md; detailed reference material in separate files that the agent reads only when needed.
+
+```markdown
+# PDF Processing
+
+## Quick start
+[Essential instructions here]
+
+## Additional resources
+- For complete API details, see [reference.md](reference.md)
+- For usage examples, see [examples.md](examples.md)
+```
+
+**Keep references one level deep** - link directly from SKILL.md to reference files. Deeply nested references may result in partial reads.
+
+### 4. Set Appropriate Degrees of Freedom
+
+Match specificity to the task's fragility:
+
+| Freedom Level | When to Use | Example |
+|---------------|-------------|---------|
+| **High** (text instructions) | Multiple valid approaches, context-dependent | Code review guidelines |
+| **Medium** (pseudocode/templates) | Preferred pattern with acceptable variation | Report generation |
+| **Low** (specific scripts) | Fragile operations, consistency critical | Database migrations |
+
+---
+
+## Common Patterns
+
+### Template Pattern
+
+Provide output format templates:
+
+```markdown
+## Report structure
+
+Use this template:
+
+\`\`\`markdown
+# [Analysis Title]
+
+## Executive summary
+[One-paragraph overview of key findings]
+
+## Key findings
+- Finding 1 with supporting data
+- Finding 2 with supporting data
+
+## Recommendations
+1. Specific actionable recommendation
+2. Specific actionable recommendation
+\`\`\`
+```
+
+### Examples Pattern
+
+For skills where output quality depends on seeing examples:
+
+```markdown
+## Commit message format
+
+**Example 1:**
+Input: Added user authentication with JWT tokens
+Output:
+\`\`\`
+feat(auth): implement JWT-based authentication
+
+Add login endpoint and token validation middleware
+\`\`\`
+
+**Example 2:**
+Input: Fixed bug where dates displayed incorrectly
+Output:
+\`\`\`
+fix(reports): correct date formatting in timezone conversion
+
+Use UTC timestamps consistently across report generation
+\`\`\`
+```
+
+### Workflow Pattern
+
+Break complex operations into clear steps with checklists:
+
+```markdown
+## Form filling workflow
+
+Copy this checklist and track progress:
+
+\`\`\`
+Task Progress:
+- [ ] Step 1: Analyze the form
+- [ ] Step 2: Create field mapping
+- [ ] Step 3: Validate mapping
+- [ ] Step 4: Fill the form
+- [ ] Step 5: Verify output
+\`\`\`
+
+**Step 1: Analyze the form**
+Run: \`python scripts/analyze_form.py input.pdf\`
+...
+```
+
+### Conditional Workflow Pattern
+
+Guide through decision points:
+
+```markdown
+## Document modification workflow
+
+1. Determine the modification type:
+
+   **Creating new content?** → Follow "Creation workflow" below
+   **Editing existing content?** → Follow "Editing workflow" below
+
+2. Creation workflow:
+   - Use docx-js library
+   - Build document from scratch
+   ...
+```
+
+### Feedback Loop Pattern
+
+For quality-critical tasks, implement validation loops:
+
+```markdown
+## Document editing process
+
+1. Make your edits
+2. **Validate immediately**: \`python scripts/validate.py output/\`
+3. If validation fails:
+   - Review the error message
+   - Fix the issues
+   - Run validation again
+4. **Only proceed when validation passes**
+```
+
+---
+
+## Utility Scripts
+
+Pre-made scripts offer advantages over generated code:
+- More reliable than generated code
+- Save tokens (no code in context)
+- Save time (no code generation)
+- Ensure consistency across uses
+
+```markdown
+## Utility scripts
+
+**analyze_form.py**: Extract all form fields from PDF
+\`\`\`bash
+python scripts/analyze_form.py input.pdf > fields.json
+\`\`\`
+
+**validate.py**: Check for errors
+\`\`\`bash
+python scripts/validate.py fields.json
+# Returns: "OK" or lists conflicts
+\`\`\`
+```
+
+Make clear whether the agent should **execute** the script (most common) or **read** it as reference.
+
+---
+
+## Anti-Patterns to Avoid
+
+### 1. Windows-Style Paths
+- ✅ Use: `scripts/helper.py`
+- ❌ Avoid: `scripts\helper.py`
+
+### 2. Too Many Options
+```markdown
+# Bad - confusing
+"You can use pypdf, or pdfplumber, or PyMuPDF, or..."
+
+# Good - provide a default with escape hatch
+"Use pdfplumber for text extraction.
+For scanned PDFs requiring OCR, use pdf2image with pytesseract instead."
+```
+
+### 3. Time-Sensitive Information
+```markdown
+# Bad - will become outdated
+"If you're doing this before August 2025, use the old API."
+
+# Good - use an "old patterns" section
+## Current method
+Use the v2 API endpoint.
+
+## Old patterns (deprecated)
+<details>
+<summary>Legacy v1 API</summary>
+...
+</details>
+```
+
+### 4. Inconsistent Terminology
+Choose one term and use it throughout:
+- ✅ Always "API endpoint" (not mixing "URL", "route", "path")
+- ✅ Always "field" (not mixing "box", "element", "control")
+
+### 5. Vague Skill Names
+- ✅ Good: `processing-pdfs`, `analyzing-spreadsheets`
+- ❌ Avoid: `helper`, `utils`, `tools`
+
+---
+
+## Skill Creation Workflow
+
+When helping a user create a skill, follow this process:
+
+### Phase 1: Discovery
+
+Gather information about:
+1. The skill's purpose and primary use case
+2. Storage location (personal vs project)
+3. Trigger scenarios
+4. Any specific requirements or constraints
+5. Existing examples or patterns to follow
+
+If you have access to the AskQuestion tool, use it for efficient structured gathering. Otherwise, ask conversationally.
+
+### Phase 2: Design
+
+1. Draft the skill name (lowercase, hyphens, max 64 chars)
+2. Write a specific, third-person description
+3. Outline the main sections needed
+4. Identify if supporting files or scripts are needed
+
+### Phase 3: Implementation
+
+1. Create the directory structure
+2. Write the SKILL.md file with frontmatter
+3. Create any supporting reference files
+4. Create any utility scripts if needed
+
+### Phase 4: Verification
+
+1. Verify the SKILL.md is under 500 lines
+2. Check that the description is specific and includes trigger terms
+3. Ensure consistent terminology throughout
+4. Verify all file references are one level deep
+5. Test that the skill can be discovered and applied
+
+---
+
+## Complete Example
+
+Here's a complete example of a well-structured skill:
+
+**Directory structure:**
+```
+code-review/
+├── SKILL.md
+├── STANDARDS.md
+└── examples.md
+```
+
+**SKILL.md:**
+```markdown
+---
+name: code-review
+description: Review code for quality, security, and maintainability following team standards. Use when reviewing pull requests, examining code changes, or when the user asks for a code review.
+---
+
+# Code Review
+
+## Quick Start
+
+When reviewing code:
+
+1. Check for correctness and potential bugs
+2. Verify security best practices
+3. Assess code readability and maintainability
+4. Ensure tests are adequate
+
+## Review Checklist
+
+- [ ] Logic is correct and handles edge cases
+- [ ] No security vulnerabilities (SQL injection, XSS, etc.)
+- [ ] Code follows project style conventions
+- [ ] Functions are appropriately sized and focused
+- [ ] Error handling is comprehensive
+- [ ] Tests cover the changes
+
+## Providing Feedback
+
+Format feedback as:
+- 🔴 **Critical**: Must fix before merge
+- 🟡 **Suggestion**: Consider improving
+- 🟢 **Nice to have**: Optional enhancement
+
+## Additional Resources
+
+- For detailed coding standards, see [STANDARDS.md](STANDARDS.md)
+- For example reviews, see [examples.md](examples.md)
+```
+
+---
+
+## Summary Checklist
+
+Before finalizing a skill, verify:
+
+### Core Quality
+- [ ] Description is specific and includes key terms
+- [ ] Description includes both WHAT and WHEN
+- [ ] Written in third person
+- [ ] SKILL.md body is under 500 lines
+- [ ] Consistent terminology throughout
+- [ ] Examples are concrete, not abstract
+
+### Structure
+- [ ] File references are one level deep
+- [ ] Progressive disclosure used appropriately
+- [ ] Workflows have clear steps
+- [ ] No time-sensitive information
+
+### If Including Scripts
+- [ ] Scripts solve problems rather than punt
+- [ ] Required packages are documented
+- [ ] Error handling is explicit and helpful
+- [ ] No Windows-style paths
+
+END_OF_FILE_CONTENT
+mkdir -p ".cursor/skills-cursor/create-subagent"
+echo "Creating .cursor/skills-cursor/create-subagent/SKILL.md..."
+cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/create-subagent/SKILL.md"
+---
+name: create-subagent
+description: >-
+  Create custom subagents for specialized AI tasks. Use when you want to create
+  a new type of subagent, set up task-specific agents, configure code reviewers,
+  debuggers, or domain-specific assistants with custom prompts.
+disable-model-invocation: true
+---
+# Creating Custom Subagents
+
+This skill guides you through creating custom subagents for Cursor. Subagents are specialized AI assistants that run in isolated contexts with custom system prompts.
+
+## When to Use Subagents
+
+Subagents help you:
+- **Preserve context** by isolating exploration from your main conversation
+- **Specialize behavior** with focused system prompts for specific domains
+- **Reuse configurations** across projects with user-level subagents
+
+### Inferring from Context
+
+If you have previous conversation context, infer the subagent's purpose and behavior from what was discussed. Create the subagent based on specialized tasks or workflows that emerged in the conversation.
+
+## Subagent Locations
+
+| Location | Scope | Priority |
+|----------|-------|----------|
+| `.cursor/agents/` | Current project | Higher |
+| `~/.cursor/agents/` | All your projects | Lower |
+
+When multiple subagents share the same name, the higher-priority location wins.
+
+**Project subagents** (`.cursor/agents/`): Ideal for codebase-specific agents. Check into version control to share with your team.
+
+**User subagents** (`~/.cursor/agents/`): Personal agents available across all your projects.
+
+## Subagent File Format
+
+Create a `.md` file with YAML frontmatter and a markdown body (the system prompt):
+
+```markdown
+---
+name: code-reviewer
+description: Reviews code for quality and best practices
+---
+
+You are a code reviewer. When invoked, analyze the code and provide
+specific, actionable feedback on quality, security, and best practices.
+```
+
+### Required Fields
+
+| Field | Description |
+|-------|-------------|
+| `name` | Unique identifier (lowercase letters and hyphens only) |
+| `description` | When to delegate to this subagent (be specific!) |
+
+## Writing Effective Descriptions
+
+The description is **critical** - the AI uses it to decide when to delegate.
+
+```yaml
+# ❌ Too vague
+description: Helps with code
+
+# ✅ Specific and actionable
+description: Expert code review specialist. Proactively reviews code for quality, security, and maintainability. Use immediately after writing or modifying code.
+```
+
+Include "use proactively" to encourage automatic delegation.
+
+## Example Subagents
+
+### Code Reviewer
+
+```markdown
+---
+name: code-reviewer
+description: Expert code review specialist. Proactively reviews code for quality, security, and maintainability. Use immediately after writing or modifying code.
+---
+
+You are a senior code reviewer ensuring high standards of code quality and security.
+
+When invoked:
+1. Run git diff to see recent changes
+2. Focus on modified files
+3. Begin review immediately
+
+Review checklist:
+- Code is clear and readable
+- Functions and variables are well-named
+- No duplicated code
+- Proper error handling
+- No exposed secrets or API keys
+- Input validation implemented
+- Good test coverage
+- Performance considerations addressed
+
+Provide feedback organized by priority:
+- Critical issues (must fix)
+- Warnings (should fix)
+- Suggestions (consider improving)
+
+Include specific examples of how to fix issues.
+```
+
+### Debugger
+
+```markdown
+---
+name: debugger
+description: Debugging specialist for errors, test failures, and unexpected behavior. Use proactively when encountering any issues.
+---
+
+You are an expert debugger specializing in root cause analysis.
+
+When invoked:
+1. Capture error message and stack trace
+2. Identify reproduction steps
+3. Isolate the failure location
+4. Implement minimal fix
+5. Verify solution works
+
+Debugging process:
+- Analyze error messages and logs
+- Check recent code changes
+- Form and test hypotheses
+- Add strategic debug logging
+- Inspect variable states
+
+For each issue, provide:
+- Root cause explanation
+- Evidence supporting the diagnosis
+- Specific code fix
+- Testing approach
+- Prevention recommendations
+
+Focus on fixing the underlying issue, not the symptoms.
+```
+
+### Data Scientist
+
+```markdown
+---
+name: data-scientist
+description: Data analysis expert for SQL queries, BigQuery operations, and data insights. Use proactively for data analysis tasks and queries.
+---
+
+You are a data scientist specializing in SQL and BigQuery analysis.
+
+When invoked:
+1. Understand the data analysis requirement
+2. Write efficient SQL queries
+3. Use BigQuery command line tools (bq) when appropriate
+4. Analyze and summarize results
+5. Present findings clearly
+
+Key practices:
+- Write optimized SQL queries with proper filters
+- Use appropriate aggregations and joins
+- Include comments explaining complex logic
+- Format results for readability
+- Provide data-driven recommendations
+
+For each analysis:
+- Explain the query approach
+- Document any assumptions
+- Highlight key findings
+- Suggest next steps based on data
+
+Always ensure queries are efficient and cost-effective.
+```
+
+## Subagent Creation Workflow
+
+### Step 1: Decide the Scope
+
+- **Project-level** (`.cursor/agents/`): For codebase-specific agents shared with team
+- **User-level** (`~/.cursor/agents/`): For personal agents across all projects
+
+### Step 2: Create the File
+
+```bash
+# For project-level
+mkdir -p .cursor/agents
+touch .cursor/agents/my-agent.md
+
+# For user-level
+mkdir -p ~/.cursor/agents
+touch ~/.cursor/agents/my-agent.md
+```
+
+### Step 3: Define Configuration
+
+Write the frontmatter with the required fields (`name` and `description`).
+
+### Step 4: Write the System Prompt
+
+The body becomes the system prompt. Be specific about:
+- What the agent should do when invoked
+- The workflow or process to follow
+- Output format and structure
+- Any constraints or guidelines
+
+### Step 5: Test the Agent
+
+Ask the AI to use your new agent:
+
+```
+Use the my-agent subagent to [task description]
+```
+
+## Best Practices
+
+1. **Design focused subagents**: Each should excel at one specific task
+2. **Write detailed descriptions**: Include trigger terms so the AI knows when to delegate
+3. **Check into version control**: Share project subagents with your team
+4. **Use proactive language**: Include "use proactively" in descriptions
+
+## Troubleshooting
+
+### Subagent Not Found
+- Ensure file is in `.cursor/agents/` or `~/.cursor/agents/`
+- Check file has `.md` extension
+- Verify YAML frontmatter syntax is valid
+
+END_OF_FILE_CONTENT
+mkdir -p ".cursor/skills-cursor/jsonpages-tenant"
+echo "Creating .cursor/skills-cursor/jsonpages-tenant/SKILL.md..."
+cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/jsonpages-tenant/SKILL.md"
+---
+name: jsonpages-tenant
+description: Use when working on a JsonPages tenant, transforming the base tenant DNA into a branded tenant, adding or modifying tenant sections, maintaining schema-driven editability, or reasoning about what belongs to @jsonpages/core versus the tenant.
+---
+
+# JsonPages Tenant
+
+Use this skill for work on the JsonPages ecosystem when the task involves:
+
+- a tenant generated from the JsonPages CLI
+- `@jsonpages/core`
+- tenant sections/capsules
+- `src/data/pages/**/*.json` or `src/data/config/*.json`
+- schema-driven editing and inspector compatibility
+- generator scripts that turn a base tenant into a branded tenant
+
+Read code first. Treat documents as secondary unless they help interpret code that is otherwise ambiguous.
+
+## Core Model
+
+JsonPages has a hard split between `core` and `tenant`.
+
+- `@jsonpages/core` owns routing, `/admin`, `/admin/preview`, preview stage, studio state, inspector/form factory, and shared engine behavior.
+- The tenant owns sections, schemas, type augmentation, page/config JSON, theme/design layer, and local workflow scripts.
+- The tenant does not implement the CMS. It implements the tenant protocol consumed by the engine.
+
+In this ecosystem, code is the source of truth.
+
+Compliance priority:
+
+1. Data is bound correctly.
+2. Schemas describe fields correctly.
+3. Content is editable without breaking the inspector.
+4. Tenant structure stays standardized.
+5. Context-aware focus/highlight in the legacy admin is desirable but secondary.
+
+## Canonical References
+
+Use these local references when available:
+
+- Base tenant DNA: `\\wsl.localhost\Ubuntu\home\dev\temp\alpha`
+- Custom tenant reference: `\\wsl.localhost\Ubuntu\home\dev\temp\gptgiorgio`
+- Core engine: `\\wsl.localhost\Ubuntu\home\dev\npm-jpcore\packages\core`
+- Generator example: `\\wsl.localhost\Ubuntu\home\dev\temp\clonark\generate_olon.sh`
+
+If these paths are missing, infer the same roles from the current workspace:
+
+- base CLI-generated tenant
+- branded tenant
+- core package
+- generator script
+
+## Tenant Anatomy
+
+Expect these files to move together:
+
+- `src/components/<section>/View.tsx`
+- `src/components/<section>/schema.ts`
+- `src/components/<section>/types.ts`
+- `src/components/<section>/index.ts`
+- `src/lib/ComponentRegistry.tsx`
+- `src/lib/schemas.ts`
+- `src/lib/addSectionConfig.ts`
+- `src/types.ts`
+- `src/data/pages/**/*.json`
+- `src/data/config/site.json`
+- `src/data/config/theme.json`
+- `src/data/config/menu.json`
+
+Useful rule: if a section type changes, check all of the files above before concluding the task is done.
+
+## What Good Work Looks Like
+
+A good tenant change:
+
+- stays inside tenant boundaries unless the issue is truly in `@jsonpages/core`
+- keeps schema, defaults, registry, and type augmentation aligned
+- preserves editability for strings, lists, nested objects, CTAs, and image fields
+- uses `ImageSelectionSchema`-style image fields when the content is image-driven
+- keeps page content JSON-first
+
+A suspicious tenant change:
+
+- patches the core to fix a tenant modeling problem
+- adds visual complexity without data bindings
+- introduces fields into JSON that are not represented in schema
+- changes a section view without updating defaults or types
+- optimizes legacy context awareness at the expense of simpler, reliable editability
+
+## Workflow 1: Base Tenant -> Branded Tenant
+
+This is the primary workflow.
+
+Goal:
+
+- transform a CLI-generated base tenant into a branded tenant through a single generator script
+
+Treat the generator script as procedural source of truth for the green build workflow.
+
+When maintaining or authoring a generator:
+
+1. Separate non-deterministic bootstrap from deterministic sync.
+2. Make explicit which files are managed output.
+3. Keep the script aligned with the current tenant code, not with stale docs.
+4. Preserve tenant protocol files: sections, schemas, registries, type augmentation, config JSON, assets, shims.
+5. Prefer deterministic local writes after any remote/bootstrap step.
+
+Typical structure of a good generator:
+
+- preflight checks
+- remote/bootstrap steps such as `shadcn` or external registries
+- deterministic creation/sync of tenant files
+- compatibility patches for known unstable upstream payloads
+- final validation commands
+
+When asked to update a branded tenant generator:
+
+1. Diff base tenant against branded tenant.
+2. Classify differences into:
+   - intended branded output
+   - reusable generator logic
+   - accidental drift
+3. Encode only the reusable intended differences into the script.
+4. Keep the output reproducible from a fresh base tenant.
+
+## Workflow 2: Add Or Change A Section
+
+When adding a new section type:
+
+1. Create `View.tsx`, `schema.ts`, `types.ts`, `index.ts`.
+2. Register the section in `src/lib/ComponentRegistry.tsx`.
+3. Register the schema in `src/lib/schemas.ts`.
+4. Add defaults and label in `src/lib/addSectionConfig.ts`.
+5. Extend `SectionComponentPropsMap` and module augmentation in `src/types.ts`.
+6. Add or update page JSON using the new section type.
+
+When changing an existing section:
+
+1. Read the section schema first.
+2. Read the page JSON using it.
+3. Check the view for `data-jp-field` usage and binding shape.
+4. Update defaults if the data shape changed.
+5. Verify the inspector still has a path to edit the content.
+
+## Workflow 3: Images, Rich Content, Nested Routes
+
+Images:
+
+- Prefer structured image objects compatible with tenant base schemas.
+- Assume the core supports image picking and upload flows.
+- The tenant is responsible for declaring image fields in schema and rendering them coherently.
+
+Rich editorial content:
+
+- Tiptap-style sections are tenant-level integrations.
+- Treat page JSON using `type: "tiptap"` as runtime usage examples, and section code as the real source of truth.
+
+Nested routes:
+
+- Files under `src/data/pages/**/*.json` may represent nested slugs.
+- Preserve slug/path consistency and do not replace file-based routing with manual lists.
+
+## Decision Rules
+
+Use `alpha` patterns when the task is about:
+
+- tenant DNA
+- capability reference
+- baseline protocol shape
+- proving what the base system already supports
+
+Use `gptgiorgio` patterns when the task is about:
+
+- stronger branded frontend customization
+- richer domain-specific sections
+- image-heavy schema design
+- proving how far customization can go without changing the bootstrap
+
+Do not treat `gptgiorgio` as canonical for legacy admin context awareness.
+
+## Default Operating Procedure
+
+When you receive a JsonPages tenant task:
+
+1. Identify whether the problem belongs to `core`, tenant, or generator.
+2. Read the smallest code surface that proves it.
+3. Prefer fixing the tenant contract before touching visual polish.
+4. Keep generated and deterministic workflows reproducible.
+5. State assumptions when inferring intended branded output from examples.
+
+END_OF_FILE_CONTENT
+mkdir -p ".cursor/skills-cursor/migrate-to-skills"
+echo "Creating .cursor/skills-cursor/migrate-to-skills/SKILL.md..."
+cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/migrate-to-skills/SKILL.md"
+---
+name: migrate-to-skills
+description: >-
+  Convert 'Applied intelligently' Cursor rules (.cursor/rules/*.mdc) and slash
+  commands (.cursor/commands/*.md) to Agent Skills format (.cursor/skills/). Use
+  when you want to migrate rules or commands to skills, convert .mdc rules to
+  SKILL.md format, or consolidate commands into the skills directory.
+disable-model-invocation: true
+---
+# Migrate Rules and Slash Commands to Skills
+
+Convert Cursor rules ("Applied intelligently") and slash commands to Agent Skills format.
+
+**CRITICAL: Preserve the exact body content. Do not modify, reformat, or "improve" it - copy verbatim.**
+
+## Locations
+
+| Level | Source | Destination |
+|-------|--------|-------------|
+| Project | `{workspaceFolder}/**/.cursor/rules/*.mdc`, `{workspaceFolder}/.cursor/commands/*.md` |
+| User | `~/.cursor/commands/*.md` |
+
+Notes:
+- Cursor rules inside the project can live in nested directories. Be thorough in your search and use glob patterns to find them.
+- Ignore anything in ~/.cursor/worktrees
+- Ignore anything in ~/.cursor/skills-cursor. This is reserved for Cursor's internal built-in skills and is managed automatically by the system.
+
+## Finding Files to Migrate
+
+**Rules**: Migrate if rule has a `description` but NO `globs` and NO `alwaysApply: true`.
+
+**Commands**: Migrate all - they're plain markdown without frontmatter.
+
+## Conversion Format
+
+### Rules: .mdc → SKILL.md
+
+```markdown
+# Before: .cursor/rules/my-rule.mdc
+---
+description: What this rule does
+globs:
+alwaysApply: false
+---
+# Title
+Body content...
+```
+
+```markdown
+# After: .cursor/skills/my-rule/SKILL.md
+---
+name: my-rule
+description: What this rule does
+---
+# Title
+Body content...
+```
+
+Changes: Add `name` field, remove `globs`/`alwaysApply`, keep body exactly.
+
+### Commands: .md → SKILL.md
+
+```markdown
+# Before: .cursor/commands/commit.md
+# Commit current work
+Instructions here...
+```
+
+```markdown
+# After: .cursor/skills/commit/SKILL.md
+---
+name: commit
+description: Commit current work with standardized message format
+disable-model-invocation: true
+---
+# Commit current work
+Instructions here...
+```
+
+Changes: Add frontmatter with `name` (from filename), `description` (infer from content), and `disable-model-invocation: true`, keep body exactly.
+
+**Note:** The `disable-model-invocation: true` field prevents the model from automatically invoking this skill. Slash commands are designed to be explicitly triggered by the user via the `/` menu, not automatically suggested by the model.
+
+## Notes
+
+- `name` must be lowercase with hyphens only
+- `description` is critical for skill discovery
+- Optionally delete originals after verifying migration works
+
+### Migrate a Rule (.mdc → SKILL.md)
+
+1. Read the rule file
+2. Extract the `description` from the frontmatter
+3. Extract the body content (everything after the closing `---` of the frontmatter)
+4. Create the skill directory: `.cursor/skills/{skill-name}/` (skill name = filename without .mdc)
+5. Write `SKILL.md` with new frontmatter (`name` and `description`) + the EXACT original body content (preserve all whitespace, formatting, code blocks verbatim)
+6. Delete the original rule file
+
+### Migrate a Command (.md → SKILL.md)
+
+1. Read the command file
+2. Extract description from the first heading (remove `#` prefix)
+3. Create the skill directory: `.cursor/skills/{skill-name}/` (skill name = filename without .md)
+4. Write `SKILL.md` with new frontmatter (`name`, `description`, and `disable-model-invocation: true`) + blank line + the EXACT original file content (preserve all whitespace, formatting, code blocks verbatim)
+5. Delete the original command file
+
+**CRITICAL: Copy the body content character-for-character. Do not reformat, fix typos, or "improve" anything.**
+
+## Workflow
+
+If you have the Task tool available:
+DO NOT start to read all of the files yourself. That function should be delegated to the subagents. Your job is to dispatch the subagents for each category of files and wait for the results.
+
+1. [ ] Create the skills directories if they don't exist (`.cursor/skills/` for project, `~/.cursor/skills/` for user)
+2. Dispatch three fast general purpose subagents (NOT explore) in parallel to do the following steps for project rules (pattern: `{workspaceFolder}/**/.cursor/rules/*.mdc`), user commands (pattern: `~/.cursor/commands/*.md`), and project commands (pattern: `{workspaceFolder}/**/.cursor/commands/*.md`):
+  I. [ ] Find files to migrate in the given pattern
+  II. [ ] For rules, check if it's an "applied intelligently" rule (has `description`, no `globs`, no `alwaysApply: true`). Commands are always migrated. DO NOT use the terminal to read files. Use the read tool.
+  III. [ ] Make a list of files to migrate. If empty, done.
+  IV. [ ] For each file, read it, then write the new skill file preserving the body content EXACTLY. DO NOT use the terminal to write these files. Use the edit tool.
+  V. [ ] Delete the original file. DO NOT use the terminal to delete these files. Use the delete tool.
+  VI. [ ] Return a list of all the skill files that were migrated along with the original file paths.
+3. [ ] Wait for all subagents to complete and summarize the results to the user. IMPORTANT: Make sure to let them know if they want to undo the migration, to ask you to.
+4. [ ] If the user asks you to undo the migration, do the opposite of the above steps to restore the original files.
+
+
+If you don't have the Task tool available:
+1. [ ] Create the skills directories if they don't exist (`.cursor/skills/` for project, `~/.cursor/skills/` for user)
+2. [ ] Find files to migrate in both project (`.cursor/`) and user (`~/.cursor/`) directories
+3. [ ] For rules, check if it's an "applied intelligently" rule (has `description`, no `globs`, no `alwaysApply: true`). Commands are always migrated. DO NOT use the terminal to read files. Use the read tool.
+4. [ ] Make a list of files to migrate. If empty, done.
+5. [ ] For each file, read it, then write the new skill file preserving the body content EXACTLY. DO NOT use the terminal to write these files. Use the edit tool.
+6. [ ] Delete the original file. DO NOT use the terminal to delete these files. Use the delete tool.
+7. [ ] Summarize the results to the user. IMPORTANT: Make sure to let them know if they want to undo the migration, to ask you to.
+8. [ ] If the user asks you to undo the migration, do the opposite of the above steps to restore the original files.
+
+END_OF_FILE_CONTENT
+mkdir -p ".cursor/skills-cursor/olonjs"
+echo "Creating .cursor/skills-cursor/olonjs/SKILL.md..."
+cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/olonjs/SKILL.md"
+---
+name: olonjs-tenant
+description: Use when working on a OlonJS tenant, transforming the base tenant DNA into a branded tenant, adding or modifying tenant sections, maintaining schema-driven editability, or reasoning about what belongs to @olonjs/core versus the tenant.
+---
+
+# OlonJS Tenant
+
+Use this skill for work on the OlonJS ecosystem when the task involves:
+
+- a tenant generated from the OlonJS CLI
+- `@olonjs/core`
+- tenant sections/capsules
+- `src/data/pages/**/*.json` or `src/data/config/*.json`
+- schema-driven editing and inspector compatibility
+- generator scripts that turn a base tenant into a branded tenant
+
+Read code first. Treat documents as secondary unless they help interpret code that is otherwise ambiguous.
+
+## Architecture Specifications 
+
+Use this document as the architectural laws for each tenant, compliancy will be tested against these specs:
+
+- `\\wsl.localhost\Ubuntu\home\dev\npm-jpcore\specs\olonjsSpecs_V.1.3.md`
+
+
+
+
+## Core Model
+
+OlonJS has a hard split between `core` and `tenant`.
+
+- `@olonjs/core` owns routing, `/admin`, `/admin/preview`, preview stage, studio state, inspector/form factory, and shared engine behavior.
+- The tenant owns sections, schemas, type augmentation, page/config JSON, theme/design layer, and local workflow scripts.
+- The tenant does not implement the CMS. It implements the tenant protocol consumed by the engine.
+
+In this ecosystem, code is the source of truth.
+
+Compliance priority:
+
+1. Data is bound correctly.
+2. Schemas describe fields correctly.
+3. Content is editable without breaking the inspector.
+4. Tenant structure stays standardized.
+5. Context-aware focus/highlight in the legacy admin is desirable but secondary.
+
+## Canonical References
+
+Use these local references when available:
+
+- Base tenant DNA: `\\wsl.localhost\Ubuntu\home\dev\temp\alpha`
+- Custom tenant reference: `\\wsl.localhost\Ubuntu\home\dev\temp\gptgiorgio`
+- Core engine: `\\wsl.localhost\Ubuntu\home\dev\npm-jpcore\packages\core`
+- Generator example: `\\wsl.localhost\Ubuntu\home\dev\temp\clonark\generate_olon.sh`
+
+If these paths are missing, infer the same roles from the current workspace:
+
+- base CLI-generated tenant
+- branded tenant
+- core package
+- generator script
+
+## Tenant Anatomy
+
+Expect these files to move together:
+
+- `src/components/<section>/View.tsx`
+- `src/components/<section>/schema.ts`
+- `src/components/<section>/types.ts`
+- `src/components/<section>/index.ts`
+- `src/lib/ComponentRegistry.tsx`
+- `src/lib/schemas.ts`
+- `src/lib/addSectionConfig.ts`
+- `src/types.ts`
+- `src/data/pages/**/*.json`
+- `src/data/config/site.json`
+- `src/data/config/theme.json`
+- `src/data/config/menu.json`
+
+Useful rule: if a section type changes, check all of the files above before concluding the task is done.
+
+## What Good Work Looks Like
+
+A good tenant change:
+
+- stays inside tenant boundaries unless the issue is truly in `@olonjs/core`
+- keeps schema, defaults, registry, and type augmentation aligned
+- preserves editability for strings, lists, nested objects, CTAs, and image fields
+- uses `ImageSelectionSchema`-style image fields when the content is image-driven
+- keeps page content JSON-first
+
+A suspicious tenant change:
+
+- patches the core to fix a tenant modeling problem
+- adds visual complexity without data bindings
+- introduces fields into JSON that are not represented in schema
+- changes a section view without updating defaults or types
+- optimizes legacy context awareness at the expense of simpler, reliable editability
+
+## Workflow 1: Base Tenant -> Branded Tenant
+
+This is the primary workflow.
+
+Goal:
+
+- transform a CLI-generated base tenant into a branded tenant through a single generator script
+
+Treat the generator script as procedural source of truth for the green build workflow.
+
+When maintaining or authoring a generator:
+
+1. Separate non-deterministic bootstrap from deterministic sync.
+2. Make explicit which files are managed output.
+3. Keep the script aligned with the current tenant code, not with stale docs.
+4. Preserve tenant protocol files: sections, schemas, registries, type augmentation, config JSON, assets, shims.
+5. Prefer deterministic local writes after any remote/bootstrap step.
+
+Typical structure of a good generator:
+
+- preflight checks
+- remote/bootstrap steps such as `shadcn` or external registries
+- deterministic creation/sync of tenant files
+- compatibility patches for known unstable upstream payloads
+- final validation commands
+
+When asked to update a branded tenant generator:
+
+1. Diff base tenant against branded tenant.
+2. Classify differences into:
+   - intended branded output
+   - reusable generator logic
+   - accidental drift
+3. Encode only the reusable intended differences into the script.
+4. Keep the output reproducible from a fresh base tenant.
+
+## Workflow 2: Add Or Change A Section
+
+When adding a new section type:
+
+1. Create `View.tsx`, `schema.ts`, `types.ts`, `index.ts`.
+2. Register the section in `src/lib/ComponentRegistry.tsx`.
+3. Register the schema in `src/lib/schemas.ts`.
+4. Add defaults and label in `src/lib/addSectionConfig.ts`.
+5. Extend `SectionComponentPropsMap` and module augmentation in `src/types.ts`.
+6. Add or update page JSON using the new section type.
+
+When changing an existing section:
+
+1. Read the section schema first.
+2. Read the page JSON using it.
+3. Check the view for `data-jp-field` usage and binding shape.
+4. Update defaults if the data shape changed.
+5. Verify the inspector still has a path to edit the content.
+
+## Workflow 3: Images, Rich Content, Nested Routes
+
+Images:
+
+- Prefer structured image objects compatible with tenant base schemas.
+- Assume the core supports image picking and upload flows.
+- The tenant is responsible for declaring image fields in schema and rendering them coherently.
+
+Rich editorial content:
+
+- Tiptap-style sections are tenant-level integrations.
+- Treat page JSON using `type: "tiptap"` as runtime usage examples, and section code as the real source of truth.
+
+Nested routes:
+
+- Files under `src/data/pages/**/*.json` may represent nested slugs.
+- Preserve slug/path consistency and do not replace file-based routing with manual lists.
+
+## Decision Rules
+
+Use `alpha` patterns when the task is about:
+
+- tenant DNA
+- capability reference
+- baseline protocol shape
+- proving what the base system already supports
+
+Use `gptgiorgio` patterns when the task is about:
+
+- stronger branded frontend customization
+- richer domain-specific sections
+- image-heavy schema design
+- proving how far customization can go without changing the bootstrap
+
+Do not treat `gptgiorgio` as canonical for legacy admin context awareness.
+
+## Default Operating Procedure
+
+When you receive a OlonJS tenant task:
+
+1. Identify whether the problem belongs to `core`, tenant, or generator.
+2. Read the smallest code surface that proves it.
+3. Prefer fixing the tenant contract before touching visual polish.
+4. Keep generated and deterministic workflows reproducible.
+5. State assumptions when inferring intended branded output from examples.
+
+END_OF_FILE_CONTENT
+# SKIP: .cursor/skills-cursor/olonjs/SKILL.md:Zone.Identifier is binary and cannot be embedded as text.
+mkdir -p ".cursor/skills-cursor/shell"
+echo "Creating .cursor/skills-cursor/shell/SKILL.md..."
+cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/shell/SKILL.md"
+---
+name: shell
+description: >-
+  Runs the rest of a /shell request as a literal shell command. Use only when
+  the user explicitly invokes /shell and wants the following text executed
+  directly in the terminal.
+disable-model-invocation: true
+---
+# Run Shell Commands
+
+Use this skill only when the user explicitly invokes `/shell`.
+
+## Behavior
+
+1. Treat all user text after the `/shell` invocation as the literal shell command to run.
+2. Execute that command immediately with the terminal tool.
+3. Do not rewrite, explain, or "improve" the command before running it.
+4. Do not inspect the repository first unless the command itself requires repository context.
+5. If the user invokes `/shell` without any following text, ask them which command to run.
+
+## Response
+
+- Run the command first.
+- Then briefly report the exit status and any important stdout or stderr.
+
+END_OF_FILE_CONTENT
+mkdir -p ".cursor/skills-cursor/update-cursor-settings"
+echo "Creating .cursor/skills-cursor/update-cursor-settings/SKILL.md..."
+cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/update-cursor-settings/SKILL.md"
+---
+name: update-cursor-settings
+description: >-
+  Modify Cursor/VSCode user settings in settings.json. Use when you want to
+  change editor settings, preferences, configuration, themes, font size, tab
+  size, format on save, auto save, keybindings, or any settings.json values.
+---
+# Updating Cursor Settings
+
+This skill guides you through modifying Cursor/VSCode user settings. Use this when you want to change editor settings, preferences, configuration, themes, keybindings, or any `settings.json` values.
+
+## Settings File Location
+
+| OS | Path |
+|----|------|
+| macOS | ~/Library/Application Support/Cursor/User/settings.json |
+| Linux | ~/.config/Cursor/User/settings.json |
+| Windows | %APPDATA%\Cursor\User\settings.json |
+
+## Before Modifying Settings
+
+1. **Read the existing settings file** to understand current configuration
+2. **Preserve existing settings** - only add/modify what the user requested
+3. **Validate JSON syntax** before writing to avoid breaking the editor
+
+## Modifying Settings
+
+### Step 1: Read Current Settings
+
+```typescript
+// Read the settings file first
+const settingsPath = "~/Library/Application Support/Cursor/User/settings.json";
+// Use the Read tool to get current contents
+```
+
+### Step 2: Identify the Setting to Change
+
+Common setting categories:
+- **Editor**: `editor.fontSize`, `editor.tabSize`, `editor.wordWrap`, `editor.formatOnSave`
+- **Workbench**: `workbench.colorTheme`, `workbench.iconTheme`, `workbench.sideBar.location`
+- **Files**: `files.autoSave`, `files.exclude`, `files.associations`
+- **Terminal**: `terminal.integrated.fontSize`, `terminal.integrated.shell.*`
+- **Cursor-specific**: Settings prefixed with `cursor.` or `aipopup.`
+
+### Step 3: Update the Setting
+
+When modifying settings.json:
+1. Parse the existing JSON (handle comments - VSCode settings support JSON with comments)
+2. Add or update the requested setting
+3. Preserve all other existing settings
+4. Write back with proper formatting (2-space indentation)
+
+### Example: Changing Font Size
+
+If user says "make the font bigger":
+
+```json
+{
+  "editor.fontSize": 16
+}
+```
+
+### Example: Enabling Format on Save
+
+If user says "format my code when I save":
+
+```json
+{
+  "editor.formatOnSave": true
+}
+```
+
+### Example: Changing Theme
+
+If user says "use dark theme" or "change my theme":
+
+```json
+{
+  "workbench.colorTheme": "Default Dark Modern"
+}
+```
+
+## Important Notes
+
+1. **JSON with Comments**: VSCode/Cursor settings.json supports comments (`//` and `/* */`). When reading, be aware comments may exist. When writing, preserve comments if possible.
+
+2. **Restart May Be Required**: Some settings take effect immediately, others require reloading the window or restarting Cursor. Inform the user if a restart is needed.
+
+3. **Backup**: For significant changes, consider mentioning the user can undo via Ctrl/Cmd+Z in the settings file or by reverting git changes if tracked.
+
+4. **Workspace vs User Settings**:
+   - User settings (what this skill covers): Apply globally to all projects
+   - Workspace settings (`.vscode/settings.json`): Apply only to the current project
+
+5. **Commit Attribution**: When the user asks about commit attribution, clarify whether they want to edit the **CLI agent** or the **IDE agent**. For the CLI agent, modify `~/.cursor/cli-config.json`. For the IDE agent, it is controlled from the UI at **Cursor Settings > Agent > Attribution** (not settings.json).
+
+## Common User Requests → Settings
+
+| User Request | Setting |
+|--------------|---------|
+| "bigger/smaller font" | `editor.fontSize` |
+| "change tab size" | `editor.tabSize` |
+| "format on save" | `editor.formatOnSave` |
+| "word wrap" | `editor.wordWrap` |
+| "change theme" | `workbench.colorTheme` |
+| "hide minimap" | `editor.minimap.enabled` |
+| "auto save" | `files.autoSave` |
+| "line numbers" | `editor.lineNumbers` |
+| "bracket matching" | `editor.bracketPairColorization.enabled` |
+| "cursor style" | `editor.cursorStyle` |
+| "smooth scrolling" | `editor.smoothScrolling` |
+
+## Workflow
+
+1. Read ~/Library/Application Support/Cursor/User/settings.json
+2. Parse the JSON content
+3. Add/modify the requested setting(s)
+4. Write the updated JSON back to the file
+5. Inform the user the setting has been changed and whether a reload is needed
+
+END_OF_FILE_CONTENT
 echo "Creating index.html..."
 cat << 'END_OF_FILE_CONTENT' > "index.html"
 <!DOCTYPE html>
@@ -585,7 +1630,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "dev:clean": "vite --force",
     "prebuild": "node scripts/sync-pages-to-public.mjs",
     "build": "tsc && vite build",
-    "dist": "bash ./src2Code.sh --template alpha src vercel.json index.html vite.config.ts scripts docs package.json",
+    "dist": "bash ./src2Code.sh --template alpha src .cursor vercel.json index.html vite.config.ts scripts specs package.json",
     "preview": "vite preview",
     "bake:email": "tsx scripts/bake-email.tsx",
     "bakemail": "npm run bake:email --",
@@ -596,7 +1641,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "@tiptap/extension-link": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.75",
+    "@olonjs/core": "^1.0.76",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
     "react": "^19.0.0",
@@ -915,6 +1960,615 @@ fs.mkdirSync(targetDir, { recursive: true });
 fs.cpSync(sourceDir, targetDir, { recursive: true });
 
 console.log('[sync-pages-to-public] Synced pages to public/pages');
+
+END_OF_FILE_CONTENT
+mkdir -p "specs"
+echo "Creating specs/olonjsSpecs_V.1.3.md..."
+cat << 'END_OF_FILE_CONTENT' > "specs/olonjsSpecs_V.1.3.md"
+# 📐 OlonJS Architecture Specifications v1.3
+
+**Status:** Mandatory Standard  
+**Version:** 1.3.0 (Sovereign Core Edition — Architecture + Studio/ICE UX, Path-Deterministic Nested Editing)  
+**Target:** Senior Architects / AI Agents / Enterprise Governance  
+
+**Scope v1.3:** This edition preserves the complete v1.2 architecture (MTRP, JSP, TBP, CIP, ECIP, JAP + Studio/ICE UX contract: IDAC, TOCC, BSDS, ASC, JEB + Tenant Type & Code-Generation Annex) as a **faithful superset**, and adds strict path-based/nested-array behavior for Studio selection and Inspector expansion.  
+**Scope note (breaking):** In strict v1.3 Studio semantics, the legacy flat protocol (`itemField` / `itemId`) is removed in favor of `itemPath` (root-to-leaf path segments).
+
+---
+
+## 1. 📐 Modular Type Registry Pattern (MTRP) v1.2
+
+**Objective:** Establish a strictly typed, open-ended protocol for extending content data structures where the **Core Engine** is the orchestrator and the **Tenant** is the provider.
+
+### 1.1 The Sovereign Dependency Inversion
+The **Core** defines the empty `SectionDataRegistry`. The **Tenant** "injects" its specific definitions using **Module Augmentation**. This allows the Core to be distributed as a compiled NPM package while remaining aware of Tenant-specific types at compile-time.
+
+### 1.2 Technical Implementation (`@olonjs/core/kernel`)
+```typescript
+export interface SectionDataRegistry {} // Augmented by Tenant
+export interface SectionSettingsRegistry {} // Augmented by Tenant
+
+export interface BaseSection<K extends keyof SectionDataRegistry> {
+  id: string;
+  type: K;
+  data: SectionDataRegistry[K];
+  settings?: K extends keyof SectionSettingsRegistry
+    ? SectionSettingsRegistry[K]
+    : BaseSectionSettings;
+}
+
+export type Section = {
+  [K in keyof SectionDataRegistry]: BaseSection<K>
+}[keyof SectionDataRegistry];
+```
+
+**SectionType:** Core exports (or Tenant infers) **`SectionType`** as **`keyof SectionDataRegistry`**. After Tenant module augmentation, this is the union of all section type keys (e.g. `'header' | 'footer' | 'hero' | ...`). The Tenant uses this type for the ComponentRegistry and SECTION_SCHEMAS keys.
+
+**Perché servono:** Il Core deve poter renderizzare section senza conoscere i tipi concreti a compile-time; il Tenant deve poter aggiungere nuovi tipi senza modificare il Core. I registry vuoti + module augmentation permettono di distribuire Core come pacchetto NPM e mantenere type-safety end-to-end (Section, registry, config). Senza MTRP, ogni nuovo tipo richiederebbe cambi nel Core o tipi deboli (`any`).
+
+---
+
+## 2. 📐 JsonPages Site Protocol (JSP) v1.8
+
+**Objective:** Define the deterministic file system and the **Sovereign Projection Engine** (CLI).
+
+### 2.1 The File System Ontology (The Silo Contract)
+Every site must reside in an isolated directory. Global Governance is physically separated from Local Content.
+*   **`/config/site.json`** — Global Identity & Reserved System Blocks (Header/Footer). See Appendix A for typed shape.
+*   **`/config/menu.json`** — Navigation Tree (SSOT for System Header). See Appendix A.
+*   **`/config/theme.json`** — Theme tokens (optional but recommended). See Appendix A.
+*   **`/pages/[slug].json`** — Local Body Content per page. See Appendix A (PageConfig).
+
+**Application path convention:** The runtime app typically imports these via an alias (e.g. **`@/data/config/`** and **`@/data/pages/`**). The physical silo may be `src/data/config/` and `src/data/pages/` so that `site.json`, `menu.json`, `theme.json` live under `src/data/config/`, and page JSONs under `src/data/pages/`. The CLI or projection script may use `/config/` and `/pages/` at repo root; the **contract** is that the app receives **siteConfig**, **menuConfig**, **themeConfig**, and **pages** as defined in JEB (§10) and Appendix A.
+
+### 2.2 Deterministic Projection (CLI Workflow)
+The CLI (`@olonjs/cli`) creates new tenants by:
+1.  **Infra Projection:** Generating `package.json`, `tsconfig.json`, and `vite.config.ts` (The Shell).
+2.  **Source Projection:** Executing a deterministic script (`src_tenant_alpha.sh`) to reconstruct the `src` folder (The DNA).
+3.  **Dependency Resolution:** Enforcing specific versions of React, Radix, and Tailwind v4.
+
+**Perché servono:** Una struttura file deterministica (config vs pages) separa governance globale (site, menu, theme) dal contenuto per pagina; il CLI può rigenerare tenant e tooling può trovare dati e schemi sempre negli stessi path. Senza JSP, ogni tenant sarebbe una struttura ad hoc e ingestione/export/Bake sarebbero fragili.
+
+---
+
+## 3. 🧱 Tenant Block Protocol (TBP) v1.0
+
+**Objective:** Standardize the "Capsule" structure for components to enable automated ingestion (Pull) by the SaaS.
+
+### 3.1 The Atomic Capsule Structure
+Components are self-contained directories under **`src/components/<sectionType>/`**:
+*   **`View.tsx`** — The pure React component (Dumb View). Props: see Appendix A (SectionComponentPropsMap).
+*   **`schema.ts`** — Zod schema(s) for the **data** contract (and optionally **settings**). Exports at least one schema (e.g. `HeroSchema`) used as the **data** schema for that type. Must extend BaseSectionData (§8) for data; array items must extend BaseArrayItem (§8).
+*   **`types.ts`** — TypeScript interfaces inferred from the schema (e.g. `HeroData`, `HeroSettings`). Export types with names **`<SectionType>Data`** and **`<SectionType>Settings`** (or equivalent) so the Tenant can aggregate them in a single types module.
+*   **`index.ts`** — Public API: re-exports View, schema(s), and types.
+
+### 3.2 Reserved System Types
+*   **`type: 'header'`** — Reserved for `site.json`. Receives **`menu: MenuItem[]`** in addition to `data` and `settings`. Menu is sourced from `menu.json` (see Appendix A). The Tenant **must** type `SectionComponentPropsMap['header']` as `{ data: HeaderData; settings?: HeaderSettings; menu: MenuItem[] }`.
+*   **`type: 'footer'`** — Reserved for `site.json`. Props: `{ data: FooterData; settings?: FooterSettings }` only (no `menu`).
+*   **`type: 'sectionHeader'`** — A standard local block. Must define its own `links` array in its local schema if used.
+
+**Perché servono:** La capsula (View + schema + types + index) è l’unità di estensione: il Core e il Form Factory possono scoprire tipi e contratti per tipo senza convenzioni ad hoc. Header/footer riservati evitano conflitti tra globale e locale. Senza TBP, aggregazione di SECTION_SCHEMAS e registry sarebbe incoerente e l’ingestion da SaaS non sarebbe automatizzabile.
+
+---
+
+## 4. 🧱 Component Implementation Protocol (CIP) v1.5
+
+**Objective:** Ensure system-wide stability and Admin UI integrity.
+
+1.  **The "Sovereign View" Law:** Components receive `data` and `settings` (and `menu` for header only) and return JSX. They are metadata-blind (never import Zod schemas).
+2.  **Z-Index Neutrality:** Components must not use `z-index > 1`. Layout delegation (sticky/fixed) is managed by the `SectionRenderer`.
+3.  **Agnostic Asset Protocol:** Use `resolveAssetUrl(path, tenantId)` for all media. Resolved URLs are under **`/assets/...`** with no tenantId segment in the path (e.g. relative `img/hero.jpg` → `/assets/img/hero.jpg`).
+
+### 4.4 Local Design Tokens (v1.2)
+Section Views that control their own background, text, borders, or radii **shall** define a **local scope** via an inline `style` object on the section root: e.g. `--local-bg`, `--local-text`, `--local-text-muted`, `--local-surface`, `--local-border`, `--local-radius-lg`, `--local-accent`, mapped to theme variables. All Tailwind classes that affect color or radius in that section **must** use these variables (e.g. `bg-[var(--local-bg)]`, `text-[var(--local-text)]`). No naked utilities (e.g. `bg-blue-500`). An optional **`label`** in section data may be rendered with class **`jp-section-label`** for overlay type labels.
+
+### 4.5 Z-Index & Overlay Governance (v1.2)
+Section content root **must** stay at **`z-index` ≤ 1** (prefer `z-0`) so the Sovereign Overlay can sit above with high z-index in Tenant CSS (§7). Header/footer may use a higher z-index (e.g. 50) only as a documented exception for global chrome.
+
+**Perché servono (CIP):** View “dumb” (solo data/settings) e senza import di Zod evita accoppiamento e permette al Form Factory di essere l’unica fonte di verità sugli schemi. Z-index basso evita che il contenuto copra l’overlay di selezione in Studio. Asset via `resolveAssetUrl`: i path relativi vengono risolti in `/assets/...` (senza segmento tenantId nel path). Token locali (`--local-*`) rendono le section temabili e coerenti con overlay e tema; senza, stili “nudi” creano drift visivo e conflitti con l’UI di editing.
+
+---
+
+## 5. 🛠️ Editor Component Implementation Protocol (ECIP) v1.5
+
+**Objective:** Standardize the Polymorphic ICE engine.
+
+1.  **Recursive Form Factory:** The Admin UI builds forms by traversing the Zod ontology.
+2.  **UI Metadata:** Use `.describe('ui:[widget]')` in schemas to pass instructions to the Form Factory.
+3.  **Deterministic IDs:** Every object in a `ZodArray` must extend `BaseArrayItem` (containing an `id`) to ensure React reconciliation stability during reordering.
+
+### 5.4 UI Metadata Vocabulary (v1.2)
+Standard keys for the Form Factory:
+
+| Key | Use case |
+|-----|----------|
+| `ui:text` | Single-line text input. |
+| `ui:textarea` | Multi-line text. |
+| `ui:select` | Enum / single choice. |
+| `ui:number` | Numeric input. |
+| `ui:list` | Array of items; list editor (add/remove/reorder). |
+| `ui:icon-picker` | Icon selection. |
+
+Unknown keys may be treated as `ui:text`. Array fields must use `BaseArrayItem` for items.
+
+### 5.5 Path-Only Nested Selection & Expansion (v1.3, breaking)
+In strict v1.3 Studio/Inspector behavior, nested editing targets are represented by **path segments from root to leaf**.
+
+```typescript
+export type SelectionPathSegment = { fieldKey: string; itemId?: string };
+export type SelectionPath = SelectionPathSegment[];
+```
+
+Rules:
+*   Expansion and focus for nested arrays **must** be computed from `SelectionPath` (root → leaf), not from a single flat pair.
+*   Matching by `fieldKey` alone is non-compliant for nested structures.
+*   Legacy flat payload fields **`itemField`** and **`itemId`** are removed from strict v1.3 selection protocol.
+
+**Perché servono (ECIP):** Il Form Factory deve sapere quale widget usare (text, textarea, select, list, …) senza hardcodare per tipo; `.describe('ui:...')` è il contratto. BaseArrayItem con `id` su ogni item di array garantisce chiavi stabili in React e reorder/delete corretti nell’Inspector. In v1.3 la selezione/espansione path-only elimina ambiguità su array annidati: senza path completo root→leaf, la sidebar può aprire il ramo sbagliato o non aprire il target.
+
+---
+
+## 6. 🎯 ICE Data Attribute Contract (IDAC) v1.1
+
+**Objective:** Mandatory data attributes so the Stage (iframe) and Inspector can bind selection and field/item editing without coupling to Tenant DOM.
+
+### 6.1 Section-Level Markup (Core-Provided)
+**SectionRenderer** (Core) wraps each section root with:
+*   **`data-section-id`** — Section instance ID (e.g. UUID). On the wrapper that contains content + overlay.
+*   Sibling overlay element **`data-jp-section-overlay`** — Selection ring and type label. **Tenant does not add this;** Core injects it.
+
+Tenant Views render the **content** root only (e.g. `<section>` or `<div>`), placed **inside** the Core wrapper.
+
+### 6.2 Field-Level Binding (Tenant-Provided)
+For every **editable scalar field** the View **must** attach **`data-jp-field="<fieldKey>"`** (key matches schema path: e.g. `title`, `description`, `sectionTitle`, `label`).
+
+### 6.3 Array-Item Binding (Tenant-Provided)
+For every **editable array item** the View **must** attach:
+*   **`data-jp-item-id="<stableId>"`** — Prefer `item.id`; fallback e.g. `legacy-${index}` only outside strict mode.
+*   **`data-jp-item-field="<arrayKey>"`** — e.g. `cards`, `layers`, `products`, `paragraphs`.
+
+### 6.4 Compliance
+**Reserved types** (`header`, `footer`): ICE attributes optional unless Studio edits them. **All other section types** in the Stage and in `SECTION_SCHEMAS` **must** implement §6.2 and §6.3 for every editable field and array item.
+
+### 6.5 Strict Path Extraction for Nested Arrays (v1.3, breaking)
+For nested array targets, the Core/Inspector contract is path-based:
+*   The runtime selection target is expressed as `itemPath: SelectionPath` (root → leaf).
+*   Flat identity (`itemField` + `itemId`) is not sufficient for nested structures and is removed in strict v1.3 payloads.
+*   In strict mode, index-based identity fallback is non-compliant for editable object arrays.
+
+**Perché servono (IDAC):** Lo Stage è in un iframe e l’Inspector deve sapere **quale campo o item** corrisponde al click (o alla selezione) senza conoscere la struttura DOM del Tenant. **`data-jp-field`** associa un nodo DOM al path dello schema (es. `title`, `description`): così il Core può evidenziare la riga giusta nella sidebar, applicare opacità attivo/inattivo e aprire il form sul campo corretto. **`data-jp-item-id`** e **`data-jp-item-field`** fanno lo stesso per gli item di array (liste, reorder, delete). In v1.3, `itemPath` rende deterministico anche il caso nested (array dentro array), eliminando mismatch tra selezione canvas e ramo aperto in sidebar.
+
+---
+
+## 7. 🎨 Tenant Overlay CSS Contract (TOCC) v1.0
+
+**Objective:** The Stage iframe loads only Tenant HTML/CSS. Core injects overlay **markup** but does **not** ship overlay styles. The Tenant **must** supply CSS so overlay is visible.
+
+### 7.1 Required Selectors (Tenant global CSS)
+1. **`[data-jp-section-overlay]`** — `position: absolute; inset: 0`; `pointer-events: none`; base state transparent.
+2. **`[data-section-id]:hover [data-jp-section-overlay]`** — Hover: e.g. dashed border, subtle tint.
+3. **`[data-section-id][data-jp-selected] [data-jp-section-overlay]`** — Selected: solid border, optional tint.
+4. **`[data-jp-section-overlay] > div`** (type label) — Position and visibility (e.g. visible on hover/selected).
+
+### 7.2 Z-Index
+Overlay **z-index** high (e.g. 9999). Section content at or below CIP limit (§4.5).
+
+### 7.3 Responsibility
+**Core:** Injects wrapper and overlay DOM; sets `data-jp-selected`. **Tenant:** All overlay **visual** rules.
+
+**Perché servono (TOCC):** L’iframe dello Stage carica solo HTML/CSS del Tenant; il Core inietta il markup dell’overlay ma non gli stili. Senza CSS Tenant per i selettori TOCC, bordo hover/selected e type label non sarebbero visibili: l’autore non vedrebbe quale section è selezionata né il label del tipo. TOCC chiarisce la responsabilità (Core = markup, Tenant = aspetto) e garantisce UX uniforme tra tenant.
+
+---
+
+## 8. 📦 Base Section Data & Settings (BSDS) v1.0
+
+**Objective:** Standardize base schema fragments for anchors, array items, and section settings.
+
+### 8.1 BaseSectionData
+Every section data schema **must** extend a base with at least **`anchorId`** (optional string). Canonical Zod (Tenant `lib/base-schemas.ts` or equivalent):
+
+```typescript
+export const BaseSectionData = z.object({
+  anchorId: z.string().optional().describe('ui:text'),
+});
+```
+
+### 8.2 BaseArrayItem
+Every array item schema editable in the Inspector **must** include **`id`** (optional string minimum). Canonical Zod:
+
+```typescript
+export const BaseArrayItem = z.object({
+  id: z.string().optional(),
+});
+```
+
+Recommended: required UUID for new items. Used by `data-jp-item-id` and React reconciliation.
+
+### 8.3 BaseSectionSettings (Optional)
+Common section-level settings. Canonical Zod (name **BaseSectionSettingsSchema** or as exported by Core):
+
+```typescript
+export const BaseSectionSettingsSchema = z.object({
+  paddingTop: z.enum(['none', 'sm', 'md', 'lg', 'xl', '2xl']).default('md').describe('ui:select'),
+  paddingBottom: z.enum(['none', 'sm', 'md', 'lg', 'xl', '2xl']).default('md').describe('ui:select'),
+  theme: z.enum(['dark', 'light', 'accent']).default('dark').describe('ui:select'),
+  container: z.enum(['boxed', 'fluid']).default('boxed').describe('ui:select'),
+});
+```
+
+Capsules may extend this for type-specific settings. Core may export **BaseSectionSettings** as the TypeScript type inferred from this or a superset.
+
+**Perché servono (BSDS):** anchorId permette deep-link e navigazione in-page; id sugli array item è necessario per `data-jp-item-id`, reorder e React reconciliation. BaseSectionSettings comuni (padding, theme, container) evitano ripetizione e allineano il Form Factory tra capsule. Senza base condivisi, ogni capsule inventa convenzioni e validazione/add-section diventano fragili.
+
+---
+
+## 9. 📌 AddSectionConfig (ASC) v1.0
+
+**Objective:** Formalize the "Add Section" contract used by the Studio.
+
+**Type (Core exports `AddSectionConfig`):**
+```typescript
+interface AddSectionConfig {
+  addableSectionTypes: readonly string[];
+  sectionTypeLabels: Record<string, string>;
+  getDefaultSectionData(sectionType: string): Record<string, unknown>;
+}
+```
+
+**Shape:** Tenant provides one object (e.g. `addSectionConfig`) with:
+*   **`addableSectionTypes`** — Readonly array of section type keys. Only these types appear in the Add Section Library. Must be a subset of (or equal to) the keys in SectionDataRegistry.
+*   **`sectionTypeLabels`** — Map type key → display string (e.g. `{ hero: 'Hero', 'cta-banner': 'CTA Banner' }`).
+*   **`getDefaultSectionData(sectionType: string): Record<string, unknown>`** — Returns default `data` for a new section. Must conform to the capsule’s data schema so the new section validates.
+
+Core creates a new section with deterministic UUID, `type`, and `data` from `getDefaultSectionData(type)`.
+
+**Perché servono (ASC):** Lo Studio deve mostrare una libreria “Aggiungi sezione” con nomi leggibili e, alla scelta, creare una section con dati iniziali validi. addableSectionTypes, sectionTypeLabels e getDefaultSectionData sono il contratto: il Tenant è l’unica fonte di verità su quali tipi sono addabili e con quali default. Senza ASC, il Core non saprebbe cosa mostrare in modal né come popolare i dati della nuova section.
+
+---
+
+## 10. ⚙️ JsonPagesConfig & Engine Bootstrap (JEB) v1.1
+
+**Objective:** Bootstrap contract between Tenant app and `@olonjs/core`.
+
+### 10.1 JsonPagesConfig (required fields)
+The Tenant passes a single **config** object to **JsonPagesEngine**. Required fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| **tenantId** | string | Passed to `resolveAssetUrl(path, tenantId)`; resolved asset URLs are **`/assets/...`** with no tenantId segment in the path. |
+| **registry** | `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }` | Component registry. Must match MTRP keys. See Appendix A. |
+| **schemas** | `Record<SectionType, ZodType>` or equivalent | SECTION_SCHEMAS: type → **data** Zod schema. Form Factory uses this. See Appendix A. |
+| **pages** | `Record<string, PageConfig>` | Slug → page config. See Appendix A. |
+| **siteConfig** | SiteConfig | Global site (identity, header/footer blocks). See Appendix A. |
+| **themeConfig** | ThemeConfig | Theme tokens. See Appendix A. |
+| **menuConfig** | MenuConfig | Navigation tree (SSOT for header menu). See Appendix A. |
+| **themeCss** | `{ tenant: string }` | At least **tenant**: string (inline CSS or URL) for Stage iframe injection. |
+| **addSection** | AddSectionConfig | Add-section config (§9). |
+
+Core may define optional fields. The Tenant must not omit required fields.
+
+### 10.2 JsonPagesEngine
+Root component: **`<JsonPagesEngine config={config} />`**. Responsibilities: route → page, SectionRenderer per section; in Studio mode Sovereign Shell (Inspector, Control Bar, postMessage); section wrappers and overlay per IDAC and JAP. Tenant does not implement the Shell.
+
+### 10.3 Studio Selection Event Contract (v1.3, breaking)
+In strict v1.3 Studio, section selection payload for nested targets is path-based:
+
+```typescript
+type SectionSelectMessage = {
+  type: 'SECTION_SELECT';
+  section: { id: string; type: string; scope: 'global' | 'local' };
+  itemPath?: SelectionPath; // root -> leaf
+};
+```
+
+Removed from strict protocol:
+*   `itemField`
+*   `itemId`
+
+**Perché servono (JEB):** Un unico punto di bootstrap (config + Engine) evita che il Tenant replichi logica di routing, Shell e overlay. I campi obbligatori in JsonPagesConfig (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection) sono il minimo per far funzionare rendering, Studio e Form Factory; omissioni causano errori a runtime. In v1.3, il payload `itemPath` sincronizza in modo non ambiguo Stage e Inspector su nested arrays.
+
+---
+
+# 🏛️ OlonJS_ADMIN_PROTOCOL (JAP) v1.2
+
+**Status:** Mandatory Standard  
+**Version:** 1.2.0 (Sovereign Shell Edition — Path/Nested Strictness)  
+**Objective:** Deterministic orchestration of the "Studio" environment (ICE Level 1).
+
+---
+
+## 1. The Sovereign Shell Topology
+The Admin interface is a **Sovereign Shell** from `@olonjs/core`.
+1.  **The Stage (Canvas):** Isolated Iframe; postMessage for data updates and selection mirroring. Section markup follows **IDAC** (§6); overlay styling follows **TOCC** (§7).
+2.  **The Inspector (Sidebar):** Consumes Tenant Zod schemas to generate editors; binding via `data-jp-field` and `data-jp-item-*`.
+3.  **The Control Bar:** Save, Export, Add Section.
+
+## 2. State Orchestration & Persistence
+*   **Working Draft:** Reactive local state for unsaved changes.
+*   **Sync Law:** Inspector changes → Working Draft → Stage via `STUDIO_EVENTS.UPDATE_DRAFTS`.
+*   **Bake Protocol:** "Bake HTML" requests snapshot from Iframe, injects `ProjectState` as JSON, triggers download.
+
+## 3. Context Switching (Global vs. Local)
+*   **Header/Footer** selection → Global Mode, `site.json`.
+*   Any other section → Page Mode, current `[slug].json`.
+
+## 4. Section Lifecycle Management
+1.  **Add Section:** Modal from Tenant `SECTION_SCHEMAS`; UUID + default data via **AddSectionConfig** (§9).
+2.  **Reorder:** Inspector or Stage Overlay; array mutation in Working Draft.
+3.  **Delete:** Confirmation; remove from array, clear selection.
+
+## 5. Stage Isolation & Overlay
+*   **CSS Shielding:** Stage in Iframe; Tenant CSS does not leak into Admin.
+*   **Sovereign Overlay:** Selection ring and type labels injected per **IDAC** (§6); Tenant styles them per **TOCC** (§7).
+
+## 6. "Green Build" Validation
+Studio enforces `tsc && vite build`. No export with TypeScript errors.
+
+## 7. Path-Deterministic Selection & Sidebar Expansion (v1.3, breaking)
+*   Section/item focus synchronization uses `itemPath` (root → leaf), not flat `itemField/itemId`.
+*   Sidebar expansion state for nested arrays must be derived from all path segments.
+*   Flat-only matching may open/close wrong branches and is non-compliant in strict mode.
+
+**Perché servono (JAP):** Stage in iframe + Inspector + Control Bar separano il contesto di editing dal sito; postMessage e Working Draft permettono modifiche senza toccare subito i file. Bake ed Export richiedono uno stato coerente. Global vs Page mode evita confusione su dove si sta editando (site.json vs [slug].json). Add/Reorder/Delete sono gestiti in un solo modo (Working Draft + ASC). Green Build garantisce che ciò che si esporta compili. In v1.3, il path completo elimina ambiguità nella sincronizzazione Stage↔Sidebar su strutture annidate.
+
+---
+
+## Compliance: Legacy vs Full UX (v1.3)
+
+| Dimension | Legacy / Less UX | Full UX (Core-aligned) |
+|-----------|-------------------|-------------------------|
+| **ICE binding** | No `data-jp-*`; Inspector cannot bind. | IDAC (§6) on every editable section/field/item. |
+| **Section wrapper** | Plain `<section>`; no overlay contract. | Core wrapper + overlay; Tenant CSS per TOCC (§7). |
+| **Design tokens** | Raw BEM / fixed classes. | Local tokens (§4.4); `var(--local-*)` only. |
+| **Base schemas** | Ad hoc. | BSDS (§8): BaseSectionData, BaseArrayItem, BaseSectionSettings. |
+| **Add Section** | Ad hoc defaults. | ASC (§9): addableSectionTypes, labels, getDefaultSectionData. |
+| **Bootstrap** | Implicit. | JEB (§10): JsonPagesConfig + JsonPagesEngine. |
+| **Selection payload** | Flat `itemField/itemId`. | Path-only `itemPath: SelectionPath` (JEB §10.3). |
+| **Nested array expansion** | Single-segment or field-only heuristics. | Root-to-leaf path expansion (ECIP §5.5, JAP §7). |
+| **Array item identity (strict)** | Index fallback tolerated. | Stable `id` required for editable object arrays. |
+
+**Rule:** Every page section (non-header/footer) that appears in the Stage and in `SECTION_SCHEMAS` must comply with §6, §7, §4.4, §8, §9, §10 for full Studio UX.
+
+---
+
+## Summary of v1.3 Additions
+
+| § | Title | Purpose |
+|---|--------|--------|
+| 5.5 | Path-Only Nested Selection & Expansion | ECIP: root→leaf `SelectionPath`; remove flat matching in strict mode. |
+| 6.5 | Strict Path Extraction for Nested Arrays | IDAC: path-based nested targeting; no strict flat fallback. |
+| 10.3 | Studio Selection Event Contract | JEB: `SECTION_SELECT` uses `itemPath`; remove `itemField/itemId`. |
+| JAP §7 | Path-Deterministic Selection & Sidebar Expansion | Studio state synchronization for nested arrays. |
+| Compliance | Legacy vs Full UX (v1.3) | Explicit breaking delta for flat protocol removal and strict IDs. |
+| **Appendix A.6** | **v1.3 Path/Nested Strictness Addendum** | Type/export and migration checklist for path-only protocol. |
+
+---
+
+# Appendix A — Tenant Type & Code-Generation Annex
+
+**Objective:** Make the specification **sufficient** to generate or audit a full tenant (new site, new components, new data) without a reference codebase. Defines TypeScript types, JSON shapes, schema contract, file paths, and integration pattern.
+
+**Status:** Mandatory for code-generation and governance. Compliance ensures generated tenants are typed and wired like the reference implementation.
+
+---
+
+## A.1 Core-Provided Types (from `@olonjs/core`)
+
+The following are assumed to be exported by Core. The Tenant augments **SectionDataRegistry** and **SectionSettingsRegistry**; all other types are consumed as-is.
+
+| Type | Description |
+|------|-------------|
+| **SectionType** | `keyof SectionDataRegistry` (after Tenant augmentation). Union of all section type keys. |
+| **Section** | Union of `BaseSection<K>` for all K in SectionDataRegistry. See MTRP §1.2. |
+| **BaseSectionSettings** | Optional base type for section settings (may align with BSDS §8.3). |
+| **MenuItem** | Navigation item. **Minimum shape:** `{ label: string; href: string }`. Core may extend (e.g. `children?: MenuItem[]`). |
+| **AddSectionConfig** | See §9. |
+| **JsonPagesConfig** | See §10.1. |
+
+**Perché servono (A.1):** Il Tenant deve conoscere i tipi esportati dal Core (SectionType, MenuItem, AddSectionConfig, JsonPagesConfig) per tipizzare registry, config e augmentation senza dipendere da implementazioni interne.
+
+---
+
+## A.2 Tenant-Provided Types (single source: `src/types.ts` or equivalent)
+
+The Tenant **must** define the following in one module (e.g. **`src/types.ts`**). This module **must** perform the **module augmentation** of `@olonjs/core` for **SectionDataRegistry** and **SectionSettingsRegistry**, and **must** export **SectionComponentPropsMap** and re-export from `@olonjs/core` so that **SectionType** is available after augmentation.
+
+### A.2.1 SectionComponentPropsMap
+
+Maps each section type to the props of its React component. **Header** is the only type that receives **menu**.
+
+**Option A — Explicit (recommended for clarity and tooling):** For each section type K, add one entry. Header receives **menu**.
+
+```typescript
+import type { MenuItem } from '@olonjs/core';
+// Import Data/Settings from each capsule.
+
+export type SectionComponentPropsMap = {
+  'header': { data: HeaderData; settings?: HeaderSettings; menu: MenuItem[] };
+  'footer': { data: FooterData; settings?: FooterSettings };
+  'hero': { data: HeroData; settings?: HeroSettings };
+  // ... one entry per SectionType, e.g. 'feature-grid', 'cta-banner', etc.
+};
+```
+
+**Option B — Mapped type (DRY, requires SectionDataRegistry/SectionSettingsRegistry in scope):**
+
+```typescript
+import type { MenuItem } from '@olonjs/core';
+
+export type SectionComponentPropsMap = {
+  [K in SectionType]: K extends 'header'
+    ? { data: SectionDataRegistry[K]; settings?: SectionSettingsRegistry[K]; menu: MenuItem[] }
+    : { data: SectionDataRegistry[K]; settings?: K extends keyof SectionSettingsRegistry ? SectionSettingsRegistry[K] : BaseSectionSettings };
+};
+```
+
+SectionType is imported from Core (after Tenant augmentation). In practice Option A is the reference pattern; Option B is valid if the Tenant prefers a single derived definition.
+
+**Perché servono (A.2):** SectionComponentPropsMap e i tipi di config (PageConfig, SiteConfig, MenuConfig, ThemeConfig) definiscono il contratto tra dati (JSON, API) e componente; l’augmentation è l’unico modo per estendere i registry del Core senza fork. Senza questi tipi, generazione tenant e refactor sarebbero senza guida e il type-check fallirebbe.
+
+### A.2.2 ComponentRegistry type
+
+The registry object **must** be typed as:
+
+```typescript
+import type { SectionType } from '@olonjs/core';
+import type { SectionComponentPropsMap } from '@/types';
+
+export const ComponentRegistry: {
+  [K in SectionType]: React.FC<SectionComponentPropsMap[K]>;
+} = { /* ... */ };
+```
+
+File: **`src/lib/ComponentRegistry.tsx`** (or equivalent). Imports one View per section type and assigns it to the corresponding key.
+
+### A.2.3 PageConfig
+
+Minimum shape for a single page (used in **pages** and in each **`[slug].json`**):
+
+```typescript
+export interface PageConfig {
+  id?: string;
+  slug: string;
+  meta?: {
+    title?: string;
+    description?: string;
+  };
+  sections: Section[];
+}
+```
+
+**Section** is the union type from MTRP (§1.2). Each element of **sections** has **id**, **type**, **data**, **settings** and conforms to the capsule schemas.
+
+### A.2.4 SiteConfig
+
+Minimum shape for **site.json** (and for **siteConfig** in JsonPagesConfig):
+
+```typescript
+export interface SiteConfigIdentity {
+  title?: string;
+  logoUrl?: string;
+}
+
+export interface SiteConfig {
+  identity?: SiteConfigIdentity;
+  pages?: Array<{ slug: string; label: string }>;
+  header: {
+    id: string;
+    type: 'header';
+    data: HeaderData;
+    settings?: HeaderSettings;
+  };
+  footer: {
+    id: string;
+    type: 'footer';
+    data: FooterData;
+    settings?: FooterSettings;
+  };
+}
+```
+
+**HeaderData**, **FooterData**, **HeaderSettings**, **FooterSettings** are the types exported from the header and footer capsules.
+
+### A.2.5 MenuConfig
+
+Minimum shape for **menu.json** (and for **menuConfig** in JsonPagesConfig). Structure is tenant-defined; Core expects the header to receive **MenuItem[]**. Common pattern: an object with a key (e.g. **main**) whose value is **MenuItem[]**.
+
+```typescript
+export interface MenuConfig {
+  main?: MenuItem[];
+  [key: string]: MenuItem[] | undefined;
+}
+```
+
+Or simply **`MenuItem[]`** if the app uses a single flat list. The Tenant must ensure that the value passed to the header component as **menu** conforms to **MenuItem[]** (e.g. `menuConfig.main` or `menuConfig` if it is the array).
+
+### A.2.6 ThemeConfig
+
+Minimum shape for **theme.json** (and for **themeConfig** in JsonPagesConfig). Tenant-defined; typically tokens for colors, typography, radius.
+
+```typescript
+export interface ThemeConfig {
+  name?: string;
+  tokens?: {
+    colors?: Record<string, string>;
+    typography?: Record<string, string | Record<string, string>>;
+    borderRadius?: Record<string, string>;
+  };
+  [key: string]: unknown;
+}
+```
+
+---
+
+## A.3 Schema Contract (SECTION_SCHEMAS)
+
+**Location:** **`src/lib/schemas.ts`** (or equivalent).
+
+**Contract:**
+*   **SECTION_SCHEMAS** is a **single object** whose keys are **SectionType** and whose values are **Zod schemas for the section data** (not settings, unless the Form Factory contract expects a combined or per-type settings schema; then each value may be the data schema only, and settings may be defined per capsule and aggregated elsewhere if needed).
+*   The Tenant **must** re-export **BaseSectionData**, **BaseArrayItem**, and optionally **BaseSectionSettingsSchema** from **`src/lib/base-schemas.ts`** (or equivalent). Each capsule’s data schema **must** extend BaseSectionData; each array item schema **must** extend or include BaseArrayItem.
+*   **SECTION_SCHEMAS** is typed as **`Record<SectionType, ZodType>`** or **`{ [K in SectionType]: ZodType }`** so that keys match the registry and SectionDataRegistry.
+
+**Export:** The app imports **SECTION_SCHEMAS** and passes it as **config.schemas** to JsonPagesEngine. The Form Factory traverses these schemas to build editors.
+
+**Perché servono (A.3):** Un unico oggetto SECTION_SCHEMAS con chiavi = SectionType e valori = schema data permette al Form Factory di costruire form per tipo senza convenzioni ad hoc; i base schema garantiscono anchorId e id su item. Senza questo contratto, l’Inspector non saprebbe quali campi mostrare né come validare.
+
+---
+
+## A.4 File Paths & Data Layout
+
+| Purpose | Path (conventional) | Description |
+|---------|---------------------|-------------|
+| Site config | **`src/data/config/site.json`** | SiteConfig (identity, header, footer, pages list). |
+| Menu config | **`src/data/config/menu.json`** | MenuConfig (e.g. main nav). |
+| Theme config | **`src/data/config/theme.json`** | ThemeConfig (tokens). |
+| Page data | **`src/data/pages/<slug>.json`** | One file per page; content is PageConfig (slug, meta, sections). |
+| Base schemas | **`src/lib/base-schemas.ts`** | BaseSectionData, BaseArrayItem, BaseSectionSettingsSchema. |
+| Schema aggregate | **`src/lib/schemas.ts`** | SECTION_SCHEMAS; re-exports base schemas. |
+| Registry | **`src/lib/ComponentRegistry.tsx`** | ComponentRegistry object. |
+| Add-section config | **`src/lib/addSectionConfig.ts`** | addSectionConfig (AddSectionConfig). |
+| Tenant types & augmentation | **`src/types.ts`** | SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **declare module '@olonjs/core'** for SectionDataRegistry and SectionSettingsRegistry; re-export from Core. |
+| Bootstrap | **`src/App.tsx`** | Imports config (site, theme, menu, pages), registry, schemas, addSection, themeCss; builds JsonPagesConfig; renders **<JsonPagesEngine config={config} />**. |
+
+The app entry (e.g. **main.tsx**) renders **App**. No other bootstrap contract is specified; the Tenant may use Vite aliases (e.g. **@/**) for the paths above.
+
+**Perché servono (A.4):** Path fissi (data/config, data/pages, lib/schemas, types.ts, App.tsx) permettono a CLI, tooling e agenti di trovare sempre gli stessi file; l’onboarding e la generazione da spec sono deterministici. Senza convenzione, ogni tenant sarebbe una struttura diversa.
+
+---
+
+## A.5 Integration Checklist (Code-Generation)
+
+When generating or auditing a tenant, ensure the following in order:
+
+1. **Capsules** — For each section type, create **`src/components/<type>/`** with View.tsx, schema.ts, types.ts, index.ts. Data schema extends BaseSectionData; array items extend BaseArrayItem; View complies with CIP and IDAC (§6.2–6.3 for non-reserved types).
+2. **Base schemas** — **src/lib/base-schemas.ts** exports BaseSectionData, BaseArrayItem, BaseSectionSettingsSchema (and optional CtaSchema or similar shared fragments).
+3. **types.ts** — Define SectionComponentPropsMap (header with **menu**), PageConfig, SiteConfig, MenuConfig, ThemeConfig; **declare module '@olonjs/core'** and augment SectionDataRegistry and SectionSettingsRegistry; re-export from `@olonjs/core`.
+4. **ComponentRegistry** — Import every View; build object **{ [K in SectionType]: ViewComponent }**; type as **{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }**.
+5. **schemas.ts** — Import base schemas and each capsule’s data schema; export SECTION_SCHEMAS as **{ [K in SectionType]: SchemaK }**; export SectionType as **keyof typeof SECTION_SCHEMAS** if not using Core’s SectionType.
+6. **addSectionConfig** — addableSectionTypes, sectionTypeLabels, getDefaultSectionData; export as AddSectionConfig.
+7. **App.tsx** — Import site, theme, menu, pages from data paths; build config (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss: { tenant }, addSection); render JsonPagesEngine.
+8. **Data files** — Create or update site.json, menu.json, theme.json, and one or more **<slug>.json** under the paths in A.4. Ensure JSON shapes match SiteConfig, MenuConfig, ThemeConfig, PageConfig.
+9. **Tenant CSS** — Include TOCC (§7) selectors in global CSS so the Stage overlay is visible.
+10. **Reserved types** — Header and footer capsules receive props per SectionComponentPropsMap; menu is populated from menuConfig (e.g. menuConfig.main) when building the config or inside Core when rendering the header.
+
+**Perché servono (A.5):** La checklist in ordine evita di dimenticare passi (es. augmentation prima del registry, TOCC dopo le View) e rende la spec sufficiente per generare o verificare un tenant senza codebase di riferimento.
+
+---
+
+## A.6 v1.3 Path/Nested Strictness Addendum (breaking)
+
+This addendum extends Appendix A without removing prior v1.2 obligations:
+
+1. **Type exports** — Core and/or shared types module should expose `SelectionPathSegment` and `SelectionPath` for Studio messaging and Inspector expansion logic.
+2. **Protocol migration** — Replace flat payload fields `itemField` / `itemId` with `itemPath?: SelectionPath` in strict v1.3 channels.
+3. **Nested array compliance** — For editable object arrays, item identity must be stable (`id`) and propagated to DOM attributes (`data-jp-item-id`), schema items (BaseArrayItem), and selection path segments (`itemId` when segment targets array item).
+4. **Backward compatibility policy** — Legacy flat fields may exist only in transitional adapters outside strict mode; normative v1.3 contract is path-only.
+
+---
+
+**Validation:** Align with current `@olonjs/core` exports (SectionType, MenuItem, AddSectionConfig, JsonPagesConfig, and in v1.3 path types for Studio selection).  
+**Distribution:** Core via `.yalc`; tenant projections via `@olonjs/cli`. This annex makes the spec **necessary and sufficient** for tenant code-generation and governance at enterprise grade.
 
 END_OF_FILE_CONTENT
 mkdir -p "src"

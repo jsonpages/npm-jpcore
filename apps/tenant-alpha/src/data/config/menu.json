@@ -1,19 +1,19 @@
 {
   "main": [
     {
+      "label": "The Problem",
+      "href": "#problem"
+    },
+    {
       "label": "Architecture",
       "href": "#architecture"
     },
     {
-      "label": "CMS",
-      "href": "#cms"
+      "label": "Why",
+      "href": "#why"
     },
     {
-      "label": "Versioning",
-      "href": "#git"
-    },
-    {
-      "label": "Developer",
+      "label": "DX",
       "href": "#devex"
     }
   ]

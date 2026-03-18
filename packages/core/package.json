@@ -1,6 +1,6 @@
 {
   "name": "@olonjs/core",
-  "version": "1.0.75",
+  "version": "1.0.76",
   "private": false,
   "type": "module",
   "main": "./dist/olonjs-core.umd.cjs",
