@@ -1641,7 +1641,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "@tiptap/extension-link": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.76",
+    "@olonjs/core": "^1.0.77",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
     "react": "^19.0.0",
@@ -7743,19 +7743,19 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/menu.json"
 {
   "main": [
     {
+      "label": "The Problem",
+      "href": "#problem"
+    },
+    {
       "label": "Architecture",
       "href": "#architecture"
     },
     {
-      "label": "CMS",
-      "href": "#cms"
+      "label": "Why",
+      "href": "#why"
     },
     {
-      "label": "Versioning",
-      "href": "#git"
-    },
-    {
-      "label": "Developer",
+      "label": "DX",
       "href": "#devex"
     }
   ]
@@ -7796,19 +7796,19 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
       "badge": "v1.4.0",
       "links": [
         {
+          "label": "The Problem",
+          "href": "#problem"
+        },
+        {
           "label": "Architecture",
           "href": "#architecture"
         },
         {
-          "label": "CMS",
-          "href": "#cms"
+          "label": "Why",
+          "href": "#why"
         },
         {
-          "label": "Versioning",
-          "href": "#git"
-        },
-        {
-          "label": "Developer",
+          "label": "DX",
           "href": "#devex"
         }
       ]
@@ -7917,8 +7917,18 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
         "titleHighlight": "Agentic Web",
         "description": "AI agents are becoming operational actors in commerce, marketing, and support. OlonJS introduces a deterministic machine contract for websites — so agents can reliably read and operate any site, without custom glue.",
         "ctas": [
-          { "id": "cta-1", "label": "Read the Spec",    "href": "/docs",                                          "variant": "primary"    },
-          { "id": "cta-2", "label": "View on GitHub",   "href": "https://github.com/olonjs/npm-jpcore",           "variant": "secondary"  }
+          {
+            "id": "cta-1",
+            "label": "Read the Spec",
+            "href": "/docs",
+            "variant": "primary"
+          },
+          {
+            "id": "cta-2",
+            "label": "View on GitHub",
+            "href": "https://github.com/olonjs/npm-jpcore",
+            "variant": "secondary"
+          }
         ],
         "metrics": []
       },
@@ -7933,16 +7943,35 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
         "problemTag": "The problem",
         "problemTitle": "Websites aren't built for agents",
         "problemItems": [
-          { "id": "pi-1", "text": "Agentic workflows are growing, but integration is mostly custom glue — rebuilt tenant by tenant" },
-          { "id": "pi-2", "text": "Every site has a different content structure, routing assumptions, and edge cases" },
-          { "id": "pi-3", "text": "HTML-heavy, CMS-fragmented, inconsistent across properties — slow, brittle, expensive" }
+          {
+            "id": "pi-1",
+            "text": "Agentic workflows are growing, but integration is mostly custom glue — rebuilt tenant by tenant"
+          },
+          {
+            "id": "pi-2",
+            "text": "Every site has a different content structure, routing assumptions, and edge cases"
+          },
+          {
+            "id": "pi-3",
+            "text": "HTML-heavy, CMS-fragmented, inconsistent across properties — slow, brittle, expensive"
+          }
         ],
         "solutionTag": "Our solution",
         "solutionTitle": "A standard machine contract across tenants",
         "solutionItems": [
-          { "id": "si-1", "text": "Predictable page endpoints for agents —", "code": "/{slug}.json" },
-          { "id": "si-2", "text": "Typed, schema-driven content contracts — validated, versioned, auditable" },
-          { "id": "si-3", "text": "Repeatable governance and deployment patterns across every tenant" }
+          {
+            "id": "si-1",
+            "text": "Predictable page endpoints for agents —",
+            "code": "/{slug}.json"
+          },
+          {
+            "id": "si-2",
+            "text": "Typed, schema-driven content contracts — validated, versioned, auditable"
+          },
+          {
+            "id": "si-3",
+            "text": "Repeatable governance and deployment patterns across every tenant"
+          }
         ]
       },
       "settings": {}
@@ -7956,15 +7985,47 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
         "sectionTitle": "Built for enterprise scale",
         "sectionLead": "Every layer is designed for determinism — from file system layout to component contracts to Studio UX.",
         "cards": [
-          { "id": "fc-1", "emoji": "📐", "title": "Modular Type Registry",      "description": "Core defines empty registries; tenants inject types via module augmentation. Full TypeScript safety, zero Core changes." },
-          { "id": "fc-2", "emoji": "🧱", "title": "Tenant Block Protocol",      "description": "Self-contained capsules (View + schema + types) enable automated ingestion and consistent editor generation." },
-          { "id": "fc-3", "emoji": "⚙️", "title": "Deterministic CLI",          "description": "@olonjs/cli projects new tenants from a canonical script — reproducible across every environment." },
-          { "id": "fc-4", "emoji": "🎯", "title": "ICE Data Contract",          "description": "Mandatory DOM attributes bind the Studio canvas to Inspector fields without coupling to tenant DOM structure." },
-          { "id": "fc-5", "emoji": "📦", "title": "Base Schema Fragments",      "description": "Shared BaseSectionData and BaseArrayItem enforce anchor IDs and stable React keys across all capsules." },
-          { "id": "fc-6", "emoji": "🔗", "title": "Path-Based Selection",       "description": "v1.4 strict path semantics eliminate nested array ambiguity. Studio selection is root-to-leaf, always deterministic." }
+          {
+            "id": "fc-1",
+            "emoji": "📐",
+            "title": "Modular Type Registry",
+            "description": "Core defines empty registries; tenants inject types via module augmentation. Full TypeScript safety, zero Core changes."
+          },
+          {
+            "id": "fc-2",
+            "emoji": "🧱",
+            "title": "Tenant Block Protocol",
+            "description": "Self-contained capsules (View + schema + types) enable automated ingestion and consistent editor generation."
+          },
+          {
+            "id": "fc-3",
+            "emoji": "⚙️",
+            "title": "Deterministic CLI",
+            "description": "@olonjs/cli projects new tenants from a canonical script — reproducible across every environment."
+          },
+          {
+            "id": "fc-4",
+            "emoji": "🎯",
+            "title": "ICE Data Contract",
+            "description": "Mandatory DOM attributes bind the Studio canvas to Inspector fields without coupling to tenant DOM structure."
+          },
+          {
+            "id": "fc-5",
+            "emoji": "📦",
+            "title": "Base Schema Fragments",
+            "description": "Shared BaseSectionData and BaseArrayItem enforce anchor IDs and stable React keys across all capsules."
+          },
+          {
+            "id": "fc-6",
+            "emoji": "🔗",
+            "title": "Path-Based Selection",
+            "description": "v1.4 strict path semantics eliminate nested array ambiguity. Studio selection is root-to-leaf, always deterministic."
+          }
         ]
       },
-      "settings": { "columns": 3 }
+      "settings": {
+        "columns": 3
+      }
     },
     {
       "id": "why-now",
@@ -7975,10 +8036,26 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
         "title": "Why this matters",
         "titleAccent": "now",
         "cards": [
-          { "id": "wc-1", "title": "Agentic commerce is live",      "description": "Operational standards are missing. Without a contract layer, teams face high integration cost and low reliability." },
-          { "id": "wc-2", "title": "Enterprises need governance",   "description": "A contract layer you can audit, version, and scale — not a one-off adapter for every new agent workflow." },
-          { "id": "wc-3", "title": "AI tooling is ready",           "description": "Deterministic structure means AI can scaffold, validate, and evolve tenants with less prompt ambiguity." },
-          { "id": "wc-4", "title": "Speed compounds",               "description": "Teams that standardize now ship new experiences in hours while others rebuild integration logic repeatedly." }
+          {
+            "id": "wc-1",
+            "title": "Agentic commerce is live",
+            "description": "Operational standards are missing. Without a contract layer, teams face high integration cost and low reliability."
+          },
+          {
+            "id": "wc-2",
+            "title": "Enterprises need governance",
+            "description": "A contract layer you can audit, version, and scale — not a one-off adapter for every new agent workflow."
+          },
+          {
+            "id": "wc-3",
+            "title": "AI tooling is ready",
+            "description": "Deterministic structure means AI can scaffold, validate, and evolve tenants with less prompt ambiguity."
+          },
+          {
+            "id": "wc-4",
+            "title": "Speed compounds",
+            "description": "Teams that standardize now ship new experiences in hours while others rebuild integration logic repeatedly."
+          }
         ]
       },
       "settings": {}
@@ -7987,19 +8064,40 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
       "id": "dx-section",
       "type": "devex",
       "data": {
-        "anchorId": "developer-velocity",
+        "anchorId": "devex",
         "label": "Developer Velocity",
         "title": "AI-native advantage,\nfrom day one",
         "description": "OlonJS dramatically increases AI-assisted development speed. Because structure is deterministic, agents scaffold and evolve tenants faster — with lower regression risk.",
         "features": [
-          { "id": "df-1", "text": "AI scaffolds and evolves tenants faster because structure is deterministic" },
-          { "id": "df-2", "text": "Shared conventions reduce prompt ambiguity and implementation drift" },
-          { "id": "df-3", "text": "Ship new tenant experiences in hours, not weeks" }
+          {
+            "id": "df-1",
+            "text": "AI scaffolds and evolves tenants faster because structure is deterministic"
+          },
+          {
+            "id": "df-2",
+            "text": "Shared conventions reduce prompt ambiguity and implementation drift"
+          },
+          {
+            "id": "df-3",
+            "text": "Ship new tenant experiences in hours, not weeks"
+          }
         ],
         "stats": [
-          { "id": "ds-1", "value": "10×",  "label": "Faster scaffolding" },
-          { "id": "ds-2", "value": "∅",    "label": "Glue per tenant"    },
-          { "id": "ds-3", "value": "100%", "label": "Type-safe contracts" }
+          {
+            "id": "ds-1",
+            "value": "10×",
+            "label": "Faster scaffolding"
+          },
+          {
+            "id": "ds-2",
+            "value": "∅",
+            "label": "Glue per tenant"
+          },
+          {
+            "id": "ds-3",
+            "value": "100%",
+            "label": "Type-safe contracts"
+          }
         ]
       },
       "settings": {}
@@ -8013,15 +8111,24 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
         "description": "Read the full specification or explore the source on GitHub. Zero dependencies to start — one JSON endpoint per page.",
         "cliCommand": "npx @olonjs/cli@latest new tenant",
         "ctas": [
-          { "id": "cta-docs", "label": "Read the Specification", "href": "/docs",                                     "variant": "primary"   },
-          { "id": "cta-gh",   "label": "View on GitHub",         "href": "https://github.com/olonjs/npm-jpcore",      "variant": "secondary" }
+          {
+            "id": "cta-docs",
+            "label": "Read the Specification",
+            "href": "/docs",
+            "variant": "primary"
+          },
+          {
+            "id": "cta-gh",
+            "label": "View on GitHub",
+            "href": "https://github.com/olonjs/npm-jpcore",
+            "variant": "secondary"
+          }
         ]
       },
       "settings": {}
     }
   ]
 }
-
 END_OF_FILE_CONTENT
 echo "Creating src/data/pages/post.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/pages/post.json"

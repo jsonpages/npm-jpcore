@@ -36,6 +36,9 @@ const TENANT_ID = 'alpha';
 const filePages = getFilePages();
 const fileSiteConfig = siteData as unknown as SiteConfig;
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
+const ASSET_UPLOAD_MAX_RETRIES = 2;
+const ASSET_UPLOAD_TIMEOUT_MS = 20_000;
+const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
 
 interface CloudSaveUiState {
   isOpen: boolean;
@@ -342,14 +345,39 @@ function App() {
     [isCloudMode, CLOUD_API_URL]
   );
 
-  useEffect(() => {
-    // In Cloud mode, listing assets might be different or disabled for MVP
-    // For now, we keep the local fetch which will fail gracefully on Vercel (404)
+  const loadAssetsManifest = useCallback(async (): Promise<void> => {
+    if (isCloudMode && CLOUD_API_URL && CLOUD_API_KEY) {
+      const apiBases = cloudApiCandidates.length > 0 ? cloudApiCandidates : [normalizeApiBase(CLOUD_API_URL)];
+      for (const apiBase of apiBases) {
+        try {
+          const res = await fetch(`${apiBase}/assets/list?limit=200`, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${CLOUD_API_KEY}`,
+            },
+          });
+          const body = (await res.json().catch(() => ({}))) as { items?: LibraryImageEntry[] };
+          if (!res.ok) continue;
+          const items = Array.isArray(body.items) ? body.items : [];
+          setAssetsManifest(items);
+          return;
+        } catch {
+          // try next candidate
+        }
+      }
+      setAssetsManifest([]);
+      return;
+    }
+
     fetch('/api/list-assets')
       .then((r) => (r.ok ? r.json() : []))
       .then((list: LibraryImageEntry[]) => setAssetsManifest(Array.isArray(list) ? list : []))
       .catch(() => setAssetsManifest([]));
-  }, []);
+  }, [isCloudMode, CLOUD_API_URL, CLOUD_API_KEY, cloudApiCandidates]);
+
+  useEffect(() => {
+    void loadAssetsManifest();
+  }, [loadAssetsManifest]);
 
   useEffect(() => {
     return () => {
@@ -702,14 +730,60 @@ function App() {
       assetsBaseUrl: '/assets',
       assetsManifest,
       async onAssetUpload(file: File): Promise<string> {
-        // Note: Asset upload in Cloud Mode requires the R2 Bridge (Next Step in Roadmap)
-        // For now, this works in Local Mode.
         if (!file.type.startsWith('image/')) throw new Error('Invalid file type.');
+        if (!ALLOWED_IMAGE_MIME_TYPES.has(file.type)) {
+          throw new Error('Unsupported image format. Allowed: jpeg, png, webp, gif, avif.');
+        }
         if (file.size > MAX_UPLOAD_SIZE_BYTES) throw new Error(`File too large. Max ${MAX_UPLOAD_SIZE_BYTES / 1024 / 1024}MB.`);
-        
+
+        if (isCloudMode && CLOUD_API_URL && CLOUD_API_KEY) {
+          const apiBases = cloudApiCandidates.length > 0 ? cloudApiCandidates : [normalizeApiBase(CLOUD_API_URL)];
+          let lastError: Error | null = null;
+          for (const apiBase of apiBases) {
+            for (let attempt = 0; attempt <= ASSET_UPLOAD_MAX_RETRIES; attempt += 1) {
+              try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('filename', file.name);
+                const controller = new AbortController();
+                const timeout = window.setTimeout(() => controller.abort(), ASSET_UPLOAD_TIMEOUT_MS);
+                const res = await fetch(`${apiBase}/assets/upload`, {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${CLOUD_API_KEY}`,
+                    'X-Correlation-Id': crypto.randomUUID(),
+                  },
+                  body: formData,
+                  signal: controller.signal,
+                }).finally(() => window.clearTimeout(timeout));
+                const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string; code?: string };
+                if (res.ok && typeof body.url === 'string') {
+                  await loadAssetsManifest().catch(() => undefined);
+                  return body.url;
+                }
+                lastError = new Error(body.error || body.code || `Cloud upload failed: ${res.status}`);
+                if (isRetryableStatus(res.status) && attempt < ASSET_UPLOAD_MAX_RETRIES) {
+                  await sleep(backoffDelayMs(attempt));
+                  continue;
+                }
+                break;
+              } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : 'Cloud upload failed.';
+                lastError = new Error(message);
+                if (attempt < ASSET_UPLOAD_MAX_RETRIES) {
+                  await sleep(backoffDelayMs(attempt));
+                  continue;
+                }
+                break;
+              }
+            }
+          }
+          throw lastError ?? new Error('Cloud upload failed.');
+        }
+
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload  = () => resolve((reader.result as string).split(',')[1] ?? '');
+          reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '');
           reader.onerror = () => reject(reader.error);
           reader.readAsDataURL(file);
         });
@@ -719,10 +793,10 @@ function App() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filename: file.name, mimeType: file.type || undefined, data: base64 }),
         });
-        
         const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
         if (!res.ok) throw new Error(body.error || `Upload failed: ${res.status}`);
         if (typeof body.url !== 'string') throw new Error('Invalid server response: missing url');
+        await loadAssetsManifest().catch(() => undefined);
         return body.url;
       },
     },

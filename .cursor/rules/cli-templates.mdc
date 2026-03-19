@@ -1,0 +1,74 @@
+---
+description: CLI and template DNA governance — activated when editing CLI or tenant source apps
+globs: packages/cli/**, apps/tenant-alpha/**, apps/tenant-agritourism/**
+---
+
+# CLI & Template DNA Governance
+
+## DNA generation flow
+
+```
+Source app (apps/tenant-*) --[npm run dist:dna:all]--> Template assets (packages/cli/assets/templates/<name>/)
+```
+
+Do NOT edit template DNA files directly. Always modify the source app first, then regenerate.
+
+## Template structure
+
+Each template in `packages/cli/assets/templates/<name>/` requires:
+
+- `manifest.json` — template metadata (name, description, version)
+- `src_tenant.sh` — deterministic shell script that emits tenant source files via heredocs
+
+Legacy compatibility path for alpha: `packages/cli/assets/src_tenant_alpha.sh`
+
+## CLI scaffolding flow
+
+1. `npm create vite` — base Vite project
+2. Overwrite `package.json`, `tsconfig.json`, `components.json` with template defaults
+3. Execute `src_tenant.sh` — emits full `src/` directory (components, data, lib, config)
+
+## Validation
+
+- `npm run check:templates` — validates template presence and manifest consistency
+- Run after any change to source apps or template assets
+
+## Adding a new template
+
+1. Create source app at `apps/tenant-<name>/`
+2. Implement sections following TBP (View.tsx, schema.ts, types.ts, index.ts per section)
+3. Add `dist` script to source app's `package.json`
+4. Create `packages/cli/assets/templates/<name>/manifest.json`
+5. Run `npm run dist:dna:all` to generate `src_tenant.sh`
+6. Verify with `npm run check:templates`
+7. Add template option to CLI in `packages/cli/src/index.js`
+
+## Section capsule structure (TBP)
+
+Each section in a tenant source app follows:
+
+```
+src/components/<SectionType>/
+  View.tsx      — React component rendering the section
+  schema.ts     — JSON schema for inspector editability
+  types.ts      — TypeScript types for section data
+  index.ts      — re-export barrel
+```
+
+## Tenant data structure (JSP)
+
+```
+src/data/
+  config/
+    site.json     — site-wide config (name, logo, colors, SEO)
+    menu.json     — navigation structure
+    theme.json    — design tokens
+  pages/
+    home.json     — page definition with sections array
+    about.json
+    ...
+```
+
+## CLI aliases
+
+Both `olonjs` (primary) and `jsonpages` (compatibility) are registered bin commands.

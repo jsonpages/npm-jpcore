@@ -1,0 +1,62 @@
+---
+description: Core engine guardrails — activated when editing the @olonjs/core package
+globs: packages/core/src/**
+---
+
+# @olonjs/core Engine
+
+## Fundamental constraint
+
+Core must NOT contain tenant-specific logic (sections, schemas, data, theme choices). If a change requires knowledge of a specific section type or data shape, it belongs in the tenant, not core.
+
+## Protocols
+
+- **MTRP (Module Type Registry Protocol):** `kernel.ts` defines `SectionDataRegistry`, `BaseSection`, type-safe registry pattern
+- **TBP (Tenant Block Protocol):** sections are capsules with `View.tsx`, `schema.ts`, `types.ts`, `index.ts`
+- **JSP (JsonPages Site Protocol):** `config/site.json`, `menu.json`, `theme.json`; `pages/[slug].json`
+
+## Key files
+
+| File | Role |
+|------|------|
+| `lib/kernel.ts` | Type registries, `SectionDataRegistry`, `BaseSection` |
+| `lib/JsonPagesEngine.tsx` | Main engine entry point |
+| `lib/PageRenderer.tsx` | Resolves page by slug, renders sections |
+| `lib/SectionRenderer.tsx` | Renders individual section by type from registry |
+| `lib/ConfigContext.tsx` | Site config context provider |
+| `lib/StudioContext.tsx` | Studio editing state context |
+| `lib/persistence.ts` | Save/load abstractions |
+| `lib/events.ts` | Event bus |
+| `lib/types-engine.ts` | SelectionPath, engine types |
+
+## Admin / Studio
+
+| File | Role |
+|------|------|
+| `admin/PreviewEntry.tsx` | Preview mode entry point |
+| `admin/StudioStage.tsx` | Editing stage with selection |
+| `admin/AdminSidebar.tsx` | Sidebar with inspector |
+| `admin/FormFactory.tsx` | Dynamic form from schema |
+| `admin/InputRegistry.tsx` | Maps schema field types to input components |
+| `admin/AddSectionLibrary.tsx` | Section picker for adding new sections |
+| `admin/PageSelector.tsx` | Page navigation |
+| `admin/ControlBar.tsx` | Top control bar |
+
+## Public API surface
+
+All public exports go through `index.ts`. When adding new exports:
+1. Add the export to `index.ts`
+2. Verify it does not leak tenant-specific types
+3. Consider backward compatibility — removing an export is a breaking change
+
+## UI primitives
+
+`components/ui/` contains Radix-based primitives (button, input, dialog, select, etc.). These are shared between admin UI and can be used by tenants.
+
+## Compliance priority
+
+1. Data is bound correctly
+2. Schemas describe fields correctly
+3. Content is editable without breaking the inspector
+4. Tenant structure stays standardized
+5. Context-aware focus/highlight is desirable but secondary

@@ -1,0 +1,66 @@
+---
+description: General context for the OlonJS monorepo
+alwaysApply: true
+---
+
+# OlonJS Monorepo (npm-jpcore)
+
+AI-native content infrastructure for Vercel & Vite. Deterministic, sovereign, git-backed.
+
+## Monorepo layout (npm workspaces)
+
+| Package | Path | npm name | Purpose |
+|---------|------|----------|---------|
+| **Core** | `packages/core` | `@olonjs/core` | Runtime engine consumed by tenant apps |
+| **CLI** | `packages/cli` | `@olonjs/cli` | Tenant scaffolding from DNA templates |
+| **Stack** | `packages/stack` | `@olonjs/stack` | Version manifest for dependency alignment |
+| **Tenant Alpha** | `apps/tenant-alpha` | — | Reference DNA template source (default) |
+| **Tenant Agritourism** | `apps/tenant-agritourism` | — | Second DNA template source |
+
+## Core / Tenant split (fundamental invariant)
+
+**Core owns:** routing, `/admin`, `/admin/preview`, preview stage, studio state, inspector/form factory, engine behavior.
+
+**Tenant owns:** sections (components), schemas, type augmentation, page/config JSON data, theme/design layer, workflow scripts.
+
+The tenant does NOT implement the CMS. It implements the tenant protocol consumed by the engine.
+
+## DNA generation (source of truth)
+
+Template DNA is generated from source apps, never edited manually:
+
+- `apps/tenant-alpha` -> `packages/cli/assets/templates/alpha/`
+- `apps/tenant-agritourism` -> `packages/cli/assets/templates/agritourism/`
+
+Commands:
+- `npm run dist:dna:all` — regenerate all template DNA
+- `npm run check:templates` — validate template conformance
+- `npm run release:enterprise` — gated release (check + dist + publish)
+
+## Build tools
+
+- Vite 6 for core (library mode) and tenant apps
+- `@vitejs/plugin-react`, `vite-plugin-dts`, `@tailwindcss/vite`
+- TypeScript with ES2020 target, bundler module resolution
+- Path alias: `@/*` -> `./src/*`
+
+## Key specs and docs
+
+- `specs/olonjsSpecs_V.1.4.md` — current protocol specification
+- `docs/ARCHITECTURE.md` — monorepo architecture
+- `docs/CLI.md` — CLI behavior and template resolution
+- `docs/TEMPLATES.md` — template governance and DNA generation
+- `docs/PUBLISHING.md` — publish/release operations
+
+## CLI usage
+
+```
+npx @olonjs/cli new tenant <name> [--template <name>] [--agritourism]
+```
+
+Aliases: `olonjs` (primary), `jsonpages` (compatibility).
+
+## Caveats
+
+- On Windows UNC paths (`\\wsl.localhost\...`), npm/cmd may fail; use WSL shell.
+- `scripts/release.js` only updates `tenant-alpha` dep pin during publish.
