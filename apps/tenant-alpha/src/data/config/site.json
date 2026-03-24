@@ -1,7 +1,7 @@
 {
   "identity": {
-    "title": "JsonPages",
-    "logoUrl": "/logo.svg"
+    "title": "OlonJS",
+    "logoUrl": "/brand/mark/olon-mark-dark.svg"
   },
   "pages": [
     {
@@ -9,16 +9,8 @@
       "label": "Home"
     },
     {
-      "slug": "docs",
-      "label": "Docs"
-    },
-    {
-      "slug": "architecture",
-      "label": "Architecture"
-    },
-    {
-      "slug": "usage",
-      "label": "Usage"
+      "slug": "design-system",
+      "label": "Design System"
     }
   ],
   "header": {
@@ -26,30 +18,50 @@
     "type": "header",
     "data": {
       "logoText": "Olon",
-      "logoHighlight": "JS",
-      "logoIconText": "",
-      "badge": "v1.4.0",
+      "badge": "",
       "links": [
         {
-          "label": "The Problem",
-          "href": "#problem"
+          "label": "Platform",
+          "href": "/platform",
+          "children": [
+            {
+              "label": "Overview",
+              "href": "/platform/overview"
+            },
+            {
+              "label": "Architecture",
+              "href": "/platform/architecture"
+            },
+            {
+              "label": "Security",
+              "href": "/platform/security"
+            },
+            {
+              "label": "Integrations",
+              "href": "/platform/integrations"
+            },
+            {
+              "label": "Roadmap",
+              "href": "/platform/roadmap"
+            }
+          ]
         },
         {
-          "label": "Architecture",
-          "href": "#architecture"
+          "label": "Solutions",
+          "href": "/solutions"
         },
         {
-          "label": "Why",
-          "href": "#why"
+          "label": "Pricing",
+          "href": "/pricing"
         },
         {
-          "label": "DX",
-          "href": "#devex"
+          "label": "Resources",
+          "href": "/resources"
         }
-      ]
-    },
-    "settings": {
-      "sticky": true
+      ],
+      "ctaLabel": "Get started →",
+      "ctaHref": "#contact",
+      "signinHref": "#login"
     }
   },
   "footer": {
@@ -57,8 +69,7 @@
     "type": "footer",
     "data": {
       "brandText": "Olon",
-      "brandHighlight": "JS",
-      "copyright": "© 2026 OlonJS · Guido Serio",
+      "copyright": "© 2025 OlonJS · v1.4 · Holon",
       "links": [
         {
           "label": "Docs",
@@ -66,13 +77,18 @@
         },
         {
           "label": "GitHub",
-          "href": "https://github.com/olonjs/npm-jpcore"
+          "href": "#"
         },
         {
-          "label": "MIT License",
-          "href": "https://github.com/olonjs/npm-jpcore/blob/main/LICENSE"
+          "label": "Privacy",
+          "href": "#"
+        },
+        {
+          "label": "Terms",
+          "href": "#"
         }
-      ]
+      ],
+      "designSystemHref": "/design-system"
     },
     "settings": {
       "showLogo": true

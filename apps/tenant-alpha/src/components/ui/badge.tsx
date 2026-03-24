@@ -1,35 +1,29 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
 
-export type BadgeVariant = "default" | "secondary" | "outline" | "brand"
+const badgeVariants = cva(
+  'inline-flex items-center px-2.5 py-0.5 text-xs font-medium transition-colors',
+  {
+    variants: {
+      variant: {
+        default:  'bg-primary-900 text-primary-light border border-primary rounded-sm',
+        outline:  'bg-elevated text-muted-foreground border border-border rounded-sm',
+        accent:   'text-accent border border-border-strong rounded-sm',
+        solid:    'bg-primary text-primary-foreground rounded-sm',
+        pill:     'bg-elevated text-muted-foreground border border-border rounded-full gap-1.5',
+      },
+    },
+    defaultVariants: { variant: 'default' },
+  }
+)
 
-const variantClasses: Record<BadgeVariant, string> = {
-  default:
-    "bg-primary/10 border border-primary/30 text-primary",
-  secondary:
-    "bg-muted border border-border text-muted-foreground",
-  outline:
-    "bg-transparent border border-border text-muted-foreground",
-  brand:
-    "bg-primary/10 border border-primary/30 text-primary font-mono",
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLSpanElement>,
+    VariantProps<typeof badgeVariants> {}
+
+function Badge({ className, variant, ...props }: BadgeProps) {
+  return <span className={cn(badgeVariants({ variant }), className)} {...props} />
 }
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: BadgeVariant
-}
-
-function Badge({ className, variant = "default", ...props }: BadgeProps) {
-  return (
-    <span
-      data-slot="badge"
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
-        variantClasses[variant ?? "default"],
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-export { Badge }
+export { Badge, badgeVariants }

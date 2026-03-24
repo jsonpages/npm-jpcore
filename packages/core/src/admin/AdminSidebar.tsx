@@ -28,7 +28,6 @@ import { Layers, ChevronUp, GripVertical, Settings, Trash2, AlertCircle, X, Plus
 import { Button } from '../components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../components/ui/tooltip';
 import { PageSelector } from './PageSelector';
-import { ScrollArea } from '../components/ui/scroll-area';
 
 interface SelectedSectionInfo {
   id: string;
@@ -532,8 +531,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </div>
         )}
 
-      <ScrollArea className="flex-1 min-h-0 flex flex-col">
-        <div ref={contentScrollRef} className="flex flex-col min-h-0">
+      {/* Radix ScrollArea uses an inner display:table wrapper that breaks position:sticky in descendants. */}
+      <div className="relative flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
+        <div
+          ref={contentScrollRef}
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden flex flex-col"
+          role="region"
+          aria-label="Inspector content"
+        >
+        <div className="flex flex-col min-h-0">
         {showLayersList && (
           <div className="py-1">
             <DndContext
@@ -718,7 +724,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             );
           })()}
         </div>
-      </ScrollArea>
+        </div>
+      </div>
 
       <div className="px-4 py-2.5 border-t border-zinc-800 bg-zinc-900/50 flex items-center justify-between gap-3 opacity-100 shrink-0">
         {((showLegacySave && onSaveToFile != null) || (showHotSave && onHotSave != null) || onResetToFile != null) && (

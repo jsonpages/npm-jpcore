@@ -46,7 +46,7 @@ Commands:
 
 ## Key specs and docs
 
-- `specs/olonjsSpecs_V.1.4.md` — current protocol specification
+- `specs/olonjsSpecs_V_1_5.md` — protocol specification (v1.5, normative for tenants / Studio)
 - `docs/ARCHITECTURE.md` — monorepo architecture
 - `docs/CLI.md` — CLI behavior and template resolution
 - `docs/TEMPLATES.md` — template governance and DNA generation

@@ -596,7 +596,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "@tiptap/extension-link": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.77",
+    "@olonjs/core": "^1.0.78",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
     "react": "^19.0.0",
@@ -957,6 +957,9 @@ const TENANT_ID   = 'santamamma';   // 🌿 SantaMamma Agriturismo
 const filePages     = getFilePages();
 const fileSiteConfig = siteData as unknown as SiteConfig;
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
+const ASSET_UPLOAD_MAX_RETRIES = 2;
+const ASSET_UPLOAD_TIMEOUT_MS = 20_000;
+const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
 
 interface CloudSaveUiState {
   isOpen: boolean;
@@ -980,6 +983,30 @@ function stepProgress(doneSteps: StepId[]): number {
   return Math.round((doneSteps.length / DEPLOY_STEPS.length) * 100);
 }
 
+function normalizeApiBase(raw: string): string {
+  return raw.trim().replace(/\/+$/, '');
+}
+
+function buildUploadEndpoint(raw: string): string {
+  const base = normalizeApiBase(raw);
+  const withApi = /\/api\/v1$/i.test(base) ? base : `${base}/api/v1`;
+  return `${withApi}/assets/upload`;
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+}
+
+function backoffDelayMs(attempt: number): number {
+  const base = 250 * Math.pow(2, attempt);
+  const jitter = Math.floor(Math.random() * 120);
+  return base + jitter;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function App() {
   const [{ pages, siteConfig }] = useState(getInitialData);
   const [assetsManifest, setAssetsManifest] = useState<LibraryImageEntry[]>([]);
@@ -988,12 +1015,36 @@ function App() {
   const pendingCloudSave          = useRef<{ state: ProjectState; slug: string } | null>(null);
   const isCloudMode = Boolean(CLOUD_API_URL && CLOUD_API_KEY);
 
-  useEffect(() => {
+  const loadAssetsManifest = useCallback(async (): Promise<void> => {
+    if (isCloudMode && CLOUD_API_URL && CLOUD_API_KEY) {
+      try {
+        const res = await fetch(`${buildUploadEndpoint(CLOUD_API_URL).replace(/\/upload$/, '/list')}?limit=200`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${CLOUD_API_KEY}`,
+          },
+        });
+        const body = (await res.json().catch(() => ({}))) as { items?: LibraryImageEntry[] };
+        if (res.ok) {
+          setAssetsManifest(Array.isArray(body.items) ? body.items : []);
+          return;
+        }
+      } catch {
+        // fallback to empty
+      }
+      setAssetsManifest([]);
+      return;
+    }
+
     fetch('/api/list-assets')
       .then((r) => (r.ok ? r.json() : []))
       .then((list: LibraryImageEntry[]) => setAssetsManifest(Array.isArray(list) ? list : []))
       .catch(() => setAssetsManifest([]));
-  }, []);
+  }, [isCloudMode, CLOUD_API_URL, CLOUD_API_KEY]);
+
+  useEffect(() => {
+    void loadAssetsManifest();
+  }, [loadAssetsManifest]);
 
   useEffect(() => {
     return () => { activeCloudSaveController.current?.abort(); };
@@ -1104,7 +1155,53 @@ function App() {
       assetsManifest,
       async onAssetUpload(file: File): Promise<string> {
         if (!file.type.startsWith('image/')) throw new Error('Invalid file type.');
+        if (!ALLOWED_IMAGE_MIME_TYPES.has(file.type)) {
+          throw new Error('Unsupported image format. Allowed: jpeg, png, webp, gif, avif.');
+        }
         if (file.size > MAX_UPLOAD_SIZE_BYTES) throw new Error(`File too large. Max ${MAX_UPLOAD_SIZE_BYTES / 1024 / 1024}MB.`);
+
+        if (isCloudMode && CLOUD_API_URL && CLOUD_API_KEY) {
+          let lastError: Error | null = null;
+          for (let attempt = 0; attempt <= ASSET_UPLOAD_MAX_RETRIES; attempt += 1) {
+            try {
+              const formData = new FormData();
+              formData.append('file', file);
+              formData.append('filename', file.name);
+              const controller = new AbortController();
+              const timeout = window.setTimeout(() => controller.abort(), ASSET_UPLOAD_TIMEOUT_MS);
+              const res = await fetch(buildUploadEndpoint(CLOUD_API_URL), {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${CLOUD_API_KEY}`,
+                  'X-Correlation-Id': crypto.randomUUID(),
+                },
+                body: formData,
+                signal: controller.signal,
+              }).finally(() => window.clearTimeout(timeout));
+              const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string; code?: string };
+              if (res.ok && typeof body.url === 'string') {
+                await loadAssetsManifest().catch(() => undefined);
+                return body.url;
+              }
+              lastError = new Error(body.error || body.code || `Upload failed: ${res.status}`);
+              if (isRetryableStatus(res.status) && attempt < ASSET_UPLOAD_MAX_RETRIES) {
+                await sleep(backoffDelayMs(attempt));
+                continue;
+              }
+              break;
+            } catch (error: unknown) {
+              const message = error instanceof Error ? error.message : 'Cloud upload failed.';
+              lastError = new Error(message);
+              if (attempt < ASSET_UPLOAD_MAX_RETRIES) {
+                await sleep(backoffDelayMs(attempt));
+                continue;
+              }
+              break;
+            }
+          }
+          throw lastError ?? new Error('Cloud upload failed.');
+        }
+
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload  = () => resolve((reader.result as string).split(',')[1] ?? '');
@@ -1119,6 +1216,7 @@ function App() {
         const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
         if (!res.ok) throw new Error(body.error || `Upload failed: ${res.status}`);
         if (typeof body.url !== 'string') throw new Error('Invalid server response: missing url');
+        await loadAssetsManifest().catch(() => undefined);
         return body.url;
       },
     },

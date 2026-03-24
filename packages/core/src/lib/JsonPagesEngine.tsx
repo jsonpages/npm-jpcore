@@ -116,6 +116,30 @@ function resolveSlugFromPathname(pathname: string, prefix = ''): string {
   return slug || 'home';
 }
 
+function resolvePageFromRegistry(
+  pageRegistry: Record<string, PageConfig>,
+  requestedSlug: string
+): PageConfig | undefined {
+  const normalized = normalizeSlugSegments(requestedSlug) || 'home';
+  return pageRegistry[normalized];
+}
+
+function isMenuItemShape(value: unknown): value is MenuItem {
+  if (!value || typeof value !== 'object') return false;
+  const rec = value as Record<string, unknown>;
+  return typeof rec.label === 'string' && typeof rec.href === 'string';
+}
+
+function resolveMenuMainFromHeaderData(
+  headerData: { links?: unknown } | undefined,
+  fallbackMain: MenuItem[]
+): MenuItem[] {
+  if (Array.isArray(headerData?.links) && headerData.links.every(isMenuItemShape)) {
+    return headerData.links as MenuItem[];
+  }
+  return Array.isArray(fallbackMain) ? fallbackMain : [];
+}
+
 interface VisitorRouteProps {
   pageRegistry: Record<string, PageConfig>;
   siteConfig: SiteConfig;
@@ -150,7 +174,7 @@ const VisitorRoute: React.FC<VisitorRouteProps> = ({
     }
   }, []);
 
-  const pageConfig = bakedState ? bakedState.page : pageRegistry[slug];
+  const pageConfig = bakedState ? bakedState.page : resolvePageFromRegistry(pageRegistry, slug);
   const activeSiteConfig = bakedState ? bakedState.site : siteConfig;
   const activeMenuConfig = bakedState ? bakedState.menu : menuConfig;
 
@@ -216,8 +240,8 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
       const base = JSON.parse(JSON.stringify(siteConfig ?? {})) as SiteConfig;
       if (!base.identity) base.identity = { title: 'Site' };
       if (!base.pages) base.pages = [];
-      const headerData = base.header?.data as { links?: MenuItem[] } | undefined;
-      if (headerData && menuConfig?.main) {
+      const headerData = base.header?.data as { links?: unknown } | undefined;
+      if (headerData && menuConfig?.main && Array.isArray(headerData.links)) {
         headerData.links = JSON.parse(JSON.stringify(menuConfig.main)) as MenuItem[];
       }
       return base;
@@ -287,7 +311,7 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
     : [];
 
   useEffect(() => {
-    const data = pageRegistry[slug];
+    const data = resolvePageFromRegistry(pageRegistry, slug);
     if (data) setDraft(JSON.parse(JSON.stringify(data)));
     setSelected(null);
     setExpandedItemPath(null);
@@ -295,7 +319,7 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
   }, [slug, pageRegistry]);
 
   const handleResetToFile = useCallback(() => {
-    const data = pageRegistry[slug];
+    const data = resolvePageFromRegistry(pageRegistry, slug);
     if (data) setDraft(JSON.parse(JSON.stringify(data)));
     setSelected(null);
     setExpandedItemPath(null);
@@ -368,11 +392,11 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
       }
       if (event.data.type === STUDIO_EVENTS.SEND_CLEAN_HTML) {
         if (!draftRef.current) return;
-        const headerData = globalDraftRef.current.header?.data as { links?: MenuItem[] } | undefined;
+        const headerData = globalDraftRef.current.header?.data as { links?: unknown } | undefined;
         const projectState: ProjectState = {
           page: draftRef.current,
           site: globalDraftRef.current,
-          menu: { main: headerData?.links ?? [] },
+          menu: { main: resolveMenuMainFromHeaderData(headerData, menuConfig.main) },
           theme: themeConfig,
         };
         exportHTML(projectState, slug, event.data.html);
@@ -481,11 +505,11 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
     const currentDraft = draftRef.current;
     const currentGlobalDraft = globalDraftRef.current;
     if (!currentDraft) return;
-    const headerData = currentGlobalDraft.header?.data as { links?: MenuItem[] } | undefined;
+    const headerData = currentGlobalDraft.header?.data as { links?: unknown } | undefined;
     const projectState: ProjectState = {
       page: currentDraft,
       site: currentGlobalDraft,
-      menu: { main: headerData?.links ?? [] },
+      menu: { main: resolveMenuMainFromHeaderData(headerData, menuConfig.main) },
       theme: themeConfig,
     };
     saveToFile(projectState, slug).then(() => {
@@ -507,11 +531,11 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
     const currentDraft = draftRef.current;
     const currentGlobalDraft = globalDraftRef.current;
     if (!currentDraft) return;
-    const headerData = currentGlobalDraft.header?.data as { links?: MenuItem[] } | undefined;
+    const headerData = currentGlobalDraft.header?.data as { links?: unknown } | undefined;
     const projectState: ProjectState = {
       page: currentDraft,
       site: currentGlobalDraft,
-      menu: { main: headerData?.links ?? [] },
+      menu: { main: resolveMenuMainFromHeaderData(headerData, menuConfig.main) },
       theme: themeConfig,
     };
 
@@ -571,6 +595,7 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
               <StudioStage
                 draft={draft}
                 globalDraft={globalDraft}
+                menuConfig={menuConfig}
                 themeConfig={themeConfig}
                 slug={slug}
                 selectedId={selected?.id}

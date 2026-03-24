@@ -319,10 +319,14 @@ const ArrayItemWrapper: React.FC<ArrayItemWrapperProps> = ({
 }) => {
   const shouldOpen = openItemId != null && String(openItemId) === String(itemId);
   const [isOpen, setIsOpen] = React.useState(shouldOpen);
+  // Only sync from path/canvas when this array level has an openItemId. Otherwise nested lists
+  // (e.g. header links → children) get shouldOpen false for every row and the effect would
+  // immediately undo a manual chevron toggle.
   React.useEffect(() => {
+    if (openItemId == null) return;
     if (shouldOpen && !isOpen) setIsOpen(true);
     if (!shouldOpen && isOpen) setIsOpen(false);
-  }, [shouldOpen, isOpen]);
+  }, [openItemId, shouldOpen, isOpen]);
 
   const handleToggle = () => {
     const next = !isOpen;

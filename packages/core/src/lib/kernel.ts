@@ -61,6 +61,13 @@ export interface PageConfig {
   slug: string;
   meta: PageMeta;
   sections: Section[];
+  /** When `false`, Core does not render the global header from `site.json` for this page. Omitted = default (show if configured). */
+  'global-header'?: boolean;
+}
+
+/** Whether the global `site.json` header should be rendered for this page. */
+export function shouldRenderSiteGlobalHeader(page: PageConfig, site: SiteConfig): boolean {
+  return site.header != null && page['global-header'] !== false;
 }
 
 export interface SiteIdentity {

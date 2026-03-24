@@ -1,45 +1,53 @@
-import React from 'react';
-import { OlonMark } from '@/components/ui/OlonMark';
+import { OlonMark } from '@/components/OlonWordmark';
 import type { FooterData, FooterSettings } from './types';
 
-export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> = ({ data }) => {
+interface FooterViewProps {
+  data: FooterData;
+  settings?: FooterSettings;
+}
+
+export function Footer({ data, settings }: FooterViewProps) {
+  const showLogo = settings?.showLogo ?? true;
+  const links = data.links ?? [];
+
   return (
-    <footer
-      style={{
-        '--local-bg': 'var(--background)',
-        '--local-text': 'var(--foreground)',
-        '--local-text-muted': 'var(--muted-foreground)',
-        '--local-accent': 'var(--accent)',
-        '--local-border': 'color-mix(in oklch, var(--foreground) 8%, transparent)',
-      } as React.CSSProperties}
-      className="py-12 border-t border-[var(--local-border)] bg-[var(--local-bg)] relative z-0"
-    >
-      <div className="max-w-[1200px] mx-auto px-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5 font-bold text-[0.9rem] text-[var(--local-text-muted)]">
-            <OlonMark size={20} />
-            <span data-jp-field="brandText">{data.brandText}{data.brandHighlight && <span className="text-[var(--local-accent)]" data-jp-field="brandHighlight">{data.brandHighlight}</span>}</span>
-          </div>
-          {data.links && data.links.length > 0 && (
-            <nav className="flex gap-6">
-              {data.links.map((link, idx) => (
+    <footer className="border-t border-border px-6 py-8">
+      <div className="max-w-6xl px-6 mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-6">
+          {showLogo && (
+            <div className="flex items-center gap-2.5">
+              <OlonMark size={18} />
+              <span className="text-base  font-display text-foreground tracking-[-0.02em]">
+                {data.brandText}
+              </span>
+            </div>
+          )}
+          {links.length > 0 && (
+            <div className="flex items-center gap-4">
+              {links.map((link) => (
                 <a
-                  key={idx}
+                  key={link.label}
                   href={link.href}
-                  className="text-[0.82rem] text-[var(--local-text-muted)] hover:text-[var(--local-accent)] transition-colors no-underline"
-                  data-jp-item-id={(link as { id?: string }).id ?? `legacy-${idx}`}
-                  data-jp-item-field="links"
+                  className="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {link.label}
                 </a>
               ))}
-            </nav>
+              {data.designSystemHref && (
+                <a
+                  href={data.designSystemHref}
+                  className="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Design System
+                </a>
+              )}
+            </div>
           )}
-          <div className="text-[0.8rem] text-[var(--local-text-muted)] opacity-60" data-jp-field="copyright">
-            {data.copyright}
-          </div>
         </div>
+        <span className="font-mono-olon text-[11px] text-muted-foreground">
+          {data.copyright}
+        </span>
       </div>
     </footer>
   );
-};
+}

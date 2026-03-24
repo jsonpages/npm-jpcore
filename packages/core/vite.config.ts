@@ -16,6 +16,7 @@ export default defineConfig({
     dts({ 
       insertTypesEntry: true,
       include: ['src'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/**/vitest-setup.ts'],
       // Genera file .d.ts puliti senza import circolari
       rollupTypes: true 
     })

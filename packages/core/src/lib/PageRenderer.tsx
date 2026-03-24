@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SectionRenderer } from './SectionRenderer';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
-import type { PageRendererProps } from './kernel';
+import { shouldRenderSiteGlobalHeader, type PageRendererProps } from './kernel';
 
 const REORDER_DATA_KEY = 'application/json';
 
@@ -28,6 +28,8 @@ export const PageRenderer: React.FC<Props> = ({
   const onActiveSectionChangeRef = useRef(onActiveSectionChange);
   onActiveSectionChangeRef.current = onActiveSectionChange;
 
+  const showGlobalHeader = shouldRenderSiteGlobalHeader(pageConfig, siteConfig);
+
   const handleSectionHover = (sectionId: string) => {
     onActiveSectionChangeRef.current?.(sectionId);
   };
@@ -43,7 +45,7 @@ export const PageRenderer: React.FC<Props> = ({
     const callback = onActiveSectionChangeRef.current;
     if (!callback) return;
     const ids: string[] = [
-      ...(siteConfig.header ? [siteConfig.header.id] : []),
+      ...(showGlobalHeader && siteConfig.header ? [siteConfig.header.id] : []),
       ...pageConfig.sections.map((s) => s.id),
       ...(siteConfig.footer ? [siteConfig.footer.id] : []),
     ];
@@ -71,7 +73,7 @@ export const PageRenderer: React.FC<Props> = ({
       cancelAnimationFrame(rafId);
       observer.disconnect();
     };
-  }, [pageConfig.sections, siteConfig.header?.id, siteConfig.footer?.id]);
+  }, [pageConfig.sections, pageConfig['global-header'], showGlobalHeader, siteConfig.header?.id, siteConfig.footer?.id]);
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
@@ -109,7 +111,7 @@ export const PageRenderer: React.FC<Props> = ({
             data-section-id={section.id}
             onMouseEnter={() => handleSectionHover(section.id)}
           >
-            <SectionRenderer section={section} selectedId={selectedId} />
+            <SectionRenderer section={section} menu={menuConfig.main} selectedId={selectedId} />
           </div>
         );
       }
@@ -141,6 +143,7 @@ export const PageRenderer: React.FC<Props> = ({
           />
           <SectionRenderer
             section={section}
+            menu={menuConfig.main}
             selectedId={selectedId}
             reorderable
             sectionIndex={index}
@@ -181,7 +184,7 @@ export const PageRenderer: React.FC<Props> = ({
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-background)]">
-      {siteConfig.header != null && (
+      {showGlobalHeader && siteConfig.header != null && (
         <div
           ref={(el) => { sectionRefs.current[siteConfig.header!.id] = el; }}
           data-section-id={siteConfig.header.id}

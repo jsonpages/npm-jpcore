@@ -51,57 +51,131 @@ function extractToc(markdown: string): TocEntry[] {
   return entries;
 }
 
+/** Plain text from react-markdown heading children — must match extractToc slugify input semantics. */
+function mdChildrenToPlainText(node: React.ReactNode): string {
+  if (node == null || typeof node === 'boolean') return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(mdChildrenToPlainText).join('');
+  if (React.isValidElement(node)) {
+    const ch = (node.props as { children?: React.ReactNode }).children;
+    if (ch != null) return mdChildrenToPlainText(ch);
+  }
+  return '';
+}
+
+function readScrollSpyOffsetPx(): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--theme-header-h').trim();
+  const n = parseFloat(raw);
+  const header = Number.isFinite(n) ? n : 56;
+  return header + 24;
+}
+
+/** Last TOC id whose heading is at or above the activation line (viewport top + offset). */
+function computeActiveTocId(ids: readonly string[], offsetPx: number): string {
+  let active = '';
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (el.getBoundingClientRect().top <= offsetPx) active = id;
+  }
+  return active;
+}
+
+/** Studio: ProseMirror headings usually have no `id`; match slug(text) to TOC ids in DOM order. */
+function computeActiveTocIdFromHeadings(
+  container: HTMLElement,
+  toc: readonly TocEntry[],
+  offsetPx: number
+): string {
+  const allowed = new Set(toc.map((e) => e.id));
+  let active = '';
+  container.querySelectorAll<HTMLElement>('h2, h3').forEach((h) => {
+    const id = slugify(h.textContent ?? '');
+    if (!allowed.has(id)) return;
+    if (h.getBoundingClientRect().top <= offsetPx) active = id;
+  });
+  return active;
+}
+
 // ── Sidebar (always rendered, both in Studio and Public) ──────────────────────
 
 const DocsSidebar: React.FC<{
   toc: TocEntry[];
   activeId: string;
   onNav: (id: string) => void;
-}> = ({ toc, activeId, onNav }) => (
-  <aside className="w-[200px] flex-shrink-0 sticky top-[72px] self-start hidden lg:block">
-    <div className="text-[9px] font-mono font-bold uppercase tracking-[.14em] text-[var(--local-toolbar-text)] mb-3 px-3">
-      On this page
-    </div>
-    <nav className="flex flex-col">
-      {toc.map((entry) => (
-        <button
-          key={entry.id}
-          type="button"
-          onClick={() => onNav(entry.id)}
-          className={[
-            'text-left rounded-[var(--local-radius-sm)] transition-all duration-150 no-underline',
-            entry.level === 3
-              ? 'pl-[22px] pr-3 py-1.5 text-[0.72rem] ml-0.5'
-              : 'px-3 py-2 font-bold text-[0.76rem]',
-            activeId === entry.id
-              ? entry.level === 2
-                ? 'text-[var(--local-primary)] bg-[var(--local-toolbar-hover-bg)] border-l-2 border-[var(--local-primary)] pl-[10px]'
-                : 'text-[var(--local-primary)] font-semibold bg-[var(--local-toolbar-active-bg)]'
-              : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[var(--local-toolbar-hover-bg)]',
-          ].join(' ')}
+}> = ({ toc, activeId, onNav }) => {
+  const navScrollRef = React.useRef<HTMLElement>(null);
+
+  React.useEffect(() => {
+    if (!activeId || !navScrollRef.current) return;
+    const btn = navScrollRef.current.querySelector<HTMLButtonElement>(
+      `button[data-toc-id="${CSS.escape(activeId)}"]`
+    );
+    btn?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [activeId, toc]);
+
+  return (
+    <aside
+      className="hidden w-[min(240px,28vw)] flex-shrink-0 flex-col lg:flex lg:sticky lg:self-start"
+      style={{
+        top: 'calc(var(--theme-header-h, 56px) + 1rem)',
+        maxHeight: 'calc(100vh - var(--theme-header-h, 56px) - 4rem)',
+      }}
+    >
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--local-radius-md)] border border-[var(--local-border)] bg-[color-mix(in_srgb,var(--local-toolbar-bg)_40%,transparent)]">
+        <div className="shrink-0 border-b border-[var(--local-border)] px-3 py-2.5">
+          <div className="text-[9px] font-mono font-bold uppercase tracking-[0.14em] text-[var(--local-toolbar-text)]">
+            On this page
+          </div>
+        </div>
+        <nav
+          ref={navScrollRef}
+          className="jp-docs-toc-scroll flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-y-contain px-1.5 py-2"
+          aria-label="Table of contents"
         >
-          {entry.level === 3 && (
-            <span
-              className={`inline-block w-[5px] h-[5px] rounded-full mr-2 align-middle mb-px flex-shrink-0 ${
-                activeId === entry.id ? 'bg-[var(--local-primary)]' : 'bg-[var(--local-border)]'
-              }`}
-            />
-          )}
-          {entry.text}
-        </button>
-      ))}
-    </nav>
-    <div className="mt-5 pt-4 border-t border-[var(--local-border)]">
-      <button
-        type="button"
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        className="flex items-center gap-2 font-mono text-[0.58rem] uppercase tracking-widest text-[var(--local-text-muted)] hover:text-[var(--local-primary)] transition-colors px-3"
-      >
-        ↑ Back to top
-      </button>
-    </div>
-  </aside>
-);
+          {toc.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              data-toc-id={entry.id}
+              onClick={() => onNav(entry.id)}
+              className={[
+                'text-left rounded-[var(--local-radius-sm)] transition-colors duration-150 no-underline',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--local-bg)]',
+                entry.level === 3
+                  ? 'pl-[22px] pr-2 py-1.5 text-[0.72rem] ml-0.5'
+                  : 'px-2.5 py-2 font-bold text-[0.76rem]',
+                activeId === entry.id
+                  ? entry.level === 2
+                    ? 'text-[var(--local-primary)] bg-[var(--local-toolbar-hover-bg)] border-l-2 border-[var(--local-primary)] pl-[8px]'
+                    : 'text-[var(--local-primary)] font-semibold bg-[var(--local-toolbar-active-bg)]'
+                  : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[var(--local-toolbar-hover-bg)]',
+              ].join(' ')}
+            >
+              {entry.level === 3 && (
+                <span
+                  className={`mr-2 inline-block h-[5px] w-[5px] flex-shrink-0 rounded-full align-middle mb-px ${
+                    activeId === entry.id ? 'bg-[var(--local-primary)]' : 'bg-[var(--local-border)]'
+                  }`}
+                />
+              )}
+              <span className="line-clamp-3">{entry.text}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="shrink-0 border-t border-[var(--local-border)] px-2 py-2.5">
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex w-full items-center gap-2 px-2 font-mono text-[0.58rem] uppercase tracking-widest text-[var(--local-text-muted)] transition-colors hover:text-[var(--local-primary)]"
+          >
+            ↑ Back to top
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+};
 
 // ── UI primitives ─────────────────────────────────────────────────────────────
 
@@ -759,10 +833,14 @@ type HeadingProps = React.HTMLAttributes<HTMLHeadingElement> & ExtraProps;
 const mdHeading =
   (level: 2 | 3) =>
   ({ children, node: _node, ...rest }: HeadingProps) => {
-    const text = String(children ?? '');
-    const id = slugify(text);
+    const plain = mdChildrenToPlainText(children);
+    const id = slugify(plain);
     const Tag = `h${level}` as 'h2' | 'h3';
-    return <Tag id={id} {...rest}>{children}</Tag>;
+    return (
+      <Tag id={id} {...rest}>
+        {children}
+      </Tag>
+    );
   };
 
 const MD_COMPONENTS: Components = {
@@ -771,7 +849,7 @@ const MD_COMPONENTS: Components = {
 };
 
 const PublicTiptapContent: React.FC<{ content: string }> = ({ content }) => (
-  <article className="jp-tiptap-content" data-jp-field="content">
+  <article className="jp-tiptap-content max-w-none" data-jp-field="content">
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeSanitize]}
@@ -792,33 +870,34 @@ export const Tiptap: React.FC<{ data: TiptapData; settings?: TiptapSettings }> =
   const [activeId, setActiveId] = React.useState<string>('');
   const contentRef = React.useRef<HTMLDivElement | null>(null);
 
-  // IntersectionObserver to track active heading (public mode and studio mode)
+  // Scroll-spy: last TOC heading at/above viewport line (public: id on headings; Studio: slug from text).
   React.useEffect(() => {
     if (toc.length === 0) return;
     const ids = toc.map((e) => e.id);
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length > 0) {
-          const id = visible[0].target.getAttribute('id') ?? '';
-          if (id) setActiveId(id);
-        }
-      },
-      { rootMargin: '-60px 0px -60% 0px', threshold: 0 }
-    );
-    const scan = () => {
-      ids.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) observer.observe(el);
-      });
+    let raf = 0;
+    const tick = () => {
+      const offset = readScrollSpyOffsetPx();
+      const next = isStudio
+        ? contentRef.current
+          ? computeActiveTocIdFromHeadings(contentRef.current, toc, offset)
+          : ''
+        : computeActiveTocId(ids, offset);
+      if (next) setActiveId((prev) => (prev === next ? prev : next));
     };
-    // Delay slightly so the DOM is ready (especially in Studio with Tiptap rendering)
-    const t = setTimeout(scan, 300);
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(tick);
+    };
+    const t = setTimeout(() => {
+      tick();
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll, { passive: true });
+    }, 100);
     return () => {
       clearTimeout(t);
-      observer.disconnect();
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
     };
   }, [toc, isStudio]);
 
@@ -863,7 +942,7 @@ export const Tiptap: React.FC<{ data: TiptapData; settings?: TiptapSettings }> =
       className="w-full py-12 bg-[var(--local-bg)]"
     >
       <div className="container mx-auto px-4 max-w-6xl">
-        <div className="flex gap-8">
+        <div className="flex gap-8 py-12">
           {toc.length > 0 && (
             <DocsSidebar toc={toc} activeId={activeId} onNav={handleNav} />
           )}

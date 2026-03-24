@@ -1,20 +1,42 @@
 {
   "main": [
     {
-      "label": "The Problem",
-      "href": "#problem"
+      "label": "Platform",
+      "href": "/platform",
+      "children": [
+        {
+          "label": "Overview",
+          "href": "/platform/overview"
+        },
+        {
+          "label": "Architecture",
+          "href": "/platform/architecture"
+        },
+        {
+          "label": "Security",
+          "href": "/platform/security"
+        },
+        {
+          "label": "Integrations",
+          "href": "/platform/integrations"
+        },
+        {
+          "label": "Roadmap",
+          "href": "/platform/roadmap"
+        }
+      ]
     },
     {
-      "label": "Architecture",
-      "href": "#architecture"
+      "label": "Solutions",
+      "href": "/solutions"
     },
     {
-      "label": "Why",
-      "href": "#why"
+      "label": "Pricing",
+      "href": "/pricing"
     },
     {
-      "label": "DX",
-      "href": "#devex"
+      "label": "Resources",
+      "href": "/resources"
     }
   ]
 }

@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { STUDIO_EVENTS } from '../lib/events';
-import type { PageConfig, SiteConfig, ThemeConfig } from '../lib/kernel';
+import type { PageConfig, SiteConfig, ThemeConfig, MenuConfig } from '../lib/kernel';
 
 interface StudioStageProps {
   draft: PageConfig;
   globalDraft: SiteConfig;
+  menuConfig: MenuConfig;
   themeConfig: ThemeConfig;
   slug: string;
   selectedId?: string | null;
@@ -20,6 +21,7 @@ interface StudioStageProps {
 export const StudioStage: React.FC<StudioStageProps> = ({
   draft,
   globalDraft,
+  menuConfig,
   themeConfig,
   slug,
   selectedId,
@@ -38,10 +40,11 @@ export const StudioStage: React.FC<StudioStageProps> = ({
         type: STUDIO_EVENTS.UPDATE_DRAFTS,
         draft,
         globalDraft,
+        menuConfig,
         themeConfig,
       }, '*');
     }
-  }, [draft, globalDraft, themeConfig]);
+  }, [draft, globalDraft, menuConfig, themeConfig]);
 
   /**
    * 🔄 SYNC 1: Reactivity

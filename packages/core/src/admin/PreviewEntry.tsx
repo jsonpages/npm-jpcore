@@ -15,6 +15,7 @@ const IDAC_SELECTION_MARKER =
 export const PreviewEntry: React.FC = () => {
   const [draft, setDraft] = useState<PageConfig | null>(null);
   const [globalDraft, setGlobalDraft] = useState<SiteConfig | null>(null);
+  const [menuConfig, setMenuConfig] = useState<MenuConfig>({ main: [] });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scrollToSectionId, setScrollToSectionId] = useState<string | null>(null);
   const [isBaking, setIsBaking] = useState(false);
@@ -26,6 +27,9 @@ export const PreviewEntry: React.FC = () => {
       if (event.data.type === STUDIO_EVENTS.UPDATE_DRAFTS) {
         setDraft(event.data.draft);
         setGlobalDraft(event.data.globalDraft);
+        if (event.data.menuConfig?.main) {
+          setMenuConfig({ main: event.data.menuConfig.main as MenuItem[] });
+        }
         if (event.data.themeConfig) {
            themeManager.setTheme(event.data.themeConfig);
         }
@@ -180,9 +184,9 @@ export const PreviewEntry: React.FC = () => {
   }
 
   const headerData = globalDraft.header?.data as { links?: MenuItem[] } | undefined;
-  const currentMenuConfig: MenuConfig = {
-    main: headerData?.links ?? []
-  };
+  const currentMenuConfig: MenuConfig = Array.isArray(headerData?.links)
+    ? { main: headerData.links }
+    : menuConfig;
 
   const handleActiveSectionChange = (sectionId: string | null) => {
     window.parent.postMessage({
