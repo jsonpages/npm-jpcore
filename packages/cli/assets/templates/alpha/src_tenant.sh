@@ -1607,9 +1607,11 @@ cat << 'END_OF_FILE_CONTENT' > "index.html"
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Olon — Agentic Content Infrastructure" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-mono/style.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,700;1,300;1,500;1,700&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/merriweather@5.2.6/wdth.css" rel="stylesheet" />
     <title>Olon</title>
   </head>
   <body>
@@ -1643,9 +1645,11 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "@tiptap/extension-link": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.78",
+    "@olonjs/core": "^1.0.79",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
+    "motion": "^12.23.24",
     "react": "^19.0.0",
     "react-markdown": "^9.0.1",
     "react-dom": "^19.0.0",
@@ -1940,6 +1944,142 @@ main().catch((error) => {
 });
 
 END_OF_FILE_CONTENT
+echo "Creating scripts/bake.mjs..."
+cat << 'END_OF_FILE_CONTENT' > "scripts/bake.mjs"
+/**
+ * olon bake - production SSG
+ *
+ * 1) Build client bundle (dist/)
+ * 2) Build SSR entry bundle (dist-ssr/)
+ * 3) Discover all page slugs from JSON files under src/data/pages
+ * 4) Render each slug via SSR and write dist/<slug>/index.html
+ */
+
+import { build } from 'vite';
+import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+import fs from 'fs/promises';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, '..');
+const pagesDir = path.resolve(root, 'src/data/pages');
+
+function toCanonicalSlug(relativeJsonPath) {
+  const normalized = relativeJsonPath.replace(/\\/g, '/');
+  const slug = normalized.replace(/\.json$/i, '').replace(/^\/+|\/+$/g, '');
+  if (!slug) throw new Error('[bake] Invalid page slug: empty path segment');
+  return slug;
+}
+
+async function listJsonFilesRecursive(dir) {
+  const items = await fs.readdir(dir, { withFileTypes: true });
+  const files = [];
+  for (const item of items) {
+    const fullPath = path.join(dir, item.name);
+    if (item.isDirectory()) {
+      files.push(...(await listJsonFilesRecursive(fullPath)));
+      continue;
+    }
+    if (item.isFile() && item.name.toLowerCase().endsWith('.json')) files.push(fullPath);
+  }
+  return files;
+}
+
+async function discoverTargets() {
+  let files = [];
+  try {
+    files = await listJsonFilesRecursive(pagesDir);
+  } catch {
+    files = [];
+  }
+
+  const rawSlugs = files.map((fullPath) => toCanonicalSlug(path.relative(pagesDir, fullPath)));
+  const slugs = Array.from(new Set(rawSlugs)).sort((a, b) => a.localeCompare(b));
+
+  return slugs.map((slug) => {
+    const depth = slug === 'home' ? 0 : slug.split('/').length;
+    const out = slug === 'home' ? 'dist/index.html' : `dist/${slug}/index.html`;
+    return { slug, out, depth };
+  });
+}
+
+console.log('\n[bake] Building client...');
+await build({ root, mode: 'production', logLevel: 'warn' });
+console.log('[bake] Client build done.');
+
+console.log('\n[bake] Building SSR bundle...');
+await build({
+  root,
+  mode: 'production',
+  logLevel: 'warn',
+  build: {
+    ssr: 'src/entry-ssg.tsx',
+    outDir: 'dist-ssr',
+    rollupOptions: {
+      output: { format: 'esm' },
+    },
+  },
+  ssr: {
+    noExternal: ['@olonjs/core'],
+  },
+});
+console.log('[bake] SSR build done.');
+
+const targets = await discoverTargets();
+if (targets.length === 0) {
+  throw new Error('[bake] No pages discovered under src/data/pages');
+}
+console.log(`[bake] Targets: ${targets.map((t) => t.slug).join(', ')}`);
+
+const ssrEntryUrl = pathToFileURL(path.resolve(root, 'dist-ssr/entry-ssg.js')).href;
+const { render, getCss, getPageMeta } = await import(ssrEntryUrl);
+
+const template = await fs.readFile(path.resolve(root, 'dist/index.html'), 'utf-8');
+const hasCommentMarker = template.includes('<!--app-html-->');
+const hasRootDivMarker = template.includes('<div id="root"></div>');
+if (!hasCommentMarker && !hasRootDivMarker) {
+  throw new Error('[bake] Missing template marker. Expected <!--app-html--> or <div id="root"></div>.');
+}
+
+const inlinedCss = getCss();
+const styleTag = `<style data-bake="inline">${inlinedCss}</style>`;
+
+for (const { slug, out, depth } of targets) {
+  console.log(`\n[bake] Rendering /${slug === 'home' ? '' : slug}...`);
+
+  const appHtml = render(slug);
+  const { title, description } = getPageMeta(slug);
+  const safeTitle = String(title).replace(/"/g, '&quot;');
+  const safeDescription = String(description).replace(/"/g, '&quot;');
+  const metaTags = [
+    `<meta name="description" content="${safeDescription}">`,
+    `<meta property="og:title" content="${safeTitle}">`,
+    `<meta property="og:description" content="${safeDescription}">`,
+  ].join('\n    ');
+
+  const prefix = depth > 0 ? '../'.repeat(depth) : './';
+  const fixedTemplate = depth > 0 ? template.replace(/(['"])\.\//g, `$1${prefix}`) : template;
+
+  let bakedHtml = fixedTemplate
+    .replace('</head>', `  ${styleTag}\n</head>`)
+    .replace(/<title>.*?<\/title>/, `<title>${safeTitle}</title>\n    ${metaTags}`);
+
+  if (hasCommentMarker) {
+    bakedHtml = bakedHtml.replace('<!--app-html-->', appHtml);
+  } else {
+    bakedHtml = bakedHtml.replace('<div id="root"></div>', `<div id="root">${appHtml}</div>`);
+  }
+
+  const outPath = path.resolve(root, out);
+  await fs.mkdir(path.dirname(outPath), { recursive: true });
+  await fs.writeFile(outPath, bakedHtml, 'utf-8');
+  console.log(`[bake] Written -> ${out} [title: "${safeTitle}"]`);
+}
+
+console.log('\n[bake] All pages baked. OK\n');
+
+END_OF_FILE_CONTENT
+# SKIP: scripts/bake.mjs:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating scripts/sync-pages-to-public.mjs..."
 cat << 'END_OF_FILE_CONTENT' > "scripts/sync-pages-to-public.mjs"
 import fs from 'fs';
@@ -2598,6 +2738,987 @@ import menuData from '@/data/config/menu.json';
 import { getFilePages } from '@/lib/getFilePages';
 import { DopaDrawer } from '@/components/save-drawer/DopaDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ThemeProvider } from '@/components/ThemeProvider';
+
+import tenantCss from './index.css?inline';
+
+// Cloud Configuration (Injected by Vercel/Netlify Env Vars)
+const CLOUD_API_URL =
+  import.meta.env.VITE_OLONJS_CLOUD_URL ?? import.meta.env.VITE_JSONPAGES_CLOUD_URL;
+const CLOUD_API_KEY =
+  import.meta.env.VITE_OLONJS_API_KEY ?? import.meta.env.VITE_JSONPAGES_API_KEY;
+
+const themeConfig = themeData as unknown as ThemeConfig;
+const menuConfig = menuData as unknown as MenuConfig;
+const TENANT_ID = 'alpha';
+
+const filePages = getFilePages();
+const fileSiteConfig = siteData as unknown as SiteConfig;
+const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
+const ASSET_UPLOAD_MAX_RETRIES = 2;
+const ASSET_UPLOAD_TIMEOUT_MS = 20_000;
+const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
+
+interface CloudSaveUiState {
+  isOpen: boolean;
+  phase: DeployPhase;
+  currentStepId: StepId | null;
+  doneSteps: StepId[];
+  progress: number;
+  errorMessage?: string;
+  deployUrl?: string;
+}
+
+type ContentMode = 'cloud' | 'error';
+type ContentStatus = 'ok' | 'empty_namespace' | 'legacy_fallback';
+
+type ContentResponse = {
+  ok?: boolean;
+  siteConfig?: unknown;
+  pages?: unknown;
+  items?: unknown;
+  error?: string;
+  code?: string;
+  correlationId?: string;
+  contentStatus?: ContentStatus;
+  usedUnscopedFallback?: boolean;
+  namespace?: string;
+  namespaceMatchedKeys?: number;
+};
+
+type CachedCloudContent = {
+  keyFingerprint: string;
+  savedAt: number;
+  siteConfig: unknown | null;
+  pages: Record<string, unknown>;
+};
+
+const CLOUD_CACHE_KEY = 'jp_cloud_content_cache_v1';
+const CLOUD_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function normalizeApiBase(raw: string): string {
+  return raw.trim().replace(/\/+$/, '');
+}
+
+function buildApiCandidates(raw: string): string[] {
+  const base = normalizeApiBase(raw);
+  const withApi = /\/api\/v1$/i.test(base) ? base : `${base}/api/v1`;
+  const candidates = [withApi, base];
+  return Array.from(new Set(candidates.filter(Boolean)));
+}
+
+function getInitialData() {
+  return getHydratedData(TENANT_ID, filePages, fileSiteConfig);
+}
+
+function getInitialCloudSaveUiState(): CloudSaveUiState {
+  return {
+    isOpen: false,
+    phase: 'idle',
+    currentStepId: null,
+    doneSteps: [],
+    progress: 0,
+  };
+}
+
+function stepProgress(doneSteps: StepId[]): number {
+  return Math.round((doneSteps.length / DEPLOY_STEPS.length) * 100);
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function asString(value: unknown, fallback: string): string {
+  return typeof value === 'string' && value.trim() ? value : fallback;
+}
+
+function normalizeRouteSlug(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9/_-]/g, '-')
+    .replace(/^\/+|\/+$/g, '') || 'home';
+}
+
+function coercePageConfig(slug: string, value: unknown): PageConfig | null {
+  let input = value;
+  if (typeof input === 'string') {
+    try {
+      input = JSON.parse(input) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (!isObjectRecord(input) || !Array.isArray(input.sections)) return null;
+
+  const inputMeta = isObjectRecord(input.meta) ? input.meta : {};
+  const normalizedSlug = asString(input.slug, slug);
+  const normalizedId = asString(input.id, `${normalizedSlug}-page`);
+  const title = asString(inputMeta.title, normalizedSlug);
+  const description = asString(inputMeta.description, '');
+
+  return {
+    id: normalizedId,
+    slug: normalizedSlug,
+    meta: { title, description },
+    sections: input.sections as PageConfig['sections'],
+    ...(typeof input['global-header'] === 'boolean' ? { 'global-header': input['global-header'] } : {}),
+  };
+}
+
+function coerceSiteConfig(value: unknown): SiteConfig | null {
+  let input = value;
+  if (typeof input === 'string') {
+    try {
+      input = JSON.parse(input) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (!isObjectRecord(input)) return null;
+  if (!isObjectRecord(input.identity)) return null;
+  if (!Array.isArray(input.pages)) return null;
+
+  return input as unknown as SiteConfig;
+}
+
+function toPagesRecord(value: unknown): Record<string, PageConfig> | null {
+  const directPage = coercePageConfig('home', value);
+  if (directPage) {
+    const directSlug = normalizeRouteSlug(asString(directPage.slug, 'home'));
+    return { [directSlug]: { ...directPage, slug: directSlug } };
+  }
+
+  if (!isObjectRecord(value)) return null;
+  const next: Record<string, PageConfig> = {};
+  for (const [rawKey, payload] of Object.entries(value)) {
+    const rawKeyTrimmed = rawKey.trim();
+    const slugFromNamespacedKey = rawKeyTrimmed.match(/^t_[a-z0-9-]+_page_(.+)$/i)?.[1];
+    const slug = normalizeRouteSlug(slugFromNamespacedKey ?? rawKeyTrimmed);
+    const page = coercePageConfig(slug, payload);
+    if (!page) continue;
+    next[slug] = { ...page, slug };
+  }
+  return next;
+}
+
+function normalizePageRegistry(value: unknown): Record<string, PageConfig> {
+  if (!isObjectRecord(value)) return {};
+  const normalized: Record<string, PageConfig> = {};
+
+  for (const [registrySlug, rawPageValue] of Object.entries(value)) {
+    const canonicalSlug = normalizeRouteSlug(registrySlug);
+    const direct = coercePageConfig(canonicalSlug, rawPageValue);
+    if (direct) {
+      // Canonical key comes from registry/path, not from page JSON internal slug.
+      normalized[canonicalSlug] = { ...direct, slug: canonicalSlug };
+      continue;
+    }
+
+    const nested = toPagesRecord(rawPageValue);
+    if (nested && Object.keys(nested).length > 0) {
+      Object.assign(normalized, nested);
+    }
+  }
+
+  return normalized;
+}
+
+function extractContentSources(payload: ContentResponse | Record<string, unknown>): {
+  pagesSource: unknown;
+  siteSource: unknown;
+} {
+  // Canonical contract: { pages, siteConfig }
+  if (isObjectRecord(payload) && isObjectRecord(payload.pages)) {
+    return { pagesSource: payload.pages, siteSource: payload.siteConfig };
+  }
+
+  // Edge public JSON contract: { digest, updatedAt, items: { ... } }
+  if (isObjectRecord(payload) && isObjectRecord(payload.items)) {
+    const items = payload.items;
+    let siteSource: unknown = null;
+    const pageEntries: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(items)) {
+      if (/(_config_site|config_site|config:site)$/i.test(key)) {
+        siteSource = value;
+        continue;
+      }
+      if (/(_page_|^page_|page:)/i.test(key)) {
+        pageEntries[key] = value;
+      }
+    }
+    return { pagesSource: pageEntries, siteSource };
+  }
+
+  // Raw map fallback: treat payload object itself as page map.
+  return { pagesSource: payload, siteSource: null };
+}
+
+type CloudLoadFailure = {
+  reasonCode: string;
+  message: string;
+  correlationId?: string;
+};
+
+function isCloudLoadFailure(value: unknown): value is CloudLoadFailure {
+  return (
+    isObjectRecord(value) &&
+    typeof value.reasonCode === 'string' &&
+    typeof value.message === 'string'
+  );
+}
+
+function toCloudLoadFailure(value: unknown): CloudLoadFailure {
+  if (isCloudLoadFailure(value)) return value;
+  if (value instanceof Error) {
+    return { reasonCode: 'CLOUD_LOAD_FAILED', message: value.message };
+  }
+  return { reasonCode: 'CLOUD_LOAD_FAILED', message: 'Cloud content unavailable.' };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+}
+
+function backoffDelayMs(attempt: number): number {
+  const base = 250 * Math.pow(2, attempt);
+  const jitter = Math.floor(Math.random() * 120);
+  return base + jitter;
+}
+
+function logBootstrapEvent(event: string, details: Record<string, unknown>) {
+  console.info('[boot]', { event, at: new Date().toISOString(), ...details });
+}
+
+function cloudFingerprint(apiBase: string, apiKey: string): string {
+  return `${normalizeApiBase(apiBase)}::${apiKey.slice(-8)}`;
+}
+
+function normalizeSlugForCache(slug: string): string {
+  return (
+    slug
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9/_-]/g, '-')
+      .replace(/^\/+|\/+$/g, '') || 'home'
+  );
+}
+
+function readCachedCloudContent(fingerprint: string): CachedCloudContent | null {
+  try {
+    const raw = localStorage.getItem(CLOUD_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedCloudContent;
+    if (!parsed || parsed.keyFingerprint !== fingerprint) return null;
+    if (!parsed.savedAt || Date.now() - parsed.savedAt > CLOUD_CACHE_TTL_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedCloudContent(entry: CachedCloudContent): void {
+  try {
+    localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(entry));
+  } catch {
+    // non-blocking cache path
+  }
+}
+
+function buildThemeFontVarsCss(input: unknown): string {
+  if (!isObjectRecord(input)) return '';
+  const tokens = isObjectRecord(input.tokens) ? input.tokens : null;
+  const typography = tokens && isObjectRecord(tokens.typography) ? tokens.typography : null;
+  const fontFamily = typography && isObjectRecord(typography.fontFamily) ? typography.fontFamily : null;
+  const primary = typeof fontFamily?.primary === 'string' ? fontFamily.primary : "'Instrument Sans', system-ui, sans-serif";
+  const serif = typeof fontFamily?.serif === 'string' ? fontFamily.serif : "'Instrument Serif', Georgia, serif";
+  const mono = typeof fontFamily?.mono === 'string' ? fontFamily.mono : "'JetBrains Mono', monospace";
+  return `:root{--theme-font-primary:${primary};--theme-font-serif:${serif};--theme-font-mono:${mono};}`;
+}
+
+function setTenantPreviewReady(ready: boolean): void {
+  if (typeof window !== 'undefined') {
+    (window as Window & { __TENANT_PREVIEW_READY__?: boolean }).__TENANT_PREVIEW_READY__ = ready;
+  }
+  if (typeof document !== 'undefined' && document.body) {
+    document.body.dataset.previewReady = ready ? '1' : '0';
+  }
+}
+
+function App() {
+  const isCloudMode = Boolean(CLOUD_API_URL && CLOUD_API_KEY);
+  const localInitialData = useMemo(() => (isCloudMode ? null : getInitialData()), [isCloudMode]);
+  const localInitialPages = useMemo(() => {
+    if (!localInitialData) return {};
+    const normalized = normalizePageRegistry(localInitialData.pages as unknown);
+    return Object.keys(normalized).length > 0 ? normalized : localInitialData.pages;
+  }, [localInitialData]);
+  const [pages, setPages] = useState<Record<string, PageConfig>>(localInitialPages);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig>(
+    localInitialData?.siteConfig ?? fileSiteConfig
+  );
+  const [assetsManifest, setAssetsManifest] = useState<LibraryImageEntry[]>([]);
+  const [cloudSaveUi, setCloudSaveUi] = useState<CloudSaveUiState>(getInitialCloudSaveUiState);
+  const [contentMode, setContentMode] = useState<ContentMode>('cloud');
+  const [contentFallback, setContentFallback] = useState<CloudLoadFailure | null>(null);
+  const [showTopProgress, setShowTopProgress] = useState(false);
+  const [hasInitialCloudResolved, setHasInitialCloudResolved] = useState(!isCloudMode);
+  const [bootstrapRunId, setBootstrapRunId] = useState(0);
+  const activeCloudSaveController = useRef<AbortController | null>(null);
+  const contentLoadInFlight = useRef<Promise<void> | null>(null);
+  const pendingCloudSave = useRef<{ state: ProjectState; slug: string } | null>(null);
+  const cloudApiCandidates = useMemo(
+    () => (isCloudMode && CLOUD_API_URL ? buildApiCandidates(CLOUD_API_URL) : []),
+    [isCloudMode, CLOUD_API_URL]
+  );
+
+  const loadAssetsManifest = useCallback(async (): Promise<void> => {
+    if (isCloudMode && CLOUD_API_URL && CLOUD_API_KEY) {
+      const apiBases = cloudApiCandidates.length > 0 ? cloudApiCandidates : [normalizeApiBase(CLOUD_API_URL)];
+      for (const apiBase of apiBases) {
+        try {
+          const res = await fetch(`${apiBase}/assets/list?limit=200`, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${CLOUD_API_KEY}`,
+            },
+          });
+          const body = (await res.json().catch(() => ({}))) as { items?: LibraryImageEntry[] };
+          if (!res.ok) continue;
+          const items = Array.isArray(body.items) ? body.items : [];
+          setAssetsManifest(items);
+          return;
+        } catch {
+          // try next candidate
+        }
+      }
+      setAssetsManifest([]);
+      return;
+    }
+
+    fetch('/api/list-assets')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list: LibraryImageEntry[]) => setAssetsManifest(Array.isArray(list) ? list : []))
+      .catch(() => setAssetsManifest([]));
+  }, [isCloudMode, CLOUD_API_URL, CLOUD_API_KEY, cloudApiCandidates]);
+
+  useEffect(() => {
+    void loadAssetsManifest();
+  }, [loadAssetsManifest]);
+
+  useEffect(() => {
+    return () => {
+      activeCloudSaveController.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    setTenantPreviewReady(false);
+    return () => {
+      setTenantPreviewReady(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isCloudMode || !CLOUD_API_URL || !CLOUD_API_KEY) {
+      setContentMode('cloud');
+      setContentFallback(null);
+      setShowTopProgress(false);
+      setHasInitialCloudResolved(true);
+      logBootstrapEvent('boot.local.ready', { mode: 'local' });
+      return;
+    }
+    if (contentLoadInFlight.current) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const maxRetryAttempts = 2;
+    const startedAt = Date.now();
+    const primaryApiBase = cloudApiCandidates[0] ?? normalizeApiBase(CLOUD_API_URL);
+    const fingerprint = cloudFingerprint(primaryApiBase, CLOUD_API_KEY);
+    const cached = readCachedCloudContent(fingerprint);
+    const cachedPages = cached ? toPagesRecord(cached.pages) : null;
+    const cachedSite = cached ? coerceSiteConfig(cached.siteConfig) : null;
+    const hasCachedFallback = Boolean((cachedPages && Object.keys(cachedPages).length > 0) || cachedSite);
+    if (cached) {
+      logBootstrapEvent('boot.cloud.cache_hit', { ageMs: Date.now() - cached.savedAt });
+    }
+    setContentMode('cloud');
+    setContentFallback(null);
+    setShowTopProgress(true);
+    setHasInitialCloudResolved(false);
+    logBootstrapEvent('boot.start', { mode: 'cloud', apiCandidates: cloudApiCandidates.length });
+
+    const loadCloudContent = async () => {
+      try {
+        let payload: ContentResponse | null = null;
+        let lastFailure: CloudLoadFailure | null = null;
+
+        for (const apiBase of cloudApiCandidates) {
+          for (let attempt = 0; attempt <= maxRetryAttempts; attempt += 1) {
+            try {
+              const res = await fetch(`${apiBase}/content`, {
+                method: 'GET',
+                cache: 'no-store',
+                headers: {
+                  Authorization: `Bearer ${CLOUD_API_KEY}`,
+                },
+                signal: controller.signal,
+              });
+
+              const contentType = (res.headers.get('content-type') || '').toLowerCase();
+              if (!contentType.includes('application/json')) {
+                lastFailure = {
+                  reasonCode: 'NON_JSON_RESPONSE',
+                  message: `Non-JSON response from ${apiBase}/content`,
+                };
+                break;
+              }
+
+              const parsed = (await res.json().catch(() => ({}))) as ContentResponse;
+              if (!res.ok) {
+                lastFailure = {
+                  reasonCode: parsed.code || `HTTP_${res.status}`,
+                  message: parsed.error || `Cloud content read failed: ${res.status} (${apiBase}/content)`,
+                  correlationId: parsed.correlationId,
+                };
+                if (isRetryableStatus(res.status) && attempt < maxRetryAttempts) {
+                  await sleep(backoffDelayMs(attempt));
+                  continue;
+                }
+                break;
+              }
+
+              payload = parsed;
+              break;
+            } catch (error: unknown) {
+              if (controller.signal.aborted) throw error;
+              const message = error instanceof Error ? error.message : 'Network error';
+              lastFailure = {
+                reasonCode: 'NETWORK_TRANSIENT',
+                message: `${message} (${apiBase}/content)`,
+              };
+              if (attempt < maxRetryAttempts) {
+                await sleep(backoffDelayMs(attempt));
+                continue;
+              }
+            }
+          }
+          if (payload) {
+            break;
+          }
+        }
+
+        if (!payload) {
+          throw (
+            lastFailure || {
+              reasonCode: 'CLOUD_ENDPOINT_UNREACHABLE',
+              message: 'Cloud content endpoint not reachable as JSON.',
+            }
+          );
+        }
+
+        const { pagesSource, siteSource } = extractContentSources(payload);
+        const remotePages = toPagesRecord(pagesSource);
+        const remoteSite = coerceSiteConfig(siteSource);
+        const remotePageCount = remotePages ? Object.keys(remotePages).length : 0;
+        if (remotePageCount === 0 && !remoteSite) {
+          throw {
+            reasonCode: payload.contentStatus === 'empty_namespace' ? 'EMPTY_NAMESPACE' : 'EMPTY_PAYLOAD',
+            message: 'Cloud payload is empty for this tenant namespace.',
+            correlationId: payload.correlationId,
+          } satisfies CloudLoadFailure;
+        }
+        if (import.meta.env.DEV) {
+          console.info('[content] cloud diagnostics', {
+            contentStatus: payload.contentStatus ?? 'ok',
+            namespace: payload.namespace,
+            namespaceMatchedKeys: payload.namespaceMatchedKeys,
+            usedUnscopedFallback: payload.usedUnscopedFallback,
+            correlationId: payload.correlationId,
+          });
+        }
+        if (remotePages && remotePageCount > 0) {
+          setPages(remotePages);
+        }
+        if (remoteSite) {
+          setSiteConfig(remoteSite);
+        }
+        writeCachedCloudContent({
+          keyFingerprint: fingerprint,
+          savedAt: Date.now(),
+          siteConfig: remoteSite ?? null,
+          pages: (remotePages ?? {}) as Record<string, unknown>,
+        });
+        setContentMode('cloud');
+        setContentFallback(null);
+        setHasInitialCloudResolved(true);
+        logBootstrapEvent('boot.cloud.success', {
+          mode: 'cloud',
+          elapsedMs: Date.now() - startedAt,
+          contentStatus: payload.contentStatus ?? 'ok',
+          correlationId: payload.correlationId ?? null,
+        });
+      } catch (error: unknown) {
+        if (controller.signal.aborted) return;
+        const failure = toCloudLoadFailure(error);
+        if (hasCachedFallback) {
+          if (cachedPages && Object.keys(cachedPages).length > 0) {
+            setPages(cachedPages);
+          }
+          if (cachedSite) {
+            setSiteConfig(cachedSite);
+          }
+          setContentMode('cloud');
+          setContentFallback({
+            reasonCode: 'CLOUD_REFRESH_FAILED',
+            message: failure.message,
+            correlationId: failure.correlationId,
+          });
+          setHasInitialCloudResolved(true);
+        } else {
+          setContentMode('error');
+          setContentFallback(failure);
+          setHasInitialCloudResolved(true);
+        }
+        logBootstrapEvent('boot.cloud.error', {
+          mode: 'cloud',
+          elapsedMs: Date.now() - startedAt,
+          reasonCode: failure.reasonCode,
+          correlationId: failure.correlationId ?? null,
+        });
+      }
+    };
+
+    let inFlight: Promise<void> | null = null;
+    inFlight = loadCloudContent().finally(() => {
+      setShowTopProgress(false);
+      if (contentLoadInFlight.current === inFlight) {
+        contentLoadInFlight.current = null;
+      }
+    });
+    contentLoadInFlight.current = inFlight;
+    return () => controller.abort();
+  }, [isCloudMode, CLOUD_API_KEY, CLOUD_API_URL, cloudApiCandidates, bootstrapRunId]);
+
+  const runCloudSave = useCallback(
+    async (
+      payload: { state: ProjectState; slug: string },
+      rejectOnError: boolean
+    ): Promise<void> => {
+      if (!CLOUD_API_URL || !CLOUD_API_KEY) {
+        const noCloudError = new Error('Cloud mode is not configured.');
+        if (rejectOnError) throw noCloudError;
+        return;
+      }
+
+      pendingCloudSave.current = payload;
+      activeCloudSaveController.current?.abort();
+      const controller = new AbortController();
+      activeCloudSaveController.current = controller;
+
+      setCloudSaveUi({
+        isOpen: true,
+        phase: 'running',
+        currentStepId: null,
+        doneSteps: [],
+        progress: 0,
+      });
+
+      try {
+        await startCloudSaveStream({
+          apiBaseUrl: CLOUD_API_URL,
+          apiKey: CLOUD_API_KEY,
+          path: `src/data/pages/${payload.slug}.json`,
+          content: payload.state.page,
+          message: `Content update for ${payload.slug} via Visual Editor`,
+          signal: controller.signal,
+          onStep: (event) => {
+            setCloudSaveUi((prev) => {
+              if (event.status === 'running') {
+                return {
+                  ...prev,
+                  isOpen: true,
+                  phase: 'running',
+                  currentStepId: event.id,
+                  errorMessage: undefined,
+                };
+              }
+
+              if (prev.doneSteps.includes(event.id)) {
+                return prev;
+              }
+
+              const nextDone = [...prev.doneSteps, event.id];
+              return {
+                ...prev,
+                isOpen: true,
+                phase: 'running',
+                currentStepId: event.id,
+                doneSteps: nextDone,
+                progress: stepProgress(nextDone),
+              };
+            });
+          },
+          onDone: (event) => {
+            const completed = DEPLOY_STEPS.map((step) => step.id);
+            setCloudSaveUi({
+              isOpen: true,
+              phase: 'done',
+              currentStepId: 'live',
+              doneSteps: completed,
+              progress: 100,
+              deployUrl: event.deployUrl,
+            });
+          },
+        });
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Cloud save failed.';
+        setCloudSaveUi((prev) => ({
+          ...prev,
+          isOpen: true,
+          phase: 'error',
+          errorMessage: message,
+        }));
+        if (rejectOnError) throw new Error(message);
+      } finally {
+        if (activeCloudSaveController.current === controller) {
+          activeCloudSaveController.current = null;
+        }
+      }
+    },
+    []
+  );
+
+  const closeCloudDrawer = useCallback(() => {
+    setCloudSaveUi(getInitialCloudSaveUiState());
+  }, []);
+
+  const retryCloudSave = useCallback(() => {
+    if (!pendingCloudSave.current) return;
+    void runCloudSave(pendingCloudSave.current, false);
+  }, [runCloudSave]);
+
+  const config: JsonPagesConfig = {
+    tenantId: TENANT_ID,
+    registry: ComponentRegistry as JsonPagesConfig['registry'],
+    schemas: SECTION_SCHEMAS as unknown as JsonPagesConfig['schemas'],
+    pages,
+    siteConfig,
+    themeConfig,
+    menuConfig,
+    themeCss: { tenant: `${buildThemeFontVarsCss(themeConfig)}\n${tenantCss}` },
+    addSection: addSectionConfig,
+    persistence: {
+      async saveToFile(state: ProjectState, slug: string): Promise<void> {
+        // 💻 LOCAL FILESYSTEM (Development / legacy fallback)
+        console.log(`💻 Saving ${slug} to Local Filesystem...`);
+        const res = await fetch('/api/save-to-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectState: state, slug }),
+        });
+        
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) throw new Error(body.error ?? `Save to file failed: ${res.status}`);
+      },
+      async hotSave(state: ProjectState, slug: string): Promise<void> {
+        if (!isCloudMode || !CLOUD_API_URL || !CLOUD_API_KEY) {
+          throw new Error('Cloud mode is not configured for hot save.');
+        }
+        const apiBase = CLOUD_API_URL.replace(/\/$/, '');
+        const res = await fetch(`${apiBase}/hotSave`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${CLOUD_API_KEY}`,
+          },
+          body: JSON.stringify({
+            slug,
+            page: state.page,
+            siteConfig: state.site,
+          }),
+        });
+        const body = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+        if (!res.ok) {
+          throw new Error(body.error || body.code || `Hot save failed: ${res.status}`);
+        }
+        const keyFingerprint = cloudFingerprint(apiBase, CLOUD_API_KEY);
+        const normalizedSlug = normalizeSlugForCache(slug);
+        const existing = readCachedCloudContent(keyFingerprint);
+        writeCachedCloudContent({
+          keyFingerprint,
+          savedAt: Date.now(),
+          siteConfig: state.site ?? null,
+          pages: {
+            ...(existing?.pages ?? {}),
+            [normalizedSlug]: state.page,
+          },
+        });
+      },
+      showLegacySave: !isCloudMode,
+      showHotSave: isCloudMode,
+    },
+    assets: {
+      assetsBaseUrl: '/assets',
+      assetsManifest,
+      async onAssetUpload(file: File): Promise<string> {
+        if (!file.type.startsWith('image/')) throw new Error('Invalid file type.');
+        if (!ALLOWED_IMAGE_MIME_TYPES.has(file.type)) {
+          throw new Error('Unsupported image format. Allowed: jpeg, png, webp, gif, avif.');
+        }
+        if (file.size > MAX_UPLOAD_SIZE_BYTES) throw new Error(`File too large. Max ${MAX_UPLOAD_SIZE_BYTES / 1024 / 1024}MB.`);
+
+        if (isCloudMode && CLOUD_API_URL && CLOUD_API_KEY) {
+          const apiBases = cloudApiCandidates.length > 0 ? cloudApiCandidates : [normalizeApiBase(CLOUD_API_URL)];
+          let lastError: Error | null = null;
+          for (const apiBase of apiBases) {
+            for (let attempt = 0; attempt <= ASSET_UPLOAD_MAX_RETRIES; attempt += 1) {
+              try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('filename', file.name);
+                const controller = new AbortController();
+                const timeout = window.setTimeout(() => controller.abort(), ASSET_UPLOAD_TIMEOUT_MS);
+                const res = await fetch(`${apiBase}/assets/upload`, {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${CLOUD_API_KEY}`,
+                    'X-Correlation-Id': crypto.randomUUID(),
+                  },
+                  body: formData,
+                  signal: controller.signal,
+                }).finally(() => window.clearTimeout(timeout));
+                const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string; code?: string };
+                if (res.ok && typeof body.url === 'string') {
+                  await loadAssetsManifest().catch(() => undefined);
+                  return body.url;
+                }
+                lastError = new Error(body.error || body.code || `Cloud upload failed: ${res.status}`);
+                if (isRetryableStatus(res.status) && attempt < ASSET_UPLOAD_MAX_RETRIES) {
+                  await sleep(backoffDelayMs(attempt));
+                  continue;
+                }
+                break;
+              } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : 'Cloud upload failed.';
+                lastError = new Error(message);
+                if (attempt < ASSET_UPLOAD_MAX_RETRIES) {
+                  await sleep(backoffDelayMs(attempt));
+                  continue;
+                }
+                break;
+              }
+            }
+          }
+          throw lastError ?? new Error('Cloud upload failed.');
+        }
+
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '');
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+
+        const res = await fetch('/api/upload-asset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, mimeType: file.type || undefined, data: base64 }),
+        });
+        const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+        if (!res.ok) throw new Error(body.error || `Upload failed: ${res.status}`);
+        if (typeof body.url !== 'string') throw new Error('Invalid server response: missing url');
+        await loadAssetsManifest().catch(() => undefined);
+        return body.url;
+      },
+    },
+  };
+
+  const shouldRenderEngine = !isCloudMode || hasInitialCloudResolved;
+
+  useEffect(() => {
+    if (!shouldRenderEngine) {
+      setTenantPreviewReady(false);
+      return;
+    }
+    let cancelled = false;
+    let raf1 = 0;
+    let raf2 = 0;
+    raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => {
+        if (!cancelled) setTenantPreviewReady(true);
+      });
+    });
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+      setTenantPreviewReady(false);
+    };
+  }, [shouldRenderEngine, pages, siteConfig]);
+
+  return (
+    <ThemeProvider>
+      <>
+      {isCloudMode && showTopProgress ? (
+        <>
+          <style>
+            {`@keyframes jp-top-progress-slide { 0% { transform: translateX(-120%); } 100% { transform: translateX(320%); } }`}
+          </style>
+          <div
+            role="status"
+            aria-live="polite"
+            aria-label="Cloud loading progress"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 2,
+              zIndex: 1300,
+              background: 'rgba(255,255,255,0.08)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                width: '32%',
+                height: '100%',
+                background: 'linear-gradient(90deg, rgba(88,166,255,0.15) 0%, rgba(88,166,255,0.85) 50%, rgba(88,166,255,0.15) 100%)',
+                animation: 'jp-top-progress-slide 1.15s ease-in-out infinite',
+                willChange: 'transform',
+              }}
+            />
+          </div>
+        </>
+      ) : null}
+      {isCloudMode && !hasInitialCloudResolved ? (
+        <div className="fixed inset-0 z-[1290] bg-background/80 backdrop-blur-sm">
+          <div className="mx-auto w-full max-w-[1600px] p-6">
+            <div className="grid gap-4 lg:grid-cols-[1fr_420px]">
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-64" />
+                <Skeleton className="h-[220px] w-full rounded-xl" />
+                <Skeleton className="h-[220px] w-full rounded-xl" />
+              </div>
+              <div className="space-y-3 rounded-xl border border-border/50 bg-card/60 p-4">
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-5/6" />
+                <Skeleton className="h-5 w-4/6" />
+                <Skeleton className="h-24 w-full rounded-lg" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {shouldRenderEngine ? <JsonPagesEngine config={config} /> : null}
+      {isCloudMode && (contentMode === 'error' || contentFallback?.reasonCode === 'CLOUD_REFRESH_FAILED') ? (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            top: 12,
+            right: 12,
+            zIndex: 1200,
+            background: 'rgba(179, 65, 24, 0.92)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            color: '#fff',
+            padding: '8px 12px',
+            borderRadius: 10,
+            fontSize: 12,
+            maxWidth: 360,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+          }}
+        >
+          {contentMode === 'error' ? 'Cloud content unavailable.' : 'Cloud refresh failed, showing cached content.'}
+          {contentFallback ? (
+            <div style={{ opacity: 0.85, marginTop: 4 }}>
+              <div>{contentFallback.message}</div>
+              <div style={{ marginTop: 2 }}>
+                Reason: {contentFallback.reasonCode}
+                {contentFallback.correlationId ? ` | Correlation: ${contentFallback.correlationId}` : ''}
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    contentLoadInFlight.current = null;
+                    setContentMode('cloud');
+                    setContentFallback(null);
+                    setHasInitialCloudResolved(false);
+                    setShowTopProgress(true);
+                    setBootstrapRunId((prev) => prev + 1);
+                  }}
+                  style={{
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    borderRadius: 8,
+                    padding: '4px 10px',
+                    background: 'transparent',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      <DopaDrawer
+        isOpen={cloudSaveUi.isOpen}
+        phase={cloudSaveUi.phase}
+        currentStepId={cloudSaveUi.currentStepId}
+        doneSteps={cloudSaveUi.doneSteps}
+        progress={cloudSaveUi.progress}
+        errorMessage={cloudSaveUi.errorMessage}
+        deployUrl={cloudSaveUi.deployUrl}
+        onClose={closeCloudDrawer}
+        onRetry={retryCloudSave}
+      />
+      </>
+    </ThemeProvider>
+  );
+}
+
+export default App;
+
+
+END_OF_FILE_CONTENT
+# SKIP: src/App.tsx:Zone.Identifier is binary and cannot be embedded as text.
+echo "Creating src/App_.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/App_.tsx"
+/**
+ * Thin Entry Point (Tenant).
+ * Data from getHydratedData (file-backed or draft); assets from public/assets/images.
+ * Supports Hybrid Persistence: Local Filesystem (Dev) or Cloud Bridge (Prod).
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { JsonPagesEngine } from '@olonjs/core';
+import type { JsonPagesConfig, LibraryImageEntry, ProjectState } from '@olonjs/core';
+import { ComponentRegistry } from '@/lib/ComponentRegistry';
+import { SECTION_SCHEMAS } from '@/lib/schemas';
+import { addSectionConfig } from '@/lib/addSectionConfig';
+import { getHydratedData } from '@/lib/draftStorage';
+import type { SiteConfig, ThemeConfig, MenuConfig, PageConfig } from '@/types';
+import type { DeployPhase, StepId } from '@/types/deploy';
+import { DEPLOY_STEPS } from '@/lib/deploySteps';
+import { startCloudSaveStream } from '@/lib/cloudSaveStream';
+import siteData from '@/data/config/site.json';
+import themeData from '@/data/config/theme.json';
+import menuData from '@/data/config/menu.json';
+import { getFilePages } from '@/lib/getFilePages';
+import { DopaDrawer } from '@/components/save-drawer/DopaDrawer';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import tenantCss from './index.css?inline';
 
@@ -2714,6 +3835,7 @@ function coercePageConfig(slug: string, value: unknown): PageConfig | null {
     slug: normalizedSlug,
     meta: { title, description },
     sections: input.sections as PageConfig['sections'],
+    ...(typeof input['global-header'] === 'boolean' ? { 'global-header': input['global-header'] } : {}),
   };
 }
 
@@ -3547,6 +4669,483 @@ export const NotFound: React.FC = () => {
 
 
 END_OF_FILE_CONTENT
+echo "Creating src/components/OlonWordmark.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/OlonWordmark.tsx"
+import { cn } from '@/lib/utils'
+import { useTheme } from './ThemeProvider'
+
+interface OlonMarkProps {
+  size?: number
+  className?: string
+}
+
+interface OlonWordmarkProps {
+  markSize?: number
+  className?: string
+}
+
+/* ── Mark only ──────────────────────────────────────────── */
+export function OlonMark({ size = 32, className }: OlonMarkProps) {
+  const { theme } = useTheme()
+
+  // Dark:  nucleus = Parchment #E2D5B0 (warm, human)
+  // Light: nucleus = Primary   #1E1814 (brand, on white bg)
+  const nucleusFill = theme === 'dark' ? '#E2D5B0' : '#1E1814'
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      fill="none"
+      className={cn('shrink-0', className)}
+    >
+      <defs>
+        <linearGradient id="olon-ring" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#B8A4E0" />
+          <stop offset="100%" stopColor="#5B3F9A" />
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="38" stroke="url(#olon-ring)" strokeWidth="20" />
+      <circle cx="50" cy="50" r="15" fill={nucleusFill} style={{ transition: 'fill 0.2s ease' }} />
+    </svg>
+  )
+}
+
+/* ── Wordmark — mark + "Olon" as live SVG text (DM Serif Display) ── */
+export function OlonWordmark({ markSize = 48, className }: OlonWordmarkProps) {
+  const scale = markSize / 48
+  const w = 168 * scale
+  const h = 52 * scale
+
+  return (
+    <svg
+      width={w}
+      height={h}
+      viewBox="0 0 168 52"
+      fill="none"
+      overflow="visible"
+      className={cn('shrink-0', className)}
+    >
+      <defs>
+        <linearGradient id="olon-wm-ring" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#B8A4E0" />
+          <stop offset="100%" stopColor="#5B3F9A" />
+        </linearGradient>
+      </defs>
+
+      {/* Mark */}
+      <circle cx="24" cy="24" r="18.24" stroke="url(#olon-wm-ring)" strokeWidth="9.6" />
+      <circle cx="24" cy="24" r="7.2" fill="#E2D5B0" />
+
+      {/* "Olon" — Merriweather via --wordmark-* tokens (style prop required for var() in SVG) */}
+      <text
+        x="57"
+        y="38"
+        fill="#E2D5B0"
+        style={{
+          fontFamily:           'var(--wordmark-font)',
+          fontSize:             '48px',
+          letterSpacing:        'var(--wordmark-tracking)',
+          fontWeight:           'var(--wordmark-weight)',
+          fontVariationSettings: '"wdth" var(--wordmark-width)',
+        }}
+      >
+        Olon
+      </text>
+    </svg>
+  )
+}
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/ThemeProvider.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/ThemeProvider.tsx"
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+
+type Theme = 'dark' | 'light'
+
+interface ThemeContextValue {
+  theme: Theme
+  toggleTheme: () => void
+  setTheme: (t: Theme) => void
+}
+
+const ThemeContext = createContext<ThemeContextValue>({
+  theme: 'dark',
+  toggleTheme: () => {},
+  setTheme: () => {},
+})
+
+const STORAGE_KEY = 'olon:theme'
+
+function isTheme(value: unknown): value is Theme {
+  return value === 'dark' || value === 'light'
+}
+
+function resolveInitialTheme(): Theme {
+  if (typeof window === 'undefined') return 'dark'
+
+  const fromDom = document.documentElement.getAttribute('data-theme')
+  if (isTheme(fromDom)) return fromDom
+
+  const fromStorage = window.localStorage.getItem(STORAGE_KEY)
+  if (isTheme(fromStorage)) return fromStorage
+
+  const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches
+  return prefersLight ? 'light' : 'dark'
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>(resolveInitialTheme)
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    window.localStorage.setItem(STORAGE_KEY, theme)
+  }, [theme])
+
+  function setTheme(t: Theme) {
+    setThemeState(t)
+  }
+
+  function toggleTheme() {
+    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'))
+  }
+
+  const value = useMemo(() => ({ theme, toggleTheme, setTheme }), [theme])
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+}
+
+export function useTheme() {
+  return useContext(ThemeContext)
+}
+
+END_OF_FILE_CONTENT
+# SKIP: src/components/ThemeProvider.tsx:Zone.Identifier is binary and cannot be embedded as text.
+echo "Creating src/components/ThemeToggle.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/ThemeToggle.tsx"
+import { Sun, Moon } from 'lucide-react'
+import { useTheme } from './ThemeProvider'
+import { cn } from '@/lib/utils'
+
+interface ThemeToggleProps {
+  className?: string
+}
+
+export function ThemeToggle({ className }: ThemeToggleProps) {
+  const { theme, toggleTheme } = useTheme()
+
+  return (
+    <button
+      onClick={toggleTheme}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      className={cn(
+        'inline-flex items-center justify-center w-8 h-8 rounded-md',
+        'text-muted-foreground hover:text-foreground hover:bg-elevated',
+        'transition-colors duration-150',
+        className
+      )}
+    >
+      {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+    </button>
+  )
+}
+
+END_OF_FILE_CONTENT
+# SKIP: src/components/ThemeToggle.tsx:Zone.Identifier is binary and cannot be embedded as text.
+mkdir -p "src/components/cloud-ai-native-grid"
+echo "Creating src/components/cloud-ai-native-grid/View.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/cloud-ai-native-grid/View.tsx"
+import type { CloudAiNativeGridData, CloudAiNativeGridSettings } from './types';
+
+interface CloudAiNativeGridViewProps {
+  data: CloudAiNativeGridData;
+  settings?: CloudAiNativeGridSettings;
+}
+
+export function CloudAiNativeGridView({ data }: CloudAiNativeGridViewProps) {
+  const mattersMatch = data.titleGradient.match(/^(.*)\s(MATTERS|Matters|matters)$/);
+  const gradientPart = mattersMatch ? mattersMatch[1] : data.titleGradient;
+  const whiteSuffix  = mattersMatch ? ` ${mattersMatch[2]}` : null;
+
+  return (
+    <section id={data.anchorId} className="max-w-4xl mx-auto px-6 mb-24 animate-fadeInUp delay-500 section-anchor">
+
+      <h1 className="text-left text-5xl font-display font-bold mb-4 text-foreground">
+        <span data-jp-field="titlePrefix">{data.titlePrefix} </span>
+        <span
+          className="bg-gradient-to-r from-primary-light to-accent bg-clip-text text-transparent"
+          data-jp-field="titleGradient"
+        >
+          {gradientPart}
+        </span>
+        {whiteSuffix && <span className="text-foreground">{whiteSuffix}</span>}
+      </h1>
+      <p
+        className="text-left text-base text-muted-foreground mb-12 max-w-2xl "
+        data-jp-field="description"
+      >
+        {data.description}
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {data.cards.map((card) => (
+          <article
+            key={card.id ?? card.title}
+            data-jp-item-id={card.id ?? card.title}
+            data-jp-item-field="cards"
+            className="jp-feature-card card-hover p-8 rounded-2xl"
+          >
+            <img
+              src={card.icon.url}
+              alt={card.icon.alt ?? card.title}
+              className="w-10 h-10 mb-4"
+              data-jp-field="icon"
+            />
+            <h3 className="text-xl font-display mb-3 text-foreground" data-jp-field="title">{card.title}</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed" data-jp-field="description">{card.description}</p>
+          </article>
+        ))}
+      </div>
+
+    </section>
+  );
+}
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/cloud-ai-native-grid/index.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/cloud-ai-native-grid/index.ts"
+export { CloudAiNativeGridView }              from './View';
+export { CloudAiNativeGridSchema, CloudAiNativeGridSettingsSchema } from './schema';
+export type { CloudAiNativeGridData, CloudAiNativeGridSettings }    from './types';
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/cloud-ai-native-grid/schema.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/cloud-ai-native-grid/schema.ts"
+import { z } from 'zod';
+import { BaseArrayItem, BaseSectionData, ImageSelectionSchema } from '@/lib/base-schemas';
+
+const FeatureCardSchema = BaseArrayItem.extend({
+  icon:        ImageSelectionSchema.describe('ui:image-picker'),
+  title:       z.string().describe('ui:text'),
+  description: z.string().describe('ui:textarea'),
+});
+
+export const CloudAiNativeGridSchema = BaseSectionData.extend({
+  titlePrefix:   z.string().describe('ui:text'),
+  titleGradient: z.string().describe('ui:text'),
+  description:   z.string().describe('ui:textarea'),
+  cards:         z.array(FeatureCardSchema).describe('ui:list'),
+});
+
+export const CloudAiNativeGridSettingsSchema = z.object({});
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/cloud-ai-native-grid/types.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/cloud-ai-native-grid/types.ts"
+import { z } from 'zod';
+import { CloudAiNativeGridSchema, CloudAiNativeGridSettingsSchema } from './schema';
+
+export type CloudAiNativeGridData     = z.infer<typeof CloudAiNativeGridSchema>;
+export type CloudAiNativeGridSettings = z.infer<typeof CloudAiNativeGridSettingsSchema>;
+
+END_OF_FILE_CONTENT
+mkdir -p "src/components/contact"
+echo "Creating src/components/contact/View.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/contact/View.tsx"
+import { useState, type CSSProperties } from 'react';
+import { ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import type { ContactData, ContactSettings } from './types';
+
+interface ContactViewProps {
+  data: ContactData;
+  settings?: ContactSettings;
+}
+
+export function Contact({ data, settings }: ContactViewProps) {
+  const [submitted, setSubmitted] = useState(false);
+  const showTiers = settings?.showTiers ?? true;
+  const tiers = data.tiers ?? [];
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitted(true);
+  }
+
+  return (
+    <section
+      id="contact"
+      className="py-24 px-6 border-t border-border section-anchor"
+      style={{
+        '--local-bg': 'var(--background)',
+        '--local-text': 'var(--foreground)',
+        '--local-text-muted': 'var(--muted-foreground)',
+        '--local-border': 'var(--border)',
+      } as CSSProperties}
+    >
+      <div className="max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_440px] gap-16 items-start">
+
+          {/* Left */}
+          <div className="max-w-md">
+            {data.label && (
+              <p className="font-mono-olon text-xs font-medium tracking-label uppercase text-muted-foreground mb-5" data-jp-field="label">
+                {data.label}
+              </p>
+            )}
+            <h2 className="font-display font-normal text-foreground leading-tight tracking-tight mb-5" data-jp-field="title">
+              {data.title}
+              {data.titleHighlight && (
+                <>
+                  <br />
+                  <em className="not-italic text-primary-light" data-jp-field="titleHighlight">{data.titleHighlight}</em>
+                </>
+              )}
+            </h2>
+            {data.description && (
+              <p className="text-base text-muted-foreground leading-relaxed mb-10" data-jp-field="description">
+                {data.description}
+              </p>
+            )}
+
+            {/* Tiers */}
+            {showTiers && tiers.length > 0 && (
+              <div className="space-y-0 border border-border rounded-lg overflow-hidden">
+                {tiers.map((tier, i) => (
+                  <div
+                    key={tier.id ?? tier.label}
+                    data-jp-item-id={tier.id ?? tier.label}
+                    data-jp-item-field="tiers"
+                    className={`flex items-start gap-4 px-5 py-4 ${i < tiers.length - 1 ? 'border-b border-border' : ''}`}
+                  >
+                    <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium tracking-wide bg-primary-900 text-primary-light border border-primary-800 rounded-sm mt-0.5 shrink-0 min-w-[64px] justify-center" data-jp-field="label">
+                      {tier.label}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-foreground leading-snug" data-jp-field="desc">{tier.desc}</p>
+                      {tier.sub && (
+                        <p className="text-[12px] text-muted-foreground mt-0.5" data-jp-field="sub">{tier.sub}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right — form */}
+          <div className="rounded-lg border border-border bg-card p-6">
+            {submitted ? (
+              <div className="py-12 text-center">
+                <div className="w-10 h-10 rounded-full bg-primary-900 border border-primary flex items-center justify-center mx-auto mb-4">
+                  <ArrowRight size={15} className="text-primary-light" />
+                </div>
+                <p className="text-base font-medium text-foreground mb-1.5" data-jp-field="successTitle">
+                  {data.successTitle ?? 'Message received'}
+                </p>
+                <p className="text-sm text-muted-foreground" data-jp-field="successBody">
+                  {data.successBody ?? "We'll respond within one business day."}
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-4" data-jp-field="formTitle">
+                    {data.formTitle ?? 'Get in touch'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="contact-first">First name</Label>
+                    <Input id="contact-first" placeholder="Ada" required />
+                  </div>
+                  <div>
+                    <Label htmlFor="contact-last">Last name</Label>
+                    <Input id="contact-last" placeholder="Lovelace" required />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="contact-email">Work email</Label>
+                  <Input id="contact-email" type="email" placeholder="ada@acme.com" required />
+                </div>
+                <div>
+                  <Label htmlFor="contact-company">Company</Label>
+                  <Input id="contact-company" placeholder="Acme Corp" />
+                </div>
+                <div>
+                  <Label htmlFor="contact-usecase">Use case</Label>
+                  <textarea
+                    id="contact-usecase"
+                    rows={3}
+                    placeholder="Tell us about your deployment context..."
+                    className="flex w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors duration-150 resize-none font-primary"
+                  />
+                </div>
+                <Button type="submit" variant="accent" className="w-full">
+                  Send message <ArrowRight size={14} />
+                </Button>
+                {data.disclaimer && (
+                  <p className="text-xs text-muted-foreground text-center" data-jp-field="disclaimer">
+                    {data.disclaimer}
+                  </p>
+                )}
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/contact/index.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/contact/index.ts"
+export * from './View';
+export * from './schema';
+export * from './types';
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/contact/schema.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/contact/schema.ts"
+import { z } from 'zod';
+import { BaseSectionData, BaseArrayItem } from '@/lib/base-schemas';
+
+export const ContactTierSchema = BaseArrayItem.extend({
+  label: z.string().describe('ui:text'),
+  desc:  z.string().describe('ui:text'),
+  sub:   z.string().optional().describe('ui:text'),
+});
+
+export const ContactSchema = BaseSectionData.extend({
+  label:          z.string().optional().describe('ui:text'),
+  title:          z.string().describe('ui:text'),
+  titleHighlight: z.string().optional().describe('ui:text'),
+  description:    z.string().optional().describe('ui:textarea'),
+  tiers:          z.array(ContactTierSchema).optional().describe('ui:list'),
+  formTitle:      z.string().optional().describe('ui:text'),
+  successTitle:   z.string().optional().describe('ui:text'),
+  successBody:    z.string().optional().describe('ui:text'),
+  disclaimer:     z.string().optional().describe('ui:text'),
+});
+
+export const ContactSettingsSchema = z.object({
+  showTiers: z.boolean().default(true).describe('ui:checkbox'),
+});
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/contact/types.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/contact/types.ts"
+import { z } from 'zod';
+import { ContactSchema, ContactSettingsSchema } from './schema';
+
+export type ContactData     = z.infer<typeof ContactSchema>;
+export type ContactSettings = z.infer<typeof ContactSettingsSchema>;
+
+END_OF_FILE_CONTENT
 mkdir -p "src/components/cta-banner"
 echo "Creating src/components/cta-banner/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cta-banner/View.tsx"
@@ -3677,6 +5276,683 @@ import { CtaBannerSchema } from './schema';
 
 export type CtaBannerData     = z.infer<typeof CtaBannerSchema>;
 export type CtaBannerSettings = z.infer<typeof BaseSectionSettingsSchema>;
+
+END_OF_FILE_CONTENT
+mkdir -p "src/components/design-system"
+echo "Creating src/components/design-system/View.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/design-system/View.tsx"
+import { useState, useEffect, useRef } from 'react';
+import { OlonMark, OlonWordmark } from '@/components/OlonWordmark';
+import { cn } from '@/lib/utils';
+import type { DesignSystemData, DesignSystemSettings } from './types';
+
+interface DesignSystemViewProps {
+  data: DesignSystemData;
+  settings?: DesignSystemSettings;
+}
+
+const nav = [
+  {
+    group: 'Foundation',
+    links: [
+      { id: 'tokens',     label: 'Tokens' },
+      { id: 'colors',     label: 'Colors' },
+      { id: 'typography', label: 'Typography' },
+      { id: 'spacing',    label: 'Spacing & Radius' },
+    ],
+  },
+  {
+    group: 'Identity',
+    links: [
+      { id: 'mark', label: 'Mark & Logo' },
+    ],
+  },
+  {
+    group: 'Components',
+    links: [
+      { id: 'buttons', label: 'Button' },
+      { id: 'badges',  label: 'Badge' },
+      { id: 'inputs',  label: 'Input' },
+      { id: 'cards',   label: 'Card' },
+      { id: 'code',    label: 'Code Block' },
+    ],
+  },
+];
+
+const tokenRows: { group: string; rows: { name: string; varName: string; tw: string; swatch?: boolean }[] }[] = [
+  {
+    group: 'Backgrounds',
+    rows: [
+      { name: 'background', varName: '--background', tw: 'bg-background', swatch: true },
+      { name: 'card', varName: '--card', tw: 'bg-card', swatch: true },
+      { name: 'elevated', varName: '--elevated', tw: 'bg-elevated', swatch: true },
+    ],
+  },
+  {
+    group: 'Text',
+    rows: [
+      { name: 'foreground', varName: '--foreground', tw: 'text-foreground', swatch: true },
+      { name: 'muted-foreground', varName: '--muted-foreground', tw: 'text-muted-foreground', swatch: true },
+    ],
+  },
+  {
+    group: 'Brand',
+    rows: [
+      { name: 'primary', varName: '--primary', tw: 'bg-primary / text-primary', swatch: true },
+      { name: 'primary-foreground', varName: '--primary-foreground', tw: 'text-primary-foreground', swatch: true },
+    ],
+  },
+  {
+    group: 'Accent',
+    rows: [
+      { name: 'accent', varName: '--accent', tw: 'bg-accent / text-accent', swatch: true },
+    ],
+  },
+  {
+    group: 'Border',
+    rows: [
+      { name: 'border', varName: '--border', tw: 'border-border', swatch: true },
+      { name: 'border-strong', varName: '--border-strong', tw: 'border-border-strong', swatch: true },
+    ],
+  },
+  {
+    group: 'Feedback',
+    rows: [
+      { name: 'destructive', varName: '--destructive', tw: 'bg-destructive', swatch: true },
+      { name: 'success', varName: '--success', tw: 'bg-success', swatch: true },
+      { name: 'warning', varName: '--warning', tw: 'bg-warning', swatch: true },
+      { name: 'info', varName: '--info', tw: 'bg-info', swatch: true },
+    ],
+  },
+  {
+    group: 'Typography',
+    rows: [
+      { name: 'font-primary', varName: '--theme-font-primary', tw: 'font-primary' },
+      { name: 'font-display', varName: '--theme-font-display', tw: 'font-display' },
+      { name: 'font-mono', varName: '--theme-font-mono', tw: 'font-mono' },
+    ],
+  },
+];
+
+const ramp = [
+  { stop: '50', varName: '--primary-50', dark: false },
+  { stop: '100', varName: '--primary-100', dark: false },
+  { stop: '200', varName: '--primary-200', dark: false },
+  { stop: '300', varName: '--primary-300', dark: false },
+  { stop: '400', varName: '--primary-400', dark: true },
+  { stop: '500', varName: '--primary-500', dark: true },
+  { stop: '600', varName: '--primary-600', dark: true, brand: true },
+  { stop: '700', varName: '--primary-700', dark: true },
+  { stop: '800', varName: '--primary-800', dark: true },
+  { stop: '900', varName: '--primary-900', dark: true },
+] as { stop: string; varName: string; dark: boolean; brand?: boolean }[];
+
+const backgroundSwatches = [
+  { label: 'Base', varName: '--background', tw: 'bg-background' },
+  { label: 'Surface', varName: '--card', tw: 'bg-card' },
+  { label: 'Elevated', varName: '--elevated', tw: 'bg-elevated' },
+  { label: 'Border', varName: '--border', tw: 'border-border' },
+] as const;
+
+const feedbackSwatches = [
+  { label: 'Destructive', bgVarName: '--destructive', fgVarName: '--destructive-foreground' },
+  { label: 'Success', bgVarName: '--success', fgVarName: '--success-foreground' },
+  { label: 'Warning', bgVarName: '--warning', fgVarName: '--warning-foreground' },
+  { label: 'Info', bgVarName: '--info', fgVarName: '--info-foreground' },
+] as const;
+
+function readCssVar(varName: string): string {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  return value || 'n/a';
+}
+
+export function DesignSystemView({ data, settings }: DesignSystemViewProps) {
+  const [activeId, setActiveId] = useState('tokens');
+  const [cssVars, setCssVars] = useState<Record<string, string>>(settings?.initialCssVars ?? {});
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const allVars = new Set<string>();
+    tokenRows.forEach((group) => group.rows.forEach((row) => allVars.add(row.varName)));
+    ramp.forEach((item) => allVars.add(item.varName));
+    backgroundSwatches.forEach((item) => allVars.add(item.varName));
+    allVars.add('--accent');
+    feedbackSwatches.forEach((item) => {
+      allVars.add(item.bgVarName);
+      allVars.add(item.fgVarName);
+    });
+
+    const syncVars = () => {
+      const next: Record<string, string> = {};
+      for (const varName of allVars) next[varName] = readCssVar(varName);
+      setCssVars(next);
+    };
+
+    syncVars();
+    const observer = new MutationObserver(syncVars);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const sections = document.querySelectorAll<HTMLElement>('section[data-ds-id]');
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            setActiveId(e.target.getAttribute('data-ds-id') ?? '');
+          }
+        }
+      },
+      { rootMargin: '-20% 0px -70% 0px' }
+    );
+    sections.forEach((s) => obs.observe(s));
+    return () => obs.disconnect();
+  }, []);
+
+  function scrollTo(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  return (
+    <div className="flex min-h-screen bg-background text-foreground">
+
+      {/* Sidebar */}
+      <aside className="hidden lg:flex flex-col fixed top-0 left-0 h-screen w-60 border-r border-border bg-background z-40 overflow-y-auto">
+        <div className="flex items-center gap-3 px-5 py-5 border-b border-border">
+          <a href="/" className="flex items-center gap-2.5 shrink-0" aria-label="OlonJS home">
+            <OlonMark size={22} />
+            <span className="text-lg font-display text-accent tracking-[-0.04em] leading-none">
+              {data.title ?? 'Olon'}
+            </span>
+          </a>
+        </div>
+        <nav className="flex-1 px-3 py-4 space-y-5">
+          {nav.map((section) => (
+            <div key={section.group}>
+              <div className="text-[10px] font-medium tracking-[0.12em] uppercase text-muted-foreground px-3 mb-2">
+                {section.group}
+              </div>
+              {section.links.map((link) => (
+                <button
+                  key={link.id}
+                  onClick={() => scrollTo(link.id)}
+                  className={cn('nav-link w-full text-left', activeId === link.id && 'active')}
+                >
+                  {link.label}
+                </button>
+              ))}
+            </div>
+          ))}
+        </nav>
+        <div className="px-5 py-4 border-t border-border">
+          <div className="font-mono-olon text-[11px] text-muted-foreground">
+            v1.4 · Labradorite · Merriweather Variable
+          </div>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <main ref={mainRef} className="flex-1 lg:ml-60 px-6 lg:px-12 py-12 max-w-4xl">
+
+        {/* Page header */}
+        <div className="mb-16">
+          <div className="inline-flex items-center text-[11px] font-medium tracking-[0.1em] uppercase text-primary-light bg-primary-900 border border-primary px-3 py-1 rounded-sm mb-6">
+            Design System
+          </div>
+          <div className="mb-3">
+            <OlonWordmark markSize={64} />
+          </div>
+          <p className="font-display text-2xl font-normal text-primary-light tracking-[-0.01em] mb-3">
+            Design Language
+          </p>
+          <p className="text-muted-foreground text-[15px] max-w-lg leading-relaxed">
+            A contract layer for the agentic web — and a design system built to communicate it.
+            Every token, component, and decision is grounded in the concept of the holon:
+            whole in itself, part of something greater.
+          </p>
+        </div>
+
+        <hr className="ds-divider mb-16" />
+
+        {/* TOKENS */}
+        <section id="tokens" data-ds-id="tokens" className="section-anchor mb-16">
+          <div className="mb-8">
+            <h2 className="text-xl font-medium text-foreground mb-1">Token Reference</h2>
+            <p className="text-sm text-muted-foreground">
+              All tokens defined in{' '}
+              <code className="code-inline">theme.json</code>
+              {' '}and bridged via{' '}
+              <code className="code-inline">index.css</code>.
+            </p>
+          </div>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-elevated border-b border-border">
+                  {['Token', 'CSS var', 'Value', 'Tailwind class'].map((h) => (
+                    <th key={h} className="text-left px-4 py-3 text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tokenRows.map((group) => (
+                  <>
+                    <tr key={group.group} className="border-b border-border">
+                      <td colSpan={4} className="px-4 py-2 text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground bg-card">
+                        {group.group}
+                      </td>
+                    </tr>
+                    {group.rows.map((row) => (
+                      <tr key={row.name} className="border-b border-border hover:bg-elevated transition-colors">
+                        <td className="px-4 py-3 text-foreground font-medium text-sm">{row.name}</td>
+                        <td className="px-4 py-3 font-mono-olon text-xs text-primary-light">{row.varName}</td>
+                        <td className="px-4 py-3 font-mono-olon text-xs text-muted-foreground">
+                          <span className="flex items-center gap-2">
+                            {row.swatch && (
+                              <span className="inline-block w-3 h-3 rounded-sm border border-border-strong shrink-0" style={{ background: `var(${row.varName})` }} />
+                            )}
+                            {cssVars[row.varName] ?? 'n/a'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono-olon text-xs text-accent">{row.tw}</td>
+                      </tr>
+                    ))}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <hr className="ds-divider mb-16" />
+
+        {/* COLORS */}
+        <section id="colors" data-ds-id="colors" className="section-anchor mb-16">
+          <div className="mb-8">
+            <h2 className="text-xl font-medium text-foreground mb-1">Color System</h2>
+            <p className="text-sm text-muted-foreground">Labradorite brand ramp + semantic layer. Dark-first. Every stop has a role.</p>
+          </div>
+          <div className="mb-6">
+            <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-3">Backgrounds</div>
+            <div className="grid grid-cols-4 gap-2">
+              {backgroundSwatches.map((s) => (
+                <div key={s.label}>
+                  <div className="h-14 rounded-md border border-border-strong" style={{ background: `var(${s.varName})` }} />
+                  <div className="mt-2">
+                    <div className="text-xs font-medium text-foreground">{s.label}</div>
+                    <div className="font-mono-olon text-[11px] text-muted-foreground">{cssVars[s.varName] ?? 'n/a'}</div>
+                    <div className="font-mono-olon text-[10px] text-primary-light">{s.tw}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mb-6">
+            <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-3">Brand Ramp — Labradorite</div>
+            <div className="flex rounded-lg overflow-hidden h-16 border border-border">
+              {ramp.map((s) => (
+                <div key={s.stop} className="flex-1 flex flex-col justify-end p-1.5 relative" style={{ background: `var(${s.varName})` }}>
+                  <span className="font-mono-olon text-[9px] font-medium" style={{ color: s.dark ? '#EDE8F8' : '#3D2770' }}>
+                    {s.stop}
+                  </span>
+                  {s.brand && (
+                    <span className="absolute top-1 right-1 text-[8px] font-medium text-primary-200 font-mono-olon">brand</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-3">Accent — Parchment</div>
+              <div className="h-14 rounded-md border border-border" style={{ background: 'var(--accent)' }} />
+              <div className="mt-2">
+                <div className="text-xs font-medium text-foreground">Accent</div>
+                <div className="font-mono-olon text-[11px] text-muted-foreground">{cssVars['--accent'] ?? 'n/a'}</div>
+                <div className="font-mono-olon text-[10px] text-primary-light">text-accent</div>
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-3">Feedback</div>
+              <div className="space-y-2">
+                {feedbackSwatches.map((f) => (
+                  <div key={f.label} className="flex items-center gap-3 px-3 py-2 rounded-md" style={{ background: `var(${f.bgVarName})` }}>
+                    <span className="text-[12px] font-medium" style={{ color: `var(${f.fgVarName})` }}>{f.label}</span>
+                    <span className="font-mono-olon text-[10px] ml-auto" style={{ color: `var(${f.fgVarName})` }}>
+                      {cssVars[f.bgVarName] ?? 'n/a'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <hr className="ds-divider mb-16" />
+
+        {/* TYPOGRAPHY */}
+        <section id="typography" data-ds-id="typography" className="section-anchor mb-16">
+          <div className="mb-8">
+            <h2 className="text-xl font-medium text-foreground mb-1">Typography</h2>
+            <p className="text-sm text-muted-foreground">Three typefaces, three voices. Built on contrast.</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-6 mb-4">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">Display · font-display</div>
+                <div className="text-sm font-medium text-foreground">Merriweather Variable</div>
+              </div>
+              <span className="font-mono-olon text-[11px] text-muted-foreground border border-border px-2 py-1 rounded-sm">Google Fonts</span>
+            </div>
+            <div className="space-y-4 border-t border-border pt-5">
+              <div className="font-display text-5xl font-normal text-foreground leading-none">The contract layer</div>
+              <div className="font-display text-3xl font-normal text-primary-light leading-tight italic">for the agentic web.</div>
+            </div>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-6 mb-4">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">UI · font-primary</div>
+                <div className="text-sm font-medium text-foreground">Geist</div>
+              </div>
+              <span className="font-mono-olon text-[11px] text-muted-foreground border border-border px-2 py-1 rounded-sm">400 · 500</span>
+            </div>
+            <div className="border-t border-border pt-5">
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div><div className="text-[10px] text-muted-foreground mb-2">15px / 400</div><div className="text-foreground">Machine-readable endpoints.</div></div>
+                <div><div className="text-[10px] text-muted-foreground mb-2">13px / 500</div><div className="text-[13px] font-medium text-foreground">Schema contracts.</div></div>
+                <div><div className="text-[10px] text-muted-foreground mb-2">11px / 400 · muted</div><div className="text-[11px] text-muted-foreground">Governance, audit.</div></div>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-1">Code · font-mono</div>
+                <div className="text-sm font-medium text-foreground">Geist Mono</div>
+              </div>
+            </div>
+            <div className="border-t border-border pt-5 space-y-1.5">
+              <div className="font-mono-olon text-sm"><span className="syntax-keyword">import</span> <span className="text-accent">Olon</span> <span className="syntax-keyword">from</span> <span className="syntax-string">'olonjs'</span></div>
+              <div className="font-mono-olon text-sm text-muted-foreground"><span className="syntax-keyword">const</span> <span className="text-foreground">page</span> = <span className="text-accent">Olon</span>.<span className="text-primary-light">contract</span>(<span className="syntax-string">'/about.json'</span>)</div>
+            </div>
+          </div>
+        </section>
+
+        <hr className="ds-divider mb-16" />
+
+        {/* SPACING & RADIUS */}
+        <section id="spacing" data-ds-id="spacing" className="section-anchor mb-16">
+          <div className="mb-8">
+            <h2 className="text-xl font-medium text-foreground mb-1">Spacing & Radius</h2>
+            <p className="text-sm text-muted-foreground">Radius scale is deliberate — corners communicate hierarchy.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { token: 'radius-sm · 4px',  r: 4,  desc: 'Badges, tags, chips.' },
+              { token: 'radius-md · 8px',  r: 8,  desc: 'Inputs, buttons, inline.' },
+              { token: 'radius-lg · 12px', r: 12, desc: 'Cards, panels, modals.' },
+            ].map((item) => (
+              <div key={item.r} className="rounded-lg border border-border bg-card p-5">
+                <div className="w-full h-14 border border-primary bg-primary-900 mb-4" style={{ borderRadius: item.r }} />
+                <div className="font-mono-olon text-xs text-primary-light mb-1">{item.token}</div>
+                <div className="text-xs text-muted-foreground">{item.desc}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <hr className="ds-divider mb-16" />
+
+        {/* MARK & LOGO */}
+        <section id="mark" data-ds-id="mark" className="section-anchor mb-16">
+          <div className="mb-8">
+            <h2 className="text-xl font-medium text-foreground mb-1">Mark & Logo</h2>
+            <p className="text-sm text-muted-foreground">The mark is a holon: a nucleus held inside a ring. Two circles, one concept.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="rounded-lg border border-border bg-card p-8 flex flex-col items-center gap-4">
+              <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground">Mark · Dark</div>
+              <OlonMark size={64} />
+            </div>
+            <div className="rounded-lg border border-border bg-elevated p-8 flex flex-col items-center gap-4">
+              <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground">Mark · Mono</div>
+              <svg width="64" height="64" viewBox="0 0 100 100" fill="none">
+                <circle cx="50" cy="50" r="38" stroke="#F2EDE6" strokeWidth="20" />
+                <circle cx="50" cy="50" r="15" fill="#F2EDE6" />
+              </svg>
+            </div>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-6 space-y-6">
+            <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground">Logo Lockups</div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-3">Standard (nav, sidebar ≥ 18px)</div>
+              <OlonWordmark markSize={36} />
+            </div>
+            <div className="border-t border-border pt-5">
+              <div className="text-xs text-muted-foreground mb-3">Hero display (marketing · ≥ 48px)</div>
+              <OlonWordmark markSize={64} />
+            </div>
+          </div>
+        </section>
+
+        <hr className="ds-divider mb-16" />
+
+        {/* BUTTON */}
+        <section id="buttons" data-ds-id="buttons" className="section-anchor mb-16">
+          <div className="mb-8">
+            <h2 className="text-xl font-medium text-foreground mb-1">Button</h2>
+            <p className="text-sm text-muted-foreground">Five variants. All use semantic tokens — no hardcoded colors.</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-6 space-y-6">
+            {[
+              {
+                label: 'Default (primary)',
+                buttons: [
+                  <button key="1" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity">Get started</button>,
+                ],
+              },
+              {
+                label: 'Accent (CTA)',
+                buttons: [
+                  <button key="1" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-accent text-accent-foreground rounded-md hover:opacity-90 transition-opacity">Get started →</button>,
+                ],
+              },
+              {
+                label: 'Secondary (outline)',
+                buttons: [
+                  <button key="1" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-transparent text-primary-light border border-primary rounded-md hover:bg-primary-900 transition-colors">Documentation</button>,
+                  <button key="2" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-transparent text-foreground border border-border rounded-md hover:bg-elevated transition-colors">View on GitHub</button>,
+                ],
+              },
+              {
+                label: 'Ghost',
+                buttons: [
+                  <button key="1" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-transparent text-muted-foreground hover:text-foreground hover:bg-elevated rounded-md transition-colors">Cancel</button>,
+                ],
+              },
+            ].map((group, i, arr) => (
+              <div key={group.label} className={i < arr.length - 1 ? 'border-b border-border pb-6' : ''}>
+                <div className="text-xs text-muted-foreground mb-4">{group.label}</div>
+                <div className="flex flex-wrap gap-3">{group.buttons}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <hr className="ds-divider mb-16" />
+
+        {/* BADGE */}
+        <section id="badges" data-ds-id="badges" className="section-anchor mb-16">
+          <div className="mb-8">
+            <h2 className="text-xl font-medium text-foreground mb-1">Badge</h2>
+            <p className="text-sm text-muted-foreground">Status, versioning, feature flags. Small but precise.</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-6">
+            <div className="flex flex-wrap gap-3">
+              <span className="inline-flex items-center px-2.5 py-0.5 text-[11px] font-medium bg-primary-900 text-primary-light border border-primary rounded-sm">Stable</span>
+              <span className="inline-flex items-center px-2.5 py-0.5 text-[11px] font-medium bg-primary-900 text-primary-200 border border-primary-800 rounded-sm">OSS</span>
+              <span className="inline-flex items-center px-2.5 py-0.5 text-[11px] font-medium bg-elevated text-muted-foreground border border-border rounded-sm">v1.4</span>
+              <span className="inline-flex items-center px-2.5 py-0.5 text-[11px] font-medium bg-primary text-primary-foreground rounded-sm">New</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-medium bg-elevated text-muted-foreground border border-border rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-success-indicator inline-block" />
+                Deployed
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <hr className="ds-divider mb-16" />
+
+        {/* INPUT */}
+        <section id="inputs" data-ds-id="inputs" className="section-anchor mb-16">
+          <div className="mb-8">
+            <h2 className="text-xl font-medium text-foreground mb-1">Input</h2>
+            <p className="text-sm text-muted-foreground">Form elements. Precision over decoration.</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-6 space-y-5">
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">Tenant slug</label>
+              <input type="text" placeholder="my-tenant" className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">
+                Schema version <span className="text-destructive-foreground ml-1">Invalid format</span>
+              </label>
+              <input type="text" defaultValue="1.x.x" className="w-full px-3 py-2 text-sm bg-background border border-destructive-border rounded-md text-foreground focus:outline-none focus:border-destructive-ring focus:ring-1 focus:ring-destructive-ring transition-colors" />
+              <p className="mt-1.5 text-xs text-destructive-foreground">Must follow semver (e.g. 1.4.0)</p>
+            </div>
+          </div>
+        </section>
+
+        <hr className="ds-divider mb-16" />
+
+        {/* CARD */}
+        <section id="cards" data-ds-id="cards" className="section-anchor mb-16">
+          <div className="mb-8">
+            <h2 className="text-xl font-medium text-foreground mb-1">Card</h2>
+            <p className="text-sm text-muted-foreground">The primary container primitive. Three elevation levels.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="rounded-lg border border-border bg-card p-5">
+              <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-4">Default · bg-card</div>
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-sm font-medium text-foreground mb-1">JsonPages contract</div>
+                  <div className="text-xs text-muted-foreground">Tenant: acme-corp · 4 routes · Last sync 2m ago</div>
+                </div>
+                <span className="inline-flex items-center px-2.5 py-0.5 text-[11px] font-medium bg-primary-900 text-primary-light border border-primary rounded-sm">Active</span>
+              </div>
+            </div>
+            <div className="rounded-lg border border-border-strong bg-elevated p-5">
+              <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-muted-foreground mb-4">Elevated · bg-elevated</div>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-md bg-primary-900 border border-primary flex items-center justify-center shrink-0">
+                  <OlonMark size={18} />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-foreground">OlonJS Enterprise</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">NX monorepo · Private cloud · SOC2 ready</div>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-lg border border-primary bg-primary-900 p-5">
+              <div className="text-[10px] font-medium tracking-[0.1em] uppercase text-primary-light mb-4">Accent · border-primary bg-primary-900</div>
+              <div className="font-display text-lg font-normal text-foreground mb-2">
+                Ship your first tenant in hours,<br />
+                <em className="not-italic text-accent">not weeks.</em>
+              </div>
+              <button className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-opacity">
+                Start building →
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <hr className="ds-divider mb-16" />
+
+        {/* CODE BLOCK */}
+        <section id="code" data-ds-id="code" className="section-anchor mb-16">
+          <div className="mb-8">
+            <h2 className="text-xl font-medium text-foreground mb-1">Code Block</h2>
+            <p className="text-sm text-muted-foreground">Developer-first. Syntax highlighting uses brand ramp stops only.</p>
+          </div>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 bg-elevated border-b border-border">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-border-strong" />
+                <span className="w-2.5 h-2.5 rounded-full bg-border-strong" />
+                <span className="w-2.5 h-2.5 rounded-full bg-border-strong" />
+              </div>
+              <span className="font-mono-olon text-[11px] text-muted-foreground">olon.config.ts</span>
+              <button className="font-mono-olon text-[11px] text-muted-foreground hover:text-foreground transition-colors">Copy</button>
+            </div>
+            <div className="bg-card px-5 py-5 overflow-x-auto">
+              <pre className="font-mono-olon text-sm leading-relaxed">
+                <code>
+                  <span className="syntax-keyword">import</span>{' '}
+                  <span className="text-foreground">{'{ defineConfig }'}</span>{' '}
+                  <span className="syntax-keyword">from</span>{' '}
+                  <span className="syntax-string">'olonjs'</span>
+                  {'\n\n'}
+                  <span className="syntax-keyword">export default</span>{' '}
+                  <span className="syntax-value">defineConfig</span>
+                  <span className="text-foreground">{'({'}</span>
+                  {'\n  '}
+                  <span className="syntax-property">tenants</span>
+                  <span className="text-foreground">{': [{'}</span>
+                  {'\n    '}
+                  <span className="syntax-property">slug</span>
+                  <span className="text-foreground">{': '}</span>
+                  <span className="syntax-string">'olon-ds'</span>
+                  {'\n  '}
+                  <span className="text-foreground">{'}]'}</span>
+                  {'\n'}
+                  <span className="text-foreground">{'}'}</span>
+                </code>
+              </pre>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  );
+}
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/design-system/index.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/design-system/index.ts"
+export * from './View';
+export * from './schema';
+export * from './types';
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/design-system/schema.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/design-system/schema.ts"
+import { z } from 'zod';
+import { BaseSectionData } from '@/lib/base-schemas';
+
+export const DesignSystemSchema = BaseSectionData.extend({
+  title: z.string().optional().describe('ui:text'),
+});
+
+export const DesignSystemSettingsSchema = z.object({
+  /** Pre-resolved CSS var map injected at SSG bake time. Keys are var names (e.g. "--background"), values are resolved hex strings. */
+  initialCssVars: z.record(z.string()).optional(),
+});
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/design-system/types.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/design-system/types.ts"
+import { z } from 'zod';
+import { DesignSystemSchema, DesignSystemSettingsSchema } from './schema';
+
+export type DesignSystemData     = z.infer<typeof DesignSystemSchema>;
+export type DesignSystemSettings = z.infer<typeof DesignSystemSettingsSchema>;
 
 END_OF_FILE_CONTENT
 mkdir -p "src/components/devex"
@@ -3864,79 +6140,127 @@ mkdir -p "src/components/docs-layout"
 mkdir -p "src/components/feature-grid"
 echo "Creating src/components/feature-grid/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/feature-grid/View.tsx"
-import React from 'react';
-import { cn } from '@/lib/utils';
+import type { CSSProperties } from 'react';
 import type { FeatureGridData, FeatureGridSettings } from './types';
 
-export const FeatureGrid: React.FC<{
+interface FeatureGridViewProps {
   data: FeatureGridData;
   settings?: FeatureGridSettings;
-}> = ({ data }) => {
+}
+
+export function FeatureGrid({ data, settings }: FeatureGridViewProps) {
+  const columns = settings?.columns ?? 3;
+  const cards = data.cards ?? [];
+  const tiers = data.tiers ?? [];
+
+  const colClass =
+    columns === 2 ? 'sm:grid-cols-2' :
+    columns === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' :
+    'sm:grid-cols-2 lg:grid-cols-3';
+
   return (
-    <section id="architecture" className="jp-feature-grid py-24">
-      <div className="max-w-[1040px] mx-auto px-8">
+    <section
+      id="features"
+      className="py-24 px-6 border-t border-border section-anchor"
+      style={{
+        '--local-bg': 'var(--background)',
+        '--local-text': 'var(--foreground)',
+        '--local-text-muted': 'var(--muted-foreground)',
+        '--local-border': 'var(--border)',
+      } as CSSProperties}
+    >
+      <div className="max-w-4xl mx-auto">
 
         {/* Section header */}
-        <header className="text-center mb-14">
+        <div className="max-w-xl mb-16">
           {data.label && (
-            <div className="inline-flex items-center gap-2 text-[10.5px] font-mono font-bold uppercase tracking-[.12em] text-muted-foreground/60 mb-5">
-              <span className="w-[18px] h-px bg-border" aria-hidden />
+            <p className="font-mono-olon text-xs font-medium tracking-label uppercase text-muted-foreground mb-5" data-jp-field="label">
               {data.label}
-            </div>
+            </p>
           )}
-          <h2
-            className="font-display font-bold tracking-[-0.03em] leading-[1.15] text-foreground mb-4"
-            style={{ fontSize: 'clamp(26px, 3.8vw, 40px)' }}
-            data-jp-field="sectionTitle"
-          >
+          <h2 className="font-display font-normal text-foreground leading-tight tracking-tight mb-5" data-jp-field="sectionTitle">
             {data.sectionTitle}
+            {data.sectionTitleItalic && (
+              <>
+                <br />
+                <em className="not-italic text-primary-light" data-jp-field="sectionTitleItalic">{data.sectionTitleItalic}</em>
+              </>
+            )}
           </h2>
           {data.sectionLead && (
-            <p
-              className="text-[15.5px] text-muted-foreground leading-[1.7] mx-auto"
-              style={{ maxWidth: '500px' }}
-              data-jp-field="sectionLead"
-            >
+            <p className="text-base text-muted-foreground leading-relaxed" data-jp-field="sectionLead">
               {data.sectionLead}
             </p>
           )}
-        </header>
-
-        {/* 3-col feature grid */}
-        <div
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 rounded-xl overflow-hidden border border-border"
-          style={{ gap: '1px', background: 'var(--border)' }}
-          data-jp-field="cards"
-        >
-          {data.cards.map((card, idx) => (
-            <div
-              key={card.id ?? idx}
-              className={cn(
-                'p-8 transition-colors hover:bg-muted/60',
-                idx % 2 === 0 ? 'bg-background' : 'bg-card'
-              )}
-              data-jp-item-id={card.id ?? `legacy-${idx}`}
-              data-jp-item-field="cards"
-            >
-              {card.emoji && (
-                <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/18 flex items-center justify-center text-[18px] mb-5">
-                  {card.emoji}
-                </div>
-              )}
-              <h3 className="text-[14px] font-semibold text-foreground mb-2">
-                {card.title}
-              </h3>
-              <p className="text-[13px] text-muted-foreground leading-[1.7]">
-                {card.description}
-              </p>
-            </div>
-          ))}
         </div>
 
+        {/* Feature grid */}
+        <div className={`grid grid-cols-1 ${colClass} gap-px bg-border`}>
+          {cards.map((card) => {
+            return (
+              <div
+                key={card.id ?? card.title}
+                data-jp-item-id={card.id ?? card.title}
+                data-jp-item-field="cards"
+                className="bg-background p-7 flex flex-col gap-4 group hover:bg-card transition-colors duration-200"
+              >
+                {card.icon && (
+                  <img
+                    src={card.icon.url}
+                    alt={card.icon.alt ?? ''}
+                    aria-hidden={card.icon.alt ? undefined : true}
+                    data-jp-field="icon"
+                    className="w-10 h-10 shrink-0"
+                  />
+                )}
+                <div>
+                  <h3 className="text-sm font-medium text-foreground mb-2 leading-snug" data-jp-field="title">
+                    {card.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed" data-jp-field="description">
+                    {card.description}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Proof strip */}
+        {(data.proofStatement || tiers.length > 0) && (
+          <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-6 px-7 py-5 rounded-lg border border-border bg-card">
+            {data.proofStatement && (
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground mb-0.5">
+                  <span data-jp-field="proofStatement">{data.proofStatement}</span>
+                </p>
+                {data.proofSub && (
+                  <p className="text-[12px] text-muted-foreground" data-jp-field="proofSub">
+                    {data.proofSub}
+                  </p>
+                )}
+              </div>
+            )}
+            {tiers.length > 0 && (
+              <div className="flex items-center gap-4 shrink-0">
+                {tiers.map((tier) => (
+                  <div
+                    key={tier.id ?? tier.label}
+                    data-jp-item-id={tier.id ?? tier.label}
+                    data-jp-item-field="tiers"
+                    className="text-center"
+                  >
+                    <div className="text-xs font-medium text-foreground" data-jp-field="label">{tier.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
-};
+}
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/feature-grid/index.ts..."
@@ -3949,86 +6273,99 @@ END_OF_FILE_CONTENT
 echo "Creating src/components/feature-grid/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/feature-grid/schema.ts"
 import { z } from 'zod';
-import { BaseSectionData, BaseArrayItem } from '@/lib/base-schemas';
+import { BaseSectionData, BaseArrayItem, ImageSelectionSchema } from '@/lib/base-schemas';
 
 export const FeatureCardSchema = BaseArrayItem.extend({
-  icon: z.string().optional().describe('ui:icon-picker'),
-  emoji: z.string().optional().describe('ui:text'),
-  title: z.string().describe('ui:text'),
+  icon:        ImageSelectionSchema.optional().describe('ui:image-picker'),
+  title:       z.string().describe('ui:text'),
   description: z.string().describe('ui:textarea'),
 });
 
+export const ProofTierSchema = BaseArrayItem.extend({
+  label: z.string().describe('ui:text'),
+});
+
 export const FeatureGridSchema = BaseSectionData.extend({
-  label: z.string().optional().describe('ui:text'),
-  sectionTitle: z.string().describe('ui:text'),
-  sectionLead: z.string().optional().describe('ui:textarea'),
-  cards: z.array(FeatureCardSchema).describe('ui:list'),
+  label:              z.string().optional().describe('ui:text'),
+  sectionTitle:       z.string().describe('ui:text'),
+  sectionTitleItalic: z.string().optional().describe('ui:text'),
+  sectionLead:        z.string().optional().describe('ui:textarea'),
+  cards:              z.array(FeatureCardSchema).describe('ui:list'),
+  proofStatement:     z.string().optional().describe('ui:text'),
+  proofSub:           z.string().optional().describe('ui:text'),
+  tiers:              z.array(ProofTierSchema).optional().describe('ui:list'),
 });
 
 export const FeatureGridSettingsSchema = z.object({
-  columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).optional().describe('ui:number'),
-  cardStyle: z.enum(['plain', 'bordered']).optional().describe('ui:select'),
+  columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).default(3).describe('ui:number'),
 });
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/feature-grid/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/feature-grid/types.ts"
 import { z } from 'zod';
-import { BaseSectionSettingsSchema } from '@/lib/base-schemas';
 import { FeatureGridSchema, FeatureGridSettingsSchema } from './schema';
 
-export type FeatureGridData = z.infer<typeof FeatureGridSchema>;
-export type FeatureGridSettings = z.infer<typeof BaseSectionSettingsSchema> & z.infer<typeof FeatureGridSettingsSchema>;
+export type FeatureGridData     = z.infer<typeof FeatureGridSchema>;
+export type FeatureGridSettings = z.infer<typeof FeatureGridSettingsSchema>;
 
 END_OF_FILE_CONTENT
 mkdir -p "src/components/footer"
 echo "Creating src/components/footer/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/footer/View.tsx"
-import React from 'react';
-import { OlonMark } from '@/components/ui/OlonMark';
+import { OlonMark } from '@/components/OlonWordmark';
 import type { FooterData, FooterSettings } from './types';
 
-export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> = ({ data }) => {
+interface FooterViewProps {
+  data: FooterData;
+  settings?: FooterSettings;
+}
+
+export function Footer({ data, settings }: FooterViewProps) {
+  const showLogo = settings?.showLogo ?? true;
+  const links = data.links ?? [];
+
   return (
-    <footer
-      style={{
-        '--local-bg': 'var(--background)',
-        '--local-text': 'var(--foreground)',
-        '--local-text-muted': 'var(--muted-foreground)',
-        '--local-accent': 'var(--accent)',
-        '--local-border': 'color-mix(in oklch, var(--foreground) 8%, transparent)',
-      } as React.CSSProperties}
-      className="py-12 border-t border-[var(--local-border)] bg-[var(--local-bg)] relative z-0"
-    >
-      <div className="max-w-[1200px] mx-auto px-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5 font-bold text-[0.9rem] text-[var(--local-text-muted)]">
-            <OlonMark size={20} />
-            <span data-jp-field="brandText">{data.brandText}{data.brandHighlight && <span className="text-[var(--local-accent)]" data-jp-field="brandHighlight">{data.brandHighlight}</span>}</span>
-          </div>
-          {data.links && data.links.length > 0 && (
-            <nav className="flex gap-6">
-              {data.links.map((link, idx) => (
+    <footer className="border-t border-border px-6 py-8">
+      <div className="max-w-6xl px-6 mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-6">
+          {showLogo && (
+            <div className="flex items-center gap-2.5">
+              <OlonMark size={18} />
+              <span className="text-base  font-display text-foreground tracking-[-0.02em]">
+                {data.brandText}
+              </span>
+            </div>
+          )}
+          {links.length > 0 && (
+            <div className="flex items-center gap-4">
+              {links.map((link) => (
                 <a
-                  key={idx}
+                  key={link.label}
                   href={link.href}
-                  className="text-[0.82rem] text-[var(--local-text-muted)] hover:text-[var(--local-accent)] transition-colors no-underline"
-                  data-jp-item-id={(link as { id?: string }).id ?? `legacy-${idx}`}
-                  data-jp-item-field="links"
+                  className="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {link.label}
                 </a>
               ))}
-            </nav>
+              {data.designSystemHref && (
+                <a
+                  href={data.designSystemHref}
+                  className="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Design System
+                </a>
+              )}
+            </div>
           )}
-          <div className="text-[0.8rem] text-[var(--local-text-muted)] opacity-60" data-jp-field="copyright">
-            {data.copyright}
-          </div>
         </div>
+        <span className="font-mono-olon text-[11px] text-muted-foreground">
+          {data.copyright}
+        </span>
       </div>
     </footer>
   );
-};
+}
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/footer/index.ts..."
@@ -4043,17 +6380,17 @@ cat << 'END_OF_FILE_CONTENT' > "src/components/footer/schema.ts"
 import { z } from 'zod';
 
 export const FooterSchema = z.object({
-  brandText: z.string().describe('ui:text'),
-  brandHighlight: z.string().optional().describe('ui:text'),
-  copyright: z.string().describe('ui:text'),
+  brandText:        z.string().describe('ui:text'),
+  copyright:        z.string().describe('ui:text'),
   links: z.array(z.object({
     label: z.string().describe('ui:text'),
-    href: z.string().describe('ui:text'),
+    href:  z.string().describe('ui:text'),
   })).optional().describe('ui:list'),
+  designSystemHref: z.string().optional().describe('ui:text'),
 });
 
 export const FooterSettingsSchema = z.object({
-  showLogo: z.boolean().optional().describe('ui:checkbox'),
+  showLogo: z.boolean().default(true).describe('ui:checkbox'),
 });
 
 END_OF_FILE_CONTENT
@@ -4062,7 +6399,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/components/footer/types.ts"
 import { z } from 'zod';
 import { FooterSchema, FooterSettingsSchema } from './schema';
 
-export type FooterData = z.infer<typeof FooterSchema>;
+export type FooterData     = z.infer<typeof FooterSchema>;
 export type FooterSettings = z.infer<typeof FooterSettingsSchema>;
 
 END_OF_FILE_CONTENT
@@ -4182,138 +6519,333 @@ END_OF_FILE_CONTENT
 mkdir -p "src/components/header"
 echo "Creating src/components/header/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/View.tsx"
-import React, { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils';
-import { OlonMark } from '@/components/ui/OlonMark';
-import { Badge } from '@/components/ui/badge';
+import { useState, useRef, useEffect } from 'react';
+import { Menu, X, ChevronDown } from 'lucide-react';
+import { OlonMark } from '@/components/OlonWordmark';
 import { Button } from '@/components/ui/button';
-import type { MenuItem } from '@olonjs/core';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { cn } from '@/lib/utils';
 import type { HeaderData, HeaderSettings } from './types';
+import type { MenuItem } from '@olonjs/core';
 
-export const Header: React.FC<{
+interface NavChild {
+  label: string;
+  href: string;
+}
+
+interface NavItem {
+  label: string;
+  href: string;
+  variant?: string;
+  children?: NavChild[];
+}
+
+interface HeaderViewProps {
   data: HeaderData;
   settings?: HeaderSettings;
   menu: MenuItem[];
-}> = ({ data, menu }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+}
+
+function isMenuRef(value: unknown): value is { $ref: string } {
+  if (!value || typeof value !== 'object') return false;
+  const rec = value as Record<string, unknown>;
+  return typeof rec.$ref === 'string' && rec.$ref.trim().length > 0;
+}
+
+function toNavItem(raw: unknown): NavItem | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const rec = raw as Record<string, unknown>;
+  if (typeof rec.label !== 'string' || typeof rec.href !== 'string') return null;
+  const children = Array.isArray(rec.children)
+    ? (rec.children as unknown[])
+        .map((c) => toNavItem(c))
+        .filter((c): c is NavChild => c !== null)
+    : undefined;
+  const variant = typeof rec.variant === 'string' ? rec.variant : undefined;
+  return { label: rec.label, href: rec.href, ...(variant ? { variant } : {}), ...(children && children.length > 0 ? { children } : {}) };
+}
+
+export function Header({ data, settings, menu }: HeaderViewProps) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
+  const isSticky = settings?.sticky ?? true;
+  const navRef = useRef<HTMLElement>(null);
+
+  const linksField = data.links as unknown;
+  const rawLinks = Array.isArray(linksField) ? linksField : [];
+  const menuItems = Array.isArray(menu) ? (menu as unknown[]) : [];
+  // If tenant explicitly uses a JSON ref for links, resolve from menu config.
+  const source =
+    isMenuRef(linksField)
+      ? menuItems
+      : (rawLinks.length > 0 ? rawLinks : menuItems);
+  const navItems: NavItem[] = source.map(toNavItem).filter((i): i is NavItem => i !== null);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    if (!openDropdown) return;
+    function handleClick(e: MouseEvent) {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [openDropdown]);
 
   return (
-    <>
-      <div style={{ height: '56px' }} aria-hidden />
-      <header
-        className={cn(
-          'fixed top-0 left-0 right-0 w-full h-14 z-50 transition-all duration-300',
-          'flex items-center',
-          scrolled
-            ? 'bg-background/88 backdrop-blur-[16px] border-b border-border/60'
-            : 'bg-transparent border-b border-transparent'
-        )}
-      >
-        <div className="max-w-[1040px] w-full mx-auto px-8 flex items-center gap-3">
+    <header
+      className={cn(
+        'top-0 left-0 right-0 z-50 border-b border-border bg-background/90 backdrop-blur-md',
+        isSticky ? 'fixed' : 'relative'
+      )}
+    >
+      <div className="max-w-6xl mx-auto px-6 h-18 flex items-center gap-8">
 
-          <a
-            href="/"
-            className="flex items-center gap-2 no-underline shrink-0"
-            aria-label="OlonJS home"
+        {/* Logo */}
+        <a href="/" className="flex items-center gap-2 shrink-0" aria-label="OlonJS home">
+          <OlonMark size={26} className="mb-0.5" />
+          <span
+            className="text-2xl text-accent leading-none"
+            style={{
+              fontFamily:           'var(--wordmark-font)',
+              letterSpacing:        'var(--wordmark-tracking)',
+              fontWeight:           'var(--wordmark-weight)',
+              fontVariationSettings: '"wdth" var(--wordmark-width)',
+            }}
           >
-            <OlonMark size={26} />
-            <span
-              className="text-lg font-bold tracking-tight text-foreground"
-              data-jp-field="logoText"
-            >
-              {data.logoText}
-              {data.logoHighlight && (
-                <span className="text-primary" data-jp-field="logoHighlight">
-                  {data.logoHighlight}
-                </span>
-              )}
-            </span>
-          </a>
-
+            {data.logoText}
+          </span>
           {data.badge && (
-            <>
-              <span className="w-px h-4 bg-border" aria-hidden />
-              <Badge variant="brand" data-jp-field="badge">
-                {data.badge}
-              </Badge>
-            </>
+            <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium font-mono-olon bg-primary-900 text-primary-light border border-primary-800 rounded-sm">
+              {data.badge}
+            </span>
           )}
+        </a>
 
-          <div className="flex-1" />
+        {/* Desktop nav */}
+        <nav ref={navRef} className="hidden md:flex items-center gap-0.5 flex-1">
+          {navItems.map((item) => {
+            const hasChildren = item.children && item.children.length > 0;
+            const isOpen = openDropdown === item.label;
+            const isSecondary = item.variant === 'secondary';
 
-          <nav className="hidden md:flex items-center gap-0.5" aria-label="Site">
-            {menu.map((item, idx) => (
-              <Button
-                key={(item as { id?: string }).id ?? idx}
-                asChild
-                variant={item.isCta ? 'default' : 'ghost'}
-                size="sm"
-                className={cn(
-                  'text-[13px]',
-                  !item.isCta && 'text-muted-foreground hover:text-foreground'
-                )}
-              >
+            if (isSecondary) {
+              return (
                 <a
+                  key={item.label}
                   href={item.href}
-                  data-jp-item-id={(item as { id?: string }).id ?? `legacy-${idx}`}
-                  data-jp-item-field="links"
-                  target={item.external ? '_blank' : undefined}
-                  rel={item.external ? 'noopener noreferrer' : undefined}
+                  className="flex items-center gap-1 px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground rounded-md border border-border bg-elevated hover:bg-elevated/70 transition-colors duration-150"
                 >
                   {item.label}
                 </a>
-              </Button>
-            ))}
-          </nav>
+              );
+            }
 
-          <button
-            type="button"
-            className="md:hidden p-2 rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              {mobileMenuOpen ? (
-                <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>
-              ) : (
-                <><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></>
-              )}
-            </svg>
-          </button>
+            if (!hasChildren) {
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className="flex items-center gap-1 px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground rounded-md transition-colors duration-150 hover:bg-elevated"
+                >
+                  {item.label}
+                </a>
+              );
+            }
+
+            return (
+              <div key={item.label} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setOpenDropdown(isOpen ? null : item.label)}
+                  className={cn(
+                    'flex items-center gap-1 px-3 py-1.5 text-[13px] rounded-md transition-colors duration-150',
+                    isOpen ? 'text-foreground bg-elevated' : 'text-muted-foreground hover:text-foreground hover:bg-elevated'
+                  )}
+                  aria-expanded={hasChildren ? isOpen : undefined}
+                >
+                  {item.label}
+                  {hasChildren && (
+                    <ChevronDown
+                      size={11}
+                      className={cn('opacity-40 mt-px transition-transform duration-150', isOpen && 'rotate-180 opacity-70')}
+                    />
+                  )}
+                </button>
+
+                {hasChildren && (
+                  <div
+                    className={cn(
+                      'absolute left-0 top-[calc(100%+8px)] min-w-[220px] rounded-lg border border-border bg-card shadow-lg shadow-black/20 overflow-hidden',
+                      'transition-all duration-150 origin-top-left',
+                      isOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
+                    )}
+                  >
+                    <div className="p-1.5">
+                      {item.children!.map((child, i) => (
+                        <a
+                          key={child.label}
+                          href={child.href}
+                          onClick={() => setOpenDropdown(null)}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] text-muted-foreground hover:text-foreground hover:bg-elevated transition-colors duration-100 group',
+                            i < item.children!.length - 1 && ''
+                          )}
+                        >
+                          <span className="w-6 h-6 rounded-md bg-primary-900 border border-primary-800 flex items-center justify-center shrink-0 text-[10px] font-medium font-mono-olon text-primary-light group-hover:border-primary transition-colors">
+                            {child.label.slice(0, 2).toUpperCase()}
+                          </span>
+                          <span className="font-medium">{child.label}</span>
+                        </a>
+                      ))}
+                    </div>
+                    <div className="px-3 py-2 border-t border-border bg-elevated/50">
+                      <a
+                        href={item.href}
+                        onClick={() => setOpenDropdown(null)}
+                        className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                      >
+                        View all {item.label.toLowerCase()} →
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Actions */}
+        <div className="hidden md:flex items-center gap-1 ml-auto shrink-0">
+          <ThemeToggle />
+          {data.signinHref && (
+            <a
+              href={data.signinHref}
+              className="text-[13px] text-muted-foreground hover:text-foreground transition-colors duration-150 px-3 py-1.5 rounded-md hover:bg-elevated"
+            >
+              Sign in
+            </a>
+          )}
+          {data.ctaHref && (
+            <Button variant="accent" size="sm" className="h-8 px-4 text-[13px] font-medium" asChild>
+              <a href={data.ctaHref}>{data.ctaLabel ?? 'Get started →'}</a>
+            </Button>
+          )}
         </div>
 
-        {mobileMenuOpen && (
-          <nav
-            className="absolute top-14 left-0 right-0 md:hidden border-b border-border bg-background/95 backdrop-blur-[16px]"
-            aria-label="Mobile menu"
-          >
-            <div className="max-w-[1040px] mx-auto px-8 py-4 flex flex-col gap-1">
-              {menu.map((item, idx) => (
+        {/* Mobile toggle */}
+        <button
+          className="md:hidden ml-auto p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label="Toggle menu"
+        >
+          {mobileOpen ? <X size={16} /> : <Menu size={16} />}
+        </button>
+      </div>
+
+      {/* Mobile drawer */}
+      <div className={cn(
+        'md:hidden border-t border-border bg-card overflow-hidden transition-all duration-200',
+        mobileOpen ? 'max-h-[32rem]' : 'max-h-0'
+      )}>
+        <nav className="px-4 py-3 flex flex-col gap-0.5">
+          {navItems.map((item) => {
+            const hasChildren = item.children && item.children.length > 0;
+            const isExpanded = mobileExpanded === item.label;
+            const isSecondary = item.variant === 'secondary';
+
+            if (isSecondary) {
+              return (
                 <a
-                  key={(item as { id?: string }).id ?? idx}
+                  key={item.label}
                   href={item.href}
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2.5 no-underline"
-                  onClick={() => setMobileMenuOpen(false)}
-                  data-jp-item-id={(item as { id?: string }).id ?? `legacy-${idx}`}
-                  data-jp-item-field="links"
+                  onClick={() => setMobileOpen(false)}
+                  className="mt-1 flex items-center px-3 py-2.5 text-[13px] text-muted-foreground hover:text-foreground border border-border bg-elevated hover:bg-elevated/70 rounded-md transition-colors"
                 >
                   {item.label}
                 </a>
-              ))}
-            </div>
-          </nav>
-        )}
-      </header>
-    </>
+              );
+            }
+
+            if (!hasChildren) {
+              return (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center px-3 py-2.5 text-[13px] text-muted-foreground hover:text-foreground hover:bg-elevated rounded-md transition-colors"
+                >
+                  {item.label}
+                </a>
+              );
+            }
+
+            return (
+              <div key={item.label}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (hasChildren) {
+                      setMobileExpanded(isExpanded ? null : item.label);
+                    }
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2.5 text-[13px] text-muted-foreground hover:text-foreground hover:bg-elevated rounded-md transition-colors text-left"
+                >
+                  <span>{item.label}</span>
+                  {hasChildren && (
+                    <ChevronDown
+                      size={13}
+                      className={cn('opacity-40 transition-transform duration-150', isExpanded && 'rotate-180 opacity-70')}
+                    />
+                  )}
+                </button>
+
+                {hasChildren && isExpanded && (
+                  <div className="ml-3 pl-3 border-l border-border mt-0.5 mb-1 flex flex-col gap-0.5">
+                    {item.children!.map((child) => (
+                      <a
+                        key={child.label}
+                        href={child.href}
+                        onClick={() => { setMobileOpen(false); setMobileExpanded(null); }}
+                        className="flex items-center gap-2.5 px-3 py-2 text-[12px] text-muted-foreground hover:text-foreground hover:bg-elevated rounded-md transition-colors"
+                      >
+                        <span className="w-5 h-5 rounded bg-primary-900 border border-primary-800 flex items-center justify-center shrink-0 text-[9px] font-medium font-mono-olon text-primary-light">
+                          {child.label.slice(0, 2).toUpperCase()}
+                        </span>
+                        {child.label}
+                      </a>
+                    ))}
+                    <a
+                      href={item.href}
+                      onClick={() => { setMobileOpen(false); setMobileExpanded(null); }}
+                      className="px-3 py-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      View all →
+                    </a>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <div className="flex gap-2 pt-3 mt-2 border-t border-border">
+            {data.signinHref && (
+              <Button variant="outline" size="sm" className="flex-1 text-[13px]" asChild>
+                <a href={data.signinHref}>Sign in</a>
+              </Button>
+            )}
+            {data.ctaHref && (
+              <Button variant="accent" size="sm" className="flex-1 text-[13px]" asChild>
+                <a href={data.ctaHref}>{data.ctaLabel ?? 'Get started'}</a>
+              </Button>
+            )}
+          </div>
+        </nav>
+      </div>
+    </header>
   );
-};
+}
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/header/index.ts..."
@@ -4321,245 +6853,285 @@ cat << 'END_OF_FILE_CONTENT' > "src/components/header/index.ts"
 export * from './View';
 export * from './schema';
 export * from './types';
+
 END_OF_FILE_CONTENT
 echo "Creating src/components/header/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/schema.ts"
 import { z } from 'zod';
 
-/**
- * 📝 HEADER SCHEMA (Contract)
- * Definisce la struttura dati che l'Admin userà per generare la form.
- */
 export const HeaderSchema = z.object({
-  logoText: z.string().describe('ui:text'),
-  logoHighlight: z.string().optional().describe('ui:text'),
-  logoIconText: z.string().optional().describe('ui:text'),
-  badge: z.string().optional().describe('ui:text'),
+  logoText:         z.string().describe('ui:text'),
+  badge:            z.string().optional().describe('ui:text'),
   links: z.array(z.object({
-    label: z.string().describe('ui:text'),
-    href: z.string().describe('ui:text'),
-    isCta: z.boolean().default(false).describe('ui:checkbox'),
-    external: z.boolean().default(false).optional().describe('ui:checkbox'),
+    label:    z.string().describe('ui:text'),
+    href:     z.string().describe('ui:text'),
+    variant:  z.string().optional().describe('ui:text'),
+    children: z.array(z.object({
+      label: z.string().describe('ui:text'),
+      href:  z.string().describe('ui:text'),
+    })).optional().describe('ui:list'),
   })).describe('ui:list'),
+  ctaLabel:         z.string().optional().describe('ui:text'),
+  ctaHref:          z.string().optional().describe('ui:text'),
+  signinHref:       z.string().optional().describe('ui:text'),
 });
 
-/**
- * ⚙️ HEADER SETTINGS
- * Definisce i parametri tecnici (non di contenuto).
- */
 export const HeaderSettingsSchema = z.object({
   sticky: z.boolean().default(true).describe('ui:checkbox'),
 });
+
 END_OF_FILE_CONTENT
 echo "Creating src/components/header/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/types.ts"
 import { z } from 'zod';
 import { HeaderSchema, HeaderSettingsSchema } from './schema';
 
-/**
- * 🧩 HEADER DATA
- * Tipo inferito dallo schema Zod del contenuto.
- * Utilizzato dalla View per renderizzare logo e links.
- */
-export type HeaderData = z.infer<typeof HeaderSchema>;
-
-/**
- * ⚙️ HEADER SETTINGS
- * Tipo inferito dallo schema Zod dei settings.
- * Gestisce comportamenti tecnici come lo 'sticky'.
- */
+export type HeaderData     = z.infer<typeof HeaderSchema>;
 export type HeaderSettings = z.infer<typeof HeaderSettingsSchema>;
+
 END_OF_FILE_CONTENT
 mkdir -p "src/components/hero"
-echo "Creating src/components/hero/View.tsx..."
-cat << 'END_OF_FILE_CONTENT' > "src/components/hero/View.tsx"
-import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import type { HeroData, HeroSettings } from './types';
+echo "Creating src/components/hero/RadialBackground.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/hero/RadialBackground.tsx"
+import { useEffect, useRef, useState } from 'react';
+import { motion } from 'motion/react';
 
-const CODE_LINES = [
-  { type: 'p', text: '{' },
-  { type: 'k', text: '  "slug"',   after: ': ', val: '"homepage"', comma: ',' },
-  { type: 'k', text: '  "meta"',   after: ': ', val: '{ "title": "Acme Corp" }', comma: ',' },
-  { type: 'k', text: '  "sections"', after: ': [' },
-  { type: 'p', text: '    {' },
-  { type: 'k', text: '      "type"', after: ':  ', val: '"hero"', comma: ',' },
-  { type: 'k', text: '      "data"', after: ': {' },
-  { type: 'k', text: '        "title"', after: ': ', val: '"Ship faster with agents"', comma: ',' },
-  { type: 'k', text: '        "cta"',   after: ':   ', val: '"Get started"' },
-  { type: 'p', text: '      }' },
-  { type: 'p', text: '    },' },
-  { type: 'c', text: '    { "type": "features" /* ... */ }' },
-  { type: 'p', text: '  ]' },
-  { type: 'p', text: '}' },
+// CSS var names — order matches STOPS
+const TOKEN_VARS = [
+  '--background',   // #0B0907 center
+  '--background',         // #130F0D
+  '--background',     // #1E1814
+  '--background',       // #2E271F
+  '--background',      // #241D17
+  '--elevated',     // #1E1814
+  '--background',   // #0B0907 outer
 ] as const;
 
-const tokenColor: Record<string, string> = {
-  k: 'text-[#84ABFF]',
-  s: 'text-[#86efac]',
-  c: 'text-[#4b5563]',
-  p: 'text-[#9ca3af]',
-};
+const STOPS = [0, 30, 55, 72, 84, 93, 100] as const;
 
-export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ data }) => {
-  const primaryCta = data.ctas?.find(c => c.variant === 'primary') ?? data.ctas?.[0];
-  const secondaryCta = data.ctas?.find(c => c.variant === 'secondary') ?? data.ctas?.[1];
+function readTokenColors(): string[] {
+  if (typeof document === 'undefined') return TOKEN_VARS.map(() => '#000');
+  const s = getComputedStyle(document.documentElement);
+  return TOKEN_VARS.map((v) => s.getPropertyValue(v).trim() || '#000');
+}
+
+export function RadialBackground({
+  startingGap =80, 
+  breathing = true,
+  animationSpeed = 0.01,
+  breathingRange = 180,
+  topOffset = 0,
+}: {
+  startingGap?: number;
+  breathing?: boolean;
+  animationSpeed?: number;
+  breathingRange?: number;
+  topOffset?: number;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [colors, setColors] = useState<string[]>(() => readTokenColors());
+
+  // Re-read tokens when data-theme changes (dark ↔ light)
+  useEffect(() => {
+    setColors(readTokenColors());
+    const observer = new MutationObserver(() => setColors(readTokenColors()));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let animationFrame: number;
+    let width = startingGap;
+    let direction = 1;
+
+    const animate = () => {
+      if (width >= startingGap + breathingRange) direction = -1;
+      if (width <= startingGap - breathingRange) direction = 1;
+      if (!breathing) direction = 0;
+      width += direction * animationSpeed;
+
+      const stops = STOPS.map((s, i) => `${colors[i]} ${s}%`).join(', ');
+      const gradient = `radial-gradient(${width}% ${width + topOffset}% at 50% 20%, ${stops})`;
+
+      if (containerRef.current) {
+        containerRef.current.style.background = gradient;
+      }
+      animationFrame = requestAnimationFrame(animate);
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [startingGap, breathing, animationSpeed, breathingRange, topOffset, colors]);
 
   return (
-    <section className="jp-hero relative pt-[156px] pb-28 text-center overflow-hidden">
+    <motion.div
+      animate={{ opacity: 1, scale: 1, transition: { duration: 2, ease: [0.25, 0.1, 0.25, 1] } }}
+      className="absolute inset-0 overflow-hidden"
+      initial={{ opacity: 0, scale: 1.5 }}
+    >
+      <div className="absolute inset-0" ref={containerRef} />
+    </motion.div>
+  );
+}
 
-      {/* Background glow — absolute, scoped to hero section */}
-      <div
-        className="pointer-events-none absolute z-0 rounded-full"
-        style={{
-          width: '900px',
-          height: '700px',
-          background: 'radial-gradient(ellipse at center, rgba(23,99,255,.10) 0%, transparent 68%)',
-          top: '-160px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-        }}
-        aria-hidden
-      />
-      {/* Grid background — absolute, scoped to hero section */}
-      <div
-        className="pointer-events-none absolute inset-0 z-0 opacity-40"
-        style={{
-          backgroundImage:
-            'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
-          backgroundSize: '48px 48px',
-          maskImage: 'radial-gradient(ellipse 80% 55% at 50% 0%, black 0%, transparent 100%)',
-        }}
-        aria-hidden
-      />
+END_OF_FILE_CONTENT
+echo "Creating src/components/hero/View.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/hero/View.tsx"
+import type { CSSProperties } from 'react';
+import { ArrowRight, Github, Terminal } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { RadialBackground } from './RadialBackground';
+import type { HeroData, HeroSettings } from './types';
 
-      <div className="relative z-10 max-w-[1040px] mx-auto px-8">
+interface HeroViewProps {
+  data: HeroData;
+  settings?: HeroSettings;
+}
 
-        {/* Eyebrow badge */}
-        {data.badge && (
-          <div className="inline-flex items-center gap-2 mb-8">
-            <Badge
-              variant="brand"
-              className="gap-2 py-1.5 px-4 text-[12px] tracking-[.05em] font-mono"
-              data-jp-field="badge"
-            >
-              <span
-                className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"
-                aria-hidden
-              />
-              {data.badge}
-            </Badge>
-          </div>
-        )}
+export function Hero({ data, settings }: HeroViewProps) {
+  const showCode = settings?.showCode ?? true;
+  const ctas = data.ctas ?? [];
+  const heroImage = data.heroImage;
 
-        {/* Headline */}
-        <h1
-          className="font-display font-bold tracking-[-0.038em] leading-[1.06] text-foreground mb-2 mx-auto"
-          style={{ fontSize: 'clamp(44px, 6.5vw, 74px)', maxWidth: '840px' }}
-          data-jp-field="title"
-        >
-          {data.title}
-          {data.titleHighlight && (
-            <>
-              {' '}
-              <span
-                className="bg-gradient-to-br from-[#84ABFF] via-[#1763FF] to-[#0F52E0] bg-clip-text text-transparent"
-                data-jp-field="titleHighlight"
-              >
-                {data.titleHighlight}
-              </span>
-            </>
+  return (
+    <section
+      className="relative overflow-hidden pt-36 pb-28 px-6"
+      id={data.anchorId}
+      style={{
+        '--local-bg': 'var(--background)',
+        '--local-text': 'var(--foreground)',
+        '--local-text-muted': 'var(--muted-foreground)',
+        '--local-border': 'var(--border)',
+      } as CSSProperties}
+    >
+      <RadialBackground />
+      <div className="relative z-10 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-20 gap-8 lg:gap-10 items-start">
+          <div className="order-2 md:order-1 md:col-span-11">
+
+          {/* Eyebrow */}
+          {data.eyebrow && (
+            <p className="font-mono-olon text-xs font-medium tracking-label uppercase text-muted-foreground mb-3" data-jp-field="eyebrow">
+              {data.eyebrow}
+            </p>
           )}
-        </h1>
 
-        {/* Subtitle */}
-        {data.description && (
-          <p
-            className="text-muted-foreground leading-[1.7] mx-auto mt-6 mb-12"
-            style={{ fontSize: 'clamp(15px, 2vw, 18px)', maxWidth: '560px' }}
-            data-jp-field="description"
-          >
-            {data.description}
-          </p>
-        )}
+          {/* Headline */}
+          <h1 className="font-display font-normal text-7xl  text-foreground leading-tight tracking-display mb-1" data-jp-field="title">
+            {data.title}
+          </h1>
+          {data.titleHighlight && (
+            <h2 className="font-display font-normal italic text-5xl md:text-6xl text-primary-light leading-tight tracking-display mb-7" data-jp-field="titleHighlight">
+              {data.titleHighlight}
+            </h2>
+          )}
 
-        {/* CTAs */}
-        {(primaryCta || secondaryCta) && (
-          <div className="flex items-center justify-center gap-3 flex-wrap mb-0">
-            {primaryCta && (
-              <Button asChild variant="default" size="lg" className="gap-2 px-7 shadow-[0_0_32px_rgba(23,99,255,.38)]">
+          {/* Body */}
+          {data.description && (
+            <p className="text-md text-muted-foreground leading-relaxed max-w-xl mb-10" data-jp-field="description">
+              {data.description}
+            </p>
+          )}
+
+          {/* CTA row */}
+          <div className="flex flex-wrap items-center gap-3 mb-16">
+            {ctas.map((cta) => (
+              <Button
+                key={cta.id ?? cta.label}
+                variant={cta.variant === 'accent' ? 'accent' : cta.variant === 'secondary' ? 'outline' : 'default'}
+                size="lg"
+                className="text-base"
+                asChild
+              >
                 <a
-                  href={primaryCta.href}
-                  data-jp-item-id={primaryCta.id}
+                  href={cta.href}
+                  data-jp-item-id={cta.id ?? cta.label}
                   data-jp-item-field="ctas"
+                  data-jp-field="href"
                 >
-                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.8 }}>
-                    <rect x="2.5" y="2" width="11" height="12" rx="2" stroke="currentColor" strokeWidth="1.4"/>
-                    <path d="M5.5 6h5M5.5 9h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                  </svg>
-                  {primaryCta.label}
+                  {cta.variant === 'accent' ? (
+                    <><span data-jp-field="label">{cta.label}</span> <ArrowRight className="h-4 w-4" /></>
+                  ) : cta.variant === 'secondary' ? (
+                    <><Github className="h-4 w-4" /> <span data-jp-field="label">{cta.label}</span></>
+                  ) : (
+                    <span data-jp-field="label">{cta.label}</span>
+                  )}
                 </a>
               </Button>
-            )}
-            {secondaryCta && (
-              <Button asChild variant="outline" size="lg" className="gap-2 px-7">
-                <a
-                  href={secondaryCta.href}
-                  data-jp-item-id={secondaryCta.id}
-                  data-jp-item-field="ctas"
-                  target={secondaryCta.href?.startsWith('http') ? '_blank' : undefined}
-                  rel={secondaryCta.href?.startsWith('http') ? 'noopener noreferrer' : undefined}
-                >
-                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.7 }}>
-                    <path d="M8 1C4.13 1 1 4.13 1 8c0 3.09 2.01 5.71 4.79 6.63.35.06.48-.15.48-.34v-1.2c-1.95.42-2.36-.94-2.36-.94-.32-.81-.78-1.02-.78-1.02-.64-.43.05-.42.05-.42.7.05 1.07.72 1.07.72.62 1.07 1.64.76 2.04.58.06-.45.24-.76.44-.93-1.56-.18-3.2-.78-3.2-3.47 0-.77.27-1.4.72-1.89-.07-.18-.31-.9.07-1.87 0 0 .59-.19 1.93.72A6.7 6.7 0 0 1 8 5.17c.6 0 1.2.08 1.76.24 1.34-.91 1.93-.72 1.93-.72.38.97.14 1.69.07 1.87.45.49.72 1.12.72 1.89 0 2.7-1.64 3.29-3.2 3.47.25.22.48.65.48 1.31v1.94c0 .19.12.4.48.34C12.99 13.71 15 11.09 15 8c0-3.87-3.13-7-7-7z" fill="currentColor"/>
-                  </svg>
-                  {secondaryCta.label}
-                </a>
-              </Button>
+            ))}
+            {data.docsHref && (
+              <a
+                href={data.docsHref}
+                data-jp-field="docsHref"
+                className="text-base text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+              >
+                <Terminal className="h-4 w-4" />
+                <span data-jp-field="docsLabel">{data.docsLabel ?? 'Read the docs'}</span>
+              </a>
             )}
           </div>
-        )}
 
-        {/* Code window */}
-        <div className="mt-[68px] mx-auto" style={{ maxWidth: '540px' }}>
-          <div
-            className="rounded-xl border border-border text-left overflow-hidden"
-            style={{ background: '#060d14', boxShadow: '0 32px 64px rgba(0,0,0,.44), 0 0 0 1px rgba(255,255,255,.04)' }}
-          >
-            <div className="flex items-center gap-1.5 px-4 py-3 bg-card border-b border-border">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />
-              <span className="flex-1 text-center font-mono text-[11px] text-muted-foreground/60">
-                GET /homepage.json
-              </span>
-            </div>
-            <div className="px-6 py-5 font-mono text-[12.5px] leading-[1.8] overflow-x-auto">
-              {CODE_LINES.map((ln, i) => (
-                <div key={i}>
-                  {ln.type === 'k' ? (
-                    <span>
-                      <span className={tokenColor.k}>{ln.text}</span>
-                      {'after' in ln && <span className={tokenColor.p}>{ln.after}</span>}
-                      {'val' in ln && <span className="text-[#86efac]">{ln.val}</span>}
-                      {'comma' in ln && <span className={tokenColor.p}>{ln.comma}</span>}
-                    </span>
-                  ) : ln.type === 'c' ? (
-                    <span className={tokenColor.c}>{ln.text}</span>
-                  ) : (
-                    <span className={tokenColor.p}>{ln.text}</span>
-                  )}
+            {/* Code block */}
+            {showCode && (
+              <div className="rounded-lg border border-border overflow-hidden max-w-2xl">
+                <div className="flex items-center justify-between px-4 py-2.5 bg-elevated border-b border-border">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-border-strong" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-border-strong" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-border-strong" />
+                  </div>
+                  <span className="font-mono-olon text-xs text-muted-foreground">olon.config.ts</span>
+                  <span className="font-mono-olon text-xs text-primary-400 hover:text-primary-light cursor-default transition-colors" data-jp-field="codeLabel">
+                    {data.codeLabel ?? 'Copy'}
+                  </span>
                 </div>
-              ))}
+                <pre className="px-5 py-5 bg-card font-mono-olon text-sm leading-[1.8] overflow-x-auto">
+                  <code>
+                    <span><span className="text-primary-400">import</span><span className="text-foreground"> {'{ defineConfig }'} </span><span className="text-primary-400">from</span><span className="text-primary-200"> 'olonjs'</span></span>
+                    {'\n\n'}
+                    <span><span className="text-primary-400">export default</span><span className="text-primary-light"> defineConfig</span><span className="text-foreground">{'({'}</span></span>
+                    {'\n  '}
+                    <span><span className="text-accent">tenants</span><span className="text-foreground">: [{'{'}</span></span>
+                    {'\n    '}
+                    <span><span className="text-accent">slug</span><span className="text-foreground">: </span><span className="text-primary-200">'acme-corp'</span><span className="text-muted-foreground">,</span></span>
+                    {'\n    '}
+                    <span><span className="text-accent">routes</span><span className="text-foreground">: </span><span className="text-primary-light">autoDiscover</span><span className="text-foreground">(</span><span className="text-primary-200">'./src/pages'</span><span className="text-foreground">),</span></span>
+                    {'\n    '}
+                    <span><span className="text-accent">schema</span><span className="text-foreground">: </span><span className="text-primary-200">'./schemas/page.json'</span><span className="text-foreground">,</span></span>
+                    {'\n  '}
+                    <span><span className="text-foreground">{'}],'}</span></span>
+                    {'\n  '}
+                    <span><span className="text-accent">output</span><span className="text-foreground">: </span><span className="text-primary-200">'vercel'</span><span className="text-muted-foreground">,  </span><span className="text-muted-foreground">{'// \'nx\' | \'vercel\' | \'custom\''}</span></span>
+                    {'\n  '}
+                    <span><span className="text-accent">governance</span><span className="text-foreground">: {'{'} </span><span className="text-accent">audit</span><span className="text-foreground">: </span><span className="text-primary-light">true</span><span className="text-foreground">, </span><span className="text-accent">strict</span><span className="text-foreground">: </span><span className="text-primary-light">true</span><span className="text-foreground"> {'}'}</span></span>
+                    {'\n'}
+                    <span><span className="text-foreground">{'}'}</span></span>
+                  </code>
+                </pre>
+              </div>
+            )}
+          </div>
+
+          {/* Right column (40%) - image placeholder */}
+          <div className="order-1 md:order-2 md:col-span-9">
+            <div className="relative rounded-md overflow-hidden bg-card hero-media-portrait">
+              <img
+                src={heroImage?.url ?? '/images/olon-hero.png'}
+                alt={heroImage?.alt ?? 'Olon hero visual'}
+                data-jp-field="heroImage"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 pointer-events-none hero-media-overlay" />
             </div>
           </div>
         </div>
-
       </div>
     </section>
   );
-};
+}
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/hero/index.ts..."
@@ -4572,31 +7144,343 @@ END_OF_FILE_CONTENT
 echo "Creating src/components/hero/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/hero/schema.ts"
 import { z } from 'zod';
-import { BaseSectionData, CtaSchema } from '@/lib/base-schemas';
-
-const HeroMetricSchema = z.object({
-  val: z.string().describe('ui:text'),
-  label: z.string().describe('ui:text'),
-});
+import { BaseSectionData, CtaSchema, ImageSelectionSchema } from '@/lib/base-schemas';
 
 export const HeroSchema = BaseSectionData.extend({
-  badge: z.string().optional().describe('ui:text'),
-  title: z.string().describe('ui:text'),
-  titleHighlight: z.string().optional().describe('ui:text'),
-  description: z.string().optional().describe('ui:textarea'),
-  ctas: z.array(CtaSchema).optional().describe('ui:list'),
-  metrics: z.array(HeroMetricSchema).optional().describe('ui:list'),
+  eyebrow:          z.string().optional().describe('ui:text'),
+  title:            z.string().describe('ui:text'),
+  titleHighlight:   z.string().optional().describe('ui:text'),
+  description:      z.string().optional().describe('ui:textarea'),
+  ctas:             z.array(CtaSchema).optional().describe('ui:list'),
+  docsLabel:        z.string().optional().describe('ui:text'),
+  docsHref:         z.string().optional().describe('ui:text'),
+  codeLabel:        z.string().optional().describe('ui:text'),
+  heroImage:        ImageSelectionSchema.optional().describe('ui:image-picker'),
+});
+
+export const HeroSettingsSchema = z.object({
+  showCode: z.boolean().default(true).describe('ui:checkbox'),
 });
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/hero/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/hero/types.ts"
 import { z } from 'zod';
-import { BaseSectionSettingsSchema } from '@/lib/base-schemas';
-import { HeroSchema } from './schema';
+import { HeroSchema, HeroSettingsSchema } from './schema';
 
-export type HeroData = z.infer<typeof HeroSchema>;
-export type HeroSettings = z.infer<typeof BaseSectionSettingsSchema>;
+export type HeroData     = z.infer<typeof HeroSchema>;
+export type HeroSettings = z.infer<typeof HeroSettingsSchema>;
+
+END_OF_FILE_CONTENT
+mkdir -p "src/components/login"
+echo "Creating src/components/login/View.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/login/View.tsx"
+import { useState } from 'react';
+import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { OlonMark } from '@/components/OlonWordmark';
+import type { LoginData, LoginSettings } from './types';
+
+interface LoginViewProps {
+  data: LoginData;
+  settings?: LoginSettings;
+}
+
+const GoogleIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24">
+    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+  </svg>
+);
+
+const GitHubIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+  </svg>
+);
+
+export function Login({ data, settings }: LoginViewProps) {
+  const [showPwd, setShowPwd] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const showOauth = settings?.showOauth ?? true;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setTimeout(() => setLoading(false), 1500);
+  }
+
+  return (
+    <section id="login" className="py-24 px-6 border-t border-border section-anchor">
+      <div className="max-w-4xl mx-auto flex justify-center">
+        <div className="w-full max-w-[360px]">
+
+          {/* Header */}
+          <div className="flex flex-col items-center mb-8 text-center">
+            <OlonMark size={32} className="mb-5" />
+            <h2 className="text-[18px] font-display text-foreground tracking-[-0.02em] mb-1.5" data-jp-field="title">
+              {data.title}
+            </h2>
+            {data.subtitle && (
+              <p className="text-[13px] text-muted-foreground" data-jp-field="subtitle">{data.subtitle}</p>
+            )}
+          </div>
+
+          {/* OAuth */}
+          {showOauth && (
+            <div className="space-y-2 mb-6">
+              {[
+                { label: 'Continue with Google', icon: <GoogleIcon />, id: 'google' },
+                { label: 'Continue with GitHub', icon: <GitHubIcon />, id: 'github' },
+              ].map(({ label, icon, id }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="w-full flex items-center justify-center gap-2.5 h-9 px-4 text-[13px] font-medium text-foreground border border-border rounded-md bg-transparent hover:bg-elevated transition-colors duration-150"
+                >
+                  {icon}
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-[11px] text-muted-foreground font-mono-olon tracking-wide">OR</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          {/* Email form */}
+          <form onSubmit={handleSubmit} className="space-y-3.5">
+            <div>
+              <Label htmlFor="login-email">Email</Label>
+              <Input id="login-email" type="email" placeholder="ada@acme.com" autoComplete="email" required />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label htmlFor="login-password" className="mb-0">Password</Label>
+                {data.forgotHref && (
+                  <a href={data.forgotHref} data-jp-field="forgotHref" className="text-[11px] text-primary-400 hover:text-primary-light transition-colors">
+                    Forgot password?
+                  </a>
+                )}
+              </div>
+              <div className="relative">
+                <Input
+                  id="login-password"
+                  type={showPwd ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowPwd(!showPwd)}
+                >
+                  {showPwd ? <EyeOff size={13} /> : <Eye size={13} />}
+                </button>
+              </div>
+            </div>
+            <Button type="submit" variant="accent" className="w-full" disabled={loading}>
+              {loading ? 'Signing in…' : <><span>Sign in</span><ArrowRight size={14} /></>}
+            </Button>
+          </form>
+
+          {data.signupHref && (
+            <p className="text-center text-[12px] text-muted-foreground mt-6">
+              No account?{' '}
+              <a href={data.signupHref} data-jp-field="signupHref" className="text-primary-light hover:text-primary-200 transition-colors">
+                Request access →
+              </a>
+            </p>
+          )}
+
+          {(data.termsHref || data.privacyHref) && (
+            <p className="text-center text-[11px] text-muted-foreground/60 mt-4">
+              By signing in you agree to our{' '}
+              {data.termsHref && (
+                <a href={data.termsHref} data-jp-field="termsHref" className="hover:text-muted-foreground transition-colors underline underline-offset-2">Terms</a>
+              )}
+              {data.termsHref && data.privacyHref && ' and '}
+              {data.privacyHref && (
+                <a href={data.privacyHref} data-jp-field="privacyHref" className="hover:text-muted-foreground transition-colors underline underline-offset-2">Privacy Policy</a>
+              )}.
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/login/index.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/login/index.ts"
+export * from './View';
+export * from './schema';
+export * from './types';
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/login/schema.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/login/schema.ts"
+import { z } from 'zod';
+import { BaseSectionData } from '@/lib/base-schemas';
+
+export const LoginSchema = BaseSectionData.extend({
+  title:       z.string().describe('ui:text'),
+  subtitle:    z.string().optional().describe('ui:text'),
+  forgotHref:  z.string().optional().describe('ui:text'),
+  signupHref:  z.string().optional().describe('ui:text'),
+  termsHref:   z.string().optional().describe('ui:text'),
+  privacyHref: z.string().optional().describe('ui:text'),
+});
+
+export const LoginSettingsSchema = z.object({
+  showOauth: z.boolean().default(true).describe('ui:checkbox'),
+});
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/login/types.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/login/types.ts"
+import { z } from 'zod';
+import { LoginSchema, LoginSettingsSchema } from './schema';
+
+export type LoginData     = z.infer<typeof LoginSchema>;
+export type LoginSettings = z.infer<typeof LoginSettingsSchema>;
+
+END_OF_FILE_CONTENT
+mkdir -p "src/components/page-hero"
+echo "Creating src/components/page-hero/View.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/page-hero/View.tsx"
+import React from 'react';
+import type { PageHeroData, PageHeroSettings } from './types';
+
+interface PageHeroViewProps {
+  data: PageHeroData;
+  settings?: PageHeroSettings;
+}
+
+export function PageHero({ data }: PageHeroViewProps) {
+  const crumbs = data.breadcrumb ?? [];
+
+  return (
+    <section
+      className="py-14 px-6 border-b border-[var(--local-border)] bg-[var(--local-bg)]"
+      style={{
+        '--local-bg':        'var(--card)',
+        '--local-text':      'var(--foreground)',
+        '--local-text-muted':'var(--muted-foreground)',
+        '--local-border':    'var(--border)',
+      } as React.CSSProperties}
+    >
+      <div className="max-w-4xl mx-auto">
+
+        {/* Breadcrumb */}
+        {crumbs.length > 0 && (
+          <nav className="flex items-center gap-2 font-mono-olon text-xs tracking-label uppercase text-muted-foreground mb-6">
+            {crumbs.map((item, idx) => (
+              <React.Fragment key={item.id ?? `crumb-${idx}`}>
+                {idx > 0 && <span className="text-border-strong select-none">/</span>}
+                <a
+                  href={item.href}
+                  data-jp-item-id={item.id ?? `crumb-${idx}`}
+                  data-jp-item-field="breadcrumb"
+                  className="hover:text-[var(--local-text)] transition-colors"
+                >
+                  {item.label}
+                </a>
+              </React.Fragment>
+            ))}
+          </nav>
+        )}
+
+        {/* Badge */}
+        {data.badge && (
+          <div
+            className="inline-flex items-center font-mono-olon text-xs font-medium tracking-label uppercase text-primary-light bg-primary-900 border border-primary px-3 py-1 rounded-sm mb-5"
+            data-jp-field="badge"
+          >
+            {data.badge}
+          </div>
+        )}
+
+        {/* Title */}
+        <h1
+          className="font-display font-normal text-4xl md:text-5xl leading-tight tracking-display text-[var(--local-text)] mb-1"
+          data-jp-field="title"
+        >
+          {data.title}
+        </h1>
+
+        {/* Title italic accent line */}
+        {data.titleItalic && (
+          <p
+            className="font-display font-normal italic text-4xl md:text-5xl leading-tight tracking-display text-primary-light mb-0"
+            data-jp-field="titleItalic"
+          >
+            {data.titleItalic}
+          </p>
+        )}
+
+        {/* Description */}
+        {data.description && (
+          <p
+            className="text-base text-[var(--local-text-muted)] leading-relaxed max-w-xl mt-5"
+            data-jp-field="description"
+          >
+            {data.description}
+          </p>
+        )}
+
+      </div>
+    </section>
+  );
+}
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/page-hero/index.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/page-hero/index.ts"
+export { PageHero } from './View';
+export { PageHeroSchema } from './schema';
+export type { PageHeroData, PageHeroSettings } from './types';
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/page-hero/schema.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/page-hero/schema.ts"
+import { z } from 'zod';
+import { BaseSectionData, BaseArrayItem } from '@/lib/base-schemas';
+
+const BreadcrumbItemSchema = BaseArrayItem.extend({
+  label: z.string().describe('ui:text'),
+  href:  z.string().describe('ui:text'),
+});
+
+export const PageHeroSchema = BaseSectionData.extend({
+  badge:       z.string().optional().describe('ui:text'),
+  title:       z.string().describe('ui:text'),
+  titleItalic: z.string().optional().describe('ui:text'),
+  description: z.string().optional().describe('ui:textarea'),
+  breadcrumb:  z.array(BreadcrumbItemSchema).optional().describe('ui:list'),
+});
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/page-hero/types.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/page-hero/types.ts"
+import { z } from 'zod';
+import { BaseSectionSettingsSchema } from '@/lib/base-schemas';
+import { PageHeroSchema } from './schema';
+
+export type PageHeroData     = z.infer<typeof PageHeroSchema>;
+export type PageHeroSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
 mkdir -p "src/components/problem-statement"
@@ -5849,125 +8733,11 @@ Add to the tenant's `package.json` and run `npm install`:
 
 ---
 
-## 3. Add CSS to `src/index.css`
+## 3. CSS in `src/index.css`
 
-Two blocks are required — one for the public (visitor) view, one for the editor (studio) view.
+**tenant-alpha:** typography for visitor markdown (`.jp-tiptap-content`) and Studio (`.jp-simple-editor .ProseMirror`) lives in **`src/index.css`**, section **`4b. TIPTAP`** — only `:root` bridge variables (`--theme-text-*`, `--theme-font-*`, `--theme-leading-*`, `--theme-tracking-*`, `--theme-radius-*`, `--foreground`, `--primary`, `--border`, …) so prose tracks **`theme.json`** via the engine.
 
-```css
-/* ==========================================================================
-   TIPTAP — Public content typography (visitor view)
-   ========================================================================== */
-.jp-tiptap-content > * + * { margin-top: 0.75em; }
-
-.jp-tiptap-content h1 { font-size: 2em;    font-weight: 700; line-height: 1.2; margin-top: 1.25em; margin-bottom: 0.25em; }
-.jp-tiptap-content h2 { font-size: 1.5em;  font-weight: 700; line-height: 1.3; margin-top: 1.25em; margin-bottom: 0.25em; }
-.jp-tiptap-content h3 { font-size: 1.25em; font-weight: 600; line-height: 1.4; margin-top: 1.25em; margin-bottom: 0.25em; }
-.jp-tiptap-content h4 { font-size: 1em;    font-weight: 600; line-height: 1.5; margin-top: 1em;    margin-bottom: 0.25em; }
-
-.jp-tiptap-content p  { line-height: 1.7; }
-.jp-tiptap-content strong { font-weight: 700; }
-.jp-tiptap-content em     { font-style: italic; }
-.jp-tiptap-content s      { text-decoration: line-through; }
-
-.jp-tiptap-content a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
-.jp-tiptap-content a:hover { opacity: 0.8; }
-
-.jp-tiptap-content code {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.875em;
-  background: color-mix(in oklch, var(--foreground) 8%, transparent);
-  border-radius: 0.25em;
-  padding: 0.1em 0.35em;
-}
-.jp-tiptap-content pre {
-  background: color-mix(in oklch, var(--background) 60%, black);
-  border-radius: 0.5em;
-  padding: 1em 1.25em;
-  overflow-x: auto;
-}
-.jp-tiptap-content pre code { background: none; padding: 0; }
-
-.jp-tiptap-content ul { list-style-type: disc;    padding-left: 1.625em; }
-.jp-tiptap-content ol { list-style-type: decimal; padding-left: 1.625em; }
-.jp-tiptap-content li { line-height: 1.7; margin-top: 0.25em; }
-.jp-tiptap-content li + li { margin-top: 0.25em; }
-
-.jp-tiptap-content blockquote {
-  border-left: 3px solid var(--border);
-  padding-left: 1em;
-  color: var(--muted-foreground);
-  font-style: italic;
-}
-.jp-tiptap-content hr { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
-.jp-tiptap-content img { max-width: 100%; height: auto; border-radius: 0.5rem; }
-
-/* ==========================================================================
-   TIPTAP / PROSEMIRROR — Editor typography (studio view)
-   ========================================================================== */
-.jp-simple-editor .ProseMirror { outline: none; word-break: break-word; }
-.jp-simple-editor .ProseMirror > * + * { margin-top: 0.75em; }
-
-.jp-simple-editor .ProseMirror h1 { font-size: 2em;    font-weight: 700; line-height: 1.2; margin-top: 1.25em; margin-bottom: 0.25em; }
-.jp-simple-editor .ProseMirror h2 { font-size: 1.5em;  font-weight: 700; line-height: 1.3; margin-top: 1.25em; margin-bottom: 0.25em; }
-.jp-simple-editor .ProseMirror h3 { font-size: 1.25em; font-weight: 600; line-height: 1.4; margin-top: 1.25em; margin-bottom: 0.25em; }
-.jp-simple-editor .ProseMirror h4 { font-size: 1em;    font-weight: 600; line-height: 1.5; margin-top: 1em;    margin-bottom: 0.25em; }
-
-.jp-simple-editor .ProseMirror p  { line-height: 1.7; }
-.jp-simple-editor .ProseMirror strong { font-weight: 700; }
-.jp-simple-editor .ProseMirror em     { font-style: italic; }
-.jp-simple-editor .ProseMirror s      { text-decoration: line-through; }
-
-.jp-simple-editor .ProseMirror a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
-.jp-simple-editor .ProseMirror a:hover { opacity: 0.8; }
-
-.jp-simple-editor .ProseMirror code {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.875em;
-  background: color-mix(in oklch, var(--foreground) 8%, transparent);
-  border-radius: 0.25em;
-  padding: 0.1em 0.35em;
-}
-.jp-simple-editor .ProseMirror pre {
-  background: color-mix(in oklch, var(--background) 60%, black);
-  border-radius: 0.5em;
-  padding: 1em 1.25em;
-  overflow-x: auto;
-}
-.jp-simple-editor .ProseMirror pre code { background: none; padding: 0; }
-
-.jp-simple-editor .ProseMirror ul { list-style-type: disc;    padding-left: 1.625em; }
-.jp-simple-editor .ProseMirror ol { list-style-type: decimal; padding-left: 1.625em; }
-.jp-simple-editor .ProseMirror li { line-height: 1.7; margin-top: 0.25em; }
-.jp-simple-editor .ProseMirror li + li { margin-top: 0.25em; }
-
-.jp-simple-editor .ProseMirror blockquote {
-  border-left: 3px solid var(--border);
-  padding-left: 1em;
-  color: var(--muted-foreground);
-  font-style: italic;
-}
-.jp-simple-editor .ProseMirror hr { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
-
-.jp-simple-editor .ProseMirror img { max-width: 100%; height: auto; border-radius: 0.5rem; }
-.jp-simple-editor .ProseMirror img[data-uploading="true"] {
-  opacity: 0.6;
-  filter: grayscale(0.25);
-  outline: 2px dashed rgb(59 130 246 / 0.7);
-  outline-offset: 2px;
-}
-.jp-simple-editor .ProseMirror img[data-upload-error="true"] {
-  outline: 2px solid rgb(239 68 68 / 0.8);
-  outline-offset: 2px;
-}
-.jp-simple-editor .ProseMirror p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  color: var(--muted-foreground);
-  opacity: 0.5;
-  pointer-events: none;
-  float: left;
-  height: 0;
-}
-```
+When copying this capsule into another tenant, copy that block from **tenant-alpha** `index.css` (or ensure your tenant’s global CSS exposes the same semantic vars).
 
 ---
 
@@ -6107,57 +8877,131 @@ function extractToc(markdown: string): TocEntry[] {
   return entries;
 }
 
+/** Plain text from react-markdown heading children — must match extractToc slugify input semantics. */
+function mdChildrenToPlainText(node: React.ReactNode): string {
+  if (node == null || typeof node === 'boolean') return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(mdChildrenToPlainText).join('');
+  if (React.isValidElement(node)) {
+    const ch = (node.props as { children?: React.ReactNode }).children;
+    if (ch != null) return mdChildrenToPlainText(ch);
+  }
+  return '';
+}
+
+function readScrollSpyOffsetPx(): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--theme-header-h').trim();
+  const n = parseFloat(raw);
+  const header = Number.isFinite(n) ? n : 56;
+  return header + 24;
+}
+
+/** Last TOC id whose heading is at or above the activation line (viewport top + offset). */
+function computeActiveTocId(ids: readonly string[], offsetPx: number): string {
+  let active = '';
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (el.getBoundingClientRect().top <= offsetPx) active = id;
+  }
+  return active;
+}
+
+/** Studio: ProseMirror headings usually have no `id`; match slug(text) to TOC ids in DOM order. */
+function computeActiveTocIdFromHeadings(
+  container: HTMLElement,
+  toc: readonly TocEntry[],
+  offsetPx: number
+): string {
+  const allowed = new Set(toc.map((e) => e.id));
+  let active = '';
+  container.querySelectorAll<HTMLElement>('h2, h3').forEach((h) => {
+    const id = slugify(h.textContent ?? '');
+    if (!allowed.has(id)) return;
+    if (h.getBoundingClientRect().top <= offsetPx) active = id;
+  });
+  return active;
+}
+
 // ── Sidebar (always rendered, both in Studio and Public) ──────────────────────
 
 const DocsSidebar: React.FC<{
   toc: TocEntry[];
   activeId: string;
   onNav: (id: string) => void;
-}> = ({ toc, activeId, onNav }) => (
-  <aside className="w-[200px] flex-shrink-0 sticky top-[72px] self-start hidden lg:block">
-    <div className="text-[9px] font-mono font-bold uppercase tracking-[.14em] text-[var(--local-toolbar-text)] mb-3 px-3">
-      On this page
-    </div>
-    <nav className="flex flex-col">
-      {toc.map((entry) => (
-        <button
-          key={entry.id}
-          type="button"
-          onClick={() => onNav(entry.id)}
-          className={[
-            'text-left rounded-[var(--local-radius-sm)] transition-all duration-150 no-underline',
-            entry.level === 3
-              ? 'pl-[22px] pr-3 py-1.5 text-[0.72rem] ml-0.5'
-              : 'px-3 py-2 font-bold text-[0.76rem]',
-            activeId === entry.id
-              ? entry.level === 2
-                ? 'text-[var(--local-primary)] bg-[var(--local-toolbar-hover-bg)] border-l-2 border-[var(--local-primary)] pl-[10px]'
-                : 'text-[var(--local-primary)] font-semibold bg-[var(--local-toolbar-active-bg)]'
-              : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[var(--local-toolbar-hover-bg)]',
-          ].join(' ')}
+}> = ({ toc, activeId, onNav }) => {
+  const navScrollRef = React.useRef<HTMLElement>(null);
+
+  React.useEffect(() => {
+    if (!activeId || !navScrollRef.current) return;
+    const btn = navScrollRef.current.querySelector<HTMLButtonElement>(
+      `button[data-toc-id="${CSS.escape(activeId)}"]`
+    );
+    btn?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [activeId, toc]);
+
+  return (
+    <aside
+      className="hidden w-[min(240px,28vw)] flex-shrink-0 flex-col lg:flex lg:sticky lg:self-start"
+      style={{
+        top: 'calc(var(--theme-header-h, 56px) + 1rem)',
+        maxHeight: 'calc(100vh - var(--theme-header-h, 56px) - 4rem)',
+      }}
+    >
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--local-radius-md)] border border-[var(--local-border)] bg-[color-mix(in_srgb,var(--local-toolbar-bg)_40%,transparent)]">
+        <div className="shrink-0 border-b border-[var(--local-border)] px-3 py-2.5">
+          <div className="text-[9px] font-mono font-bold uppercase tracking-[0.14em] text-[var(--local-toolbar-text)]">
+            On this page
+          </div>
+        </div>
+        <nav
+          ref={navScrollRef}
+          className="jp-docs-toc-scroll flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-y-contain px-1.5 py-2"
+          aria-label="Table of contents"
         >
-          {entry.level === 3 && (
-            <span
-              className={`inline-block w-[5px] h-[5px] rounded-full mr-2 align-middle mb-px flex-shrink-0 ${
-                activeId === entry.id ? 'bg-[var(--local-primary)]' : 'bg-[var(--local-border)]'
-              }`}
-            />
-          )}
-          {entry.text}
-        </button>
-      ))}
-    </nav>
-    <div className="mt-5 pt-4 border-t border-[var(--local-border)]">
-      <button
-        type="button"
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        className="flex items-center gap-2 font-mono text-[0.58rem] uppercase tracking-widest text-[var(--local-text-muted)] hover:text-[var(--local-primary)] transition-colors px-3"
-      >
-        ↑ Back to top
-      </button>
-    </div>
-  </aside>
-);
+          {toc.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              data-toc-id={entry.id}
+              onClick={() => onNav(entry.id)}
+              className={[
+                'text-left rounded-[var(--local-radius-sm)] transition-colors duration-150 no-underline',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--local-bg)]',
+                entry.level === 3
+                  ? 'pl-[22px] pr-2 py-1.5 text-[0.72rem] ml-0.5'
+                  : 'px-2.5 py-2 font-bold text-[0.76rem]',
+                activeId === entry.id
+                  ? entry.level === 2
+                    ? 'text-[var(--local-primary)] bg-[var(--local-toolbar-hover-bg)] border-l-2 border-[var(--local-primary)] pl-[8px]'
+                    : 'text-[var(--local-primary)] font-semibold bg-[var(--local-toolbar-active-bg)]'
+                  : 'text-[var(--local-text-muted)] hover:text-[var(--local-text)] hover:bg-[var(--local-toolbar-hover-bg)]',
+              ].join(' ')}
+            >
+              {entry.level === 3 && (
+                <span
+                  className={`mr-2 inline-block h-[5px] w-[5px] flex-shrink-0 rounded-full align-middle mb-px ${
+                    activeId === entry.id ? 'bg-[var(--local-primary)]' : 'bg-[var(--local-border)]'
+                  }`}
+                />
+              )}
+              <span className="line-clamp-3">{entry.text}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="shrink-0 border-t border-[var(--local-border)] px-2 py-2.5">
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex w-full items-center gap-2 px-2 font-mono text-[0.58rem] uppercase tracking-widest text-[var(--local-text-muted)] transition-colors hover:text-[var(--local-primary)]"
+          >
+            ↑ Back to top
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+};
 
 // ── UI primitives ─────────────────────────────────────────────────────────────
 
@@ -6815,10 +9659,14 @@ type HeadingProps = React.HTMLAttributes<HTMLHeadingElement> & ExtraProps;
 const mdHeading =
   (level: 2 | 3) =>
   ({ children, node: _node, ...rest }: HeadingProps) => {
-    const text = String(children ?? '');
-    const id = slugify(text);
+    const plain = mdChildrenToPlainText(children);
+    const id = slugify(plain);
     const Tag = `h${level}` as 'h2' | 'h3';
-    return <Tag id={id} {...rest}>{children}</Tag>;
+    return (
+      <Tag id={id} {...rest}>
+        {children}
+      </Tag>
+    );
   };
 
 const MD_COMPONENTS: Components = {
@@ -6827,7 +9675,7 @@ const MD_COMPONENTS: Components = {
 };
 
 const PublicTiptapContent: React.FC<{ content: string }> = ({ content }) => (
-  <article className="jp-tiptap-content" data-jp-field="content">
+  <article className="jp-tiptap-content max-w-none" data-jp-field="content">
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeSanitize]}
@@ -6848,33 +9696,34 @@ export const Tiptap: React.FC<{ data: TiptapData; settings?: TiptapSettings }> =
   const [activeId, setActiveId] = React.useState<string>('');
   const contentRef = React.useRef<HTMLDivElement | null>(null);
 
-  // IntersectionObserver to track active heading (public mode and studio mode)
+  // Scroll-spy: last TOC heading at/above viewport line (public: id on headings; Studio: slug from text).
   React.useEffect(() => {
     if (toc.length === 0) return;
     const ids = toc.map((e) => e.id);
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible.length > 0) {
-          const id = visible[0].target.getAttribute('id') ?? '';
-          if (id) setActiveId(id);
-        }
-      },
-      { rootMargin: '-60px 0px -60% 0px', threshold: 0 }
-    );
-    const scan = () => {
-      ids.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) observer.observe(el);
-      });
+    let raf = 0;
+    const tick = () => {
+      const offset = readScrollSpyOffsetPx();
+      const next = isStudio
+        ? contentRef.current
+          ? computeActiveTocIdFromHeadings(contentRef.current, toc, offset)
+          : ''
+        : computeActiveTocId(ids, offset);
+      if (next) setActiveId((prev) => (prev === next ? prev : next));
     };
-    // Delay slightly so the DOM is ready (especially in Studio with Tiptap rendering)
-    const t = setTimeout(scan, 300);
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(tick);
+    };
+    const t = setTimeout(() => {
+      tick();
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll, { passive: true });
+    }, 100);
     return () => {
       clearTimeout(t);
-      observer.disconnect();
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
     };
   }, [toc, isStudio]);
 
@@ -6919,7 +9768,7 @@ export const Tiptap: React.FC<{ data: TiptapData; settings?: TiptapSettings }> =
       className="w-full py-12 bg-[var(--local-bg)]"
     >
       <div className="container mx-auto px-4 max-w-6xl">
-        <div className="flex gap-8">
+        <div className="flex gap-8 py-12">
           {toc.length > 0 && (
             <DocsSidebar toc={toc} activeId={activeId} onNav={handleNav} />
           )}
@@ -7054,194 +9903,148 @@ export function OlonLogo({
 END_OF_FILE_CONTENT
 echo "Creating src/components/ui/badge.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ui/badge.tsx"
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
 
-export type BadgeVariant = "default" | "secondary" | "outline" | "brand"
+const badgeVariants = cva(
+  'inline-flex items-center px-2.5 py-0.5 text-xs font-medium transition-colors',
+  {
+    variants: {
+      variant: {
+        default:  'bg-primary-900 text-primary-light border border-primary rounded-sm',
+        outline:  'bg-elevated text-muted-foreground border border-border rounded-sm',
+        accent:   'text-accent border border-border-strong rounded-sm',
+        solid:    'bg-primary text-primary-foreground rounded-sm',
+        pill:     'bg-elevated text-muted-foreground border border-border rounded-full gap-1.5',
+      },
+    },
+    defaultVariants: { variant: 'default' },
+  }
+)
 
-const variantClasses: Record<BadgeVariant, string> = {
-  default:
-    "bg-primary/10 border border-primary/30 text-primary",
-  secondary:
-    "bg-muted border border-border text-muted-foreground",
-  outline:
-    "bg-transparent border border-border text-muted-foreground",
-  brand:
-    "bg-primary/10 border border-primary/30 text-primary font-mono",
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLSpanElement>,
+    VariantProps<typeof badgeVariants> {}
+
+function Badge({ className, variant, ...props }: BadgeProps) {
+  return <span className={cn(badgeVariants({ variant }), className)} {...props} />
 }
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: BadgeVariant
-}
-
-function Badge({ className, variant = "default", ...props }: BadgeProps) {
-  return (
-    <span
-      data-slot="badge"
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
-        variantClasses[variant ?? "default"],
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-export { Badge }
+export { Badge, badgeVariants }
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/ui/button.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ui/button.tsx"
-import * as React from "react"
-import { Slot } from "radix-ui"
-import { cn } from "@/lib/utils"
+import * as React from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
 
-export type ButtonVariant = "default" | "outline" | "ghost" | "secondary"
-export type ButtonSize = "default" | "sm" | "lg" | "icon"
-
-const variantClasses: Record<ButtonVariant, string> = {
-  default:
-    "bg-primary text-primary-foreground shadow hover:brightness-110 active:scale-[0.98]",
-  outline:
-    "border border-border bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
-  ghost:
-    "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
-  secondary:
-    "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-}
-
-const sizeClasses: Record<ButtonSize, string> = {
-  default: "h-10 px-5 py-2.5 text-sm",
-  sm: "h-8 px-3 py-1.5 text-xs rounded-md",
-  lg: "h-11 px-7 py-3 text-base",
-  icon: "h-9 w-9",
-}
+const buttonVariants = cva(
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40 shrink-0',
+  {
+    variants: {
+      variant: {
+        default:     'bg-primary text-primary-foreground hover:opacity-90 active:scale-[0.98]',
+        secondary:   'bg-transparent text-primary-light border border-primary hover:bg-primary-900 active:scale-[0.98]',
+        outline:     'bg-transparent text-foreground border border-border hover:bg-elevated active:scale-[0.98]',
+        ghost:       'bg-transparent text-muted-foreground hover:text-foreground hover:bg-elevated active:scale-[0.98]',
+        accent:      'bg-accent text-accent-foreground hover:opacity-90 active:scale-[0.98]',
+        destructive: 'bg-destructive text-destructive-foreground border border-destructive-border hover:opacity-90 active:scale-[0.98]',
+      },
+      size: {
+        default: 'h-9 px-4 text-sm rounded-md',
+        sm:      'h-8 px-3.5 text-sm rounded-md',
+        lg:      'h-10 px-5 text-base rounded-md',
+        icon:    'h-9 w-9 rounded-md',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'default',
+    },
+  }
+)
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant
-  size?: ButtonSize
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
   asChild?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  (
-    {
-      className,
-      variant = "default",
-      size = "default",
-      asChild = false,
-      ...props
-    },
-    ref
-  ) => {
-    const Comp = asChild ? Slot.Root : "button"
+  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
+    const classes = cn(buttonVariants({ variant, size, className }))
+
+    // asChild: clone the single child element, merging our classes onto it
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children as React.ReactElement<{ className?: string }>, {
+        className: cn(classes, (children as React.ReactElement<{ className?: string }>).props.className),
+      })
+    }
+
     return (
-      <Comp
-        data-slot="button"
-        ref={ref}
-        className={cn(
-          "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-all duration-200",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-          "disabled:pointer-events-none disabled:opacity-50",
-          "[&_svg]:pointer-events-none [&_svg]:shrink-0",
-          variantClasses[variant ?? "default"],
-          sizeClasses[size ?? "default"],
-          className
-        )}
-        {...props}
-      />
+      <button className={classes} ref={ref} {...props}>
+        {children}
+      </button>
     )
   }
 )
-Button.displayName = "Button"
+Button.displayName = 'Button'
 
-export { Button }
+export { Button, buttonVariants }
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/ui/card.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ui/card.tsx"
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from 'react'
+import { cn } from '@/lib/utils'
 
-function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
+const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
     <div
-      data-slot="card"
-      className={cn(
-        "rounded-xl border border-border bg-card text-card-foreground",
-        className
-      )}
+      ref={ref}
+      className={cn('rounded-lg border border-border bg-card text-card-foreground', className)}
       {...props}
     />
   )
-}
+)
+Card.displayName = 'Card'
 
-function CardHeader({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      data-slot="card-header"
-      className={cn("flex flex-col gap-1.5 p-6", className)}
-      {...props}
-    />
+const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn('flex flex-col gap-1.5 p-5', className)} {...props} />
   )
-}
+)
+CardHeader.displayName = 'CardHeader'
 
-function CardTitle({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLHeadingElement>) {
-  return (
-    <h3
-      data-slot="card-title"
-      className={cn("text-base font-semibold leading-snug text-foreground", className)}
-      {...props}
-    />
+const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
+  ({ className, ...props }, ref) => (
+    <h3 ref={ref} className={cn('text-sm font-medium text-foreground leading-tight', className)} {...props} />
   )
-}
+)
+CardTitle.displayName = 'CardTitle'
 
-function CardDescription({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLParagraphElement>) {
-  return (
-    <p
-      data-slot="card-description"
-      className={cn("text-sm text-muted-foreground leading-relaxed", className)}
-      {...props}
-    />
+const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+  ({ className, ...props }, ref) => (
+    <p ref={ref} className={cn('text-xs text-muted-foreground leading-relaxed', className)} {...props} />
   )
-}
+)
+CardDescription.displayName = 'CardDescription'
 
-function CardContent({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      data-slot="card-content"
-      className={cn("p-6 pt-0", className)}
-      {...props}
-    />
+const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn('px-5 pb-5', className)} {...props} />
   )
-}
+)
+CardContent.displayName = 'CardContent'
 
-function CardFooter({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      data-slot="card-footer"
-      className={cn("flex items-center p-6 pt-0", className)}
-      {...props}
-    />
+const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn('flex items-center px-5 pb-5', className)} {...props} />
   )
-}
+)
+CardFooter.displayName = 'CardFooter'
 
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 
@@ -7289,59 +10092,52 @@ export { Checkbox }
 END_OF_FILE_CONTENT
 echo "Creating src/components/ui/input.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ui/input.tsx"
-import * as React from "react"
+import * as React from 'react'
+import { cn } from '@/lib/utils'
 
-import { cn } from "@/lib/utils"
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
-  return (
-    <input
-      type={type}
-      data-slot="input"
-      className={cn(
-        "dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 disabled:bg-input/50 dark:disabled:bg-input/80 h-8 rounded-lg border bg-transparent px-2.5 py-1 text-base transition-colors file:h-6 file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 md:text-sm file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
-        className
-      )}
-      {...props}
-    />
-  )
-}
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, ...props }, ref) => {
+    return (
+      <input
+        type={type}
+        className={cn(
+          'flex h-9 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground',
+          'focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+          'transition-colors duration-150',
+          className
+        )}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+Input.displayName = 'Input'
 
 export { Input }
-
-
-
-
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/ui/label.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ui/label.tsx"
-import * as React from "react"
-import { Label as LabelPrimitive } from "radix-ui"
+import * as React from 'react'
+import { cn } from '@/lib/utils'
 
-import { cn } from "@/lib/utils"
-
-function Label({
-  className,
-  ...props
-}: React.ComponentProps<typeof LabelPrimitive.Root>) {
-  return (
-    <LabelPrimitive.Root
-      data-slot="label"
-      className={cn(
-        "gap-2 text-sm leading-none font-medium group-data-[disabled=true]:opacity-50 peer-disabled:opacity-50 flex items-center select-none group-data-[disabled=true]:pointer-events-none peer-disabled:cursor-not-allowed",
-        className
-      )}
-      {...props}
-    />
-  )
-}
+const Label = React.forwardRef<
+  HTMLLabelElement,
+  React.LabelHTMLAttributes<HTMLLabelElement>
+>(({ className, ...props }, ref) => (
+  <label
+    ref={ref}
+    className={cn('block text-xs font-medium text-foreground mb-1.5 cursor-default', className)}
+    {...props}
+  />
+))
+Label.displayName = 'Label'
 
 export { Label }
-
-
-
-
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/ui/select.tsx..."
@@ -7732,38 +10528,26 @@ export {
 END_OF_FILE_CONTENT
 echo "Creating src/components/ui/separator.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ui/separator.tsx"
-"use client"
+import * as React from 'react'
+import { cn } from '@/lib/utils'
 
-import * as React from "react"
-import { Separator as SeparatorPrimitive } from "radix-ui"
-
-import { cn } from "@/lib/utils"
-
-function Separator({
-  className,
-  orientation = "horizontal",
-  decorative = true,
-  ...props
-}: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
-  return (
-    <SeparatorPrimitive.Root
-      data-slot="separator"
-      decorative={decorative}
-      orientation={orientation}
-      className={cn(
-        "bg-border shrink-0 data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch",
-        className
-      )}
-      {...props}
-    />
-  )
-}
+const Separator = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { orientation?: 'horizontal' | 'vertical' }
+>(({ className, orientation = 'horizontal', ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      'shrink-0 bg-border',
+      orientation === 'horizontal' ? 'h-[0.5px] w-full' : 'h-full w-[0.5px]',
+      className
+    )}
+    {...props}
+  />
+))
+Separator.displayName = 'Separator'
 
 export { Separator }
-
-
-
-
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/ui/skeleton.tsx..."
@@ -7819,30 +10603,53 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/menu.json"
 {
   "main": [
     {
-      "label": "The Problem",
-      "href": "#problem"
+      "label": "Platform",
+      "href": "/platform",
+      "children": [
+        {
+          "label": "Overview",
+          "href": "/platform/overview"
+        },
+        {
+          "label": "Architecture",
+          "href": "/platform/architecture"
+        },
+        {
+          "label": "Security",
+          "href": "/platform/security"
+        },
+        {
+          "label": "Integrations",
+          "href": "/platform/integrations"
+        },
+        {
+          "label": "Roadmap",
+          "href": "/platform/roadmap"
+        }
+      ]
     },
     {
-      "label": "Architecture",
-      "href": "#architecture"
+      "label": "Solutions",
+      "href": "/solutions"
     },
     {
-      "label": "Why",
-      "href": "#why"
+      "label": "Pricing",
+      "href": "/pricing"
     },
     {
-      "label": "DX",
-      "href": "#devex"
+      "label": "Resources",
+      "href": "/resources"
     }
   ]
 }
 END_OF_FILE_CONTENT
+# SKIP: src/data/config/menu.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/config/site.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
 {
   "identity": {
-    "title": "JsonPages",
-    "logoUrl": "/logo.svg"
+    "title": "OlonJS",
+    "logoUrl": "/brand/mark/olon-mark-dark.svg"
   },
   "pages": [
     {
@@ -7850,16 +10657,8 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
       "label": "Home"
     },
     {
-      "slug": "docs",
-      "label": "Docs"
-    },
-    {
-      "slug": "architecture",
-      "label": "Architecture"
-    },
-    {
-      "slug": "usage",
-      "label": "Usage"
+      "slug": "design-system",
+      "label": "Design System"
     }
   ],
   "header": {
@@ -7867,30 +10666,50 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
     "type": "header",
     "data": {
       "logoText": "Olon",
-      "logoHighlight": "JS",
-      "logoIconText": "",
-      "badge": "v1.4.0",
+      "badge": "",
       "links": [
         {
-          "label": "The Problem",
-          "href": "#problem"
+          "label": "Platform",
+          "href": "/platform",
+          "children": [
+            {
+              "label": "Overview",
+              "href": "/platform/overview"
+            },
+            {
+              "label": "Architecture",
+              "href": "/platform/architecture"
+            },
+            {
+              "label": "Security",
+              "href": "/platform/security"
+            },
+            {
+              "label": "Integrations",
+              "href": "/platform/integrations"
+            },
+            {
+              "label": "Roadmap",
+              "href": "/platform/roadmap"
+            }
+          ]
         },
         {
-          "label": "Architecture",
-          "href": "#architecture"
+          "label": "Solutions",
+          "href": "/solutions"
         },
         {
-          "label": "Why",
-          "href": "#why"
+          "label": "Pricing",
+          "href": "/pricing"
         },
         {
-          "label": "DX",
-          "href": "#devex"
+          "label": "Resources",
+          "href": "/resources"
         }
-      ]
-    },
-    "settings": {
-      "sticky": true
+      ],
+      "ctaLabel": "Get started →",
+      "ctaHref": "#contact",
+      "signinHref": "#login"
     }
   },
   "footer": {
@@ -7898,8 +10717,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
     "type": "footer",
     "data": {
       "brandText": "Olon",
-      "brandHighlight": "JS",
-      "copyright": "© 2026 OlonJS · Guido Serio",
+      "copyright": "© 2025 OlonJS · v1.4 · Holon",
       "links": [
         {
           "label": "Docs",
@@ -7907,13 +10725,18 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
         },
         {
           "label": "GitHub",
-          "href": "https://github.com/olonjs/npm-jpcore"
+          "href": "#"
         },
         {
-          "label": "MIT License",
-          "href": "https://github.com/olonjs/npm-jpcore/blob/main/LICENSE"
+          "label": "Privacy",
+          "href": "#"
+        },
+        {
+          "label": "Terms",
+          "href": "#"
         }
-      ]
+      ],
+      "designSystemHref": "/design-system"
     },
     "settings": {
       "showLogo": true
@@ -7921,38 +10744,206 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
   }
 }
 END_OF_FILE_CONTENT
+# SKIP: src/data/config/site.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/config/theme.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/config/theme.json"
 {
   "name": "Olon",
   "tokens": {
     "colors": {
-      "primary": "#1763FF",
-      "secondary": "#0F52E0",
-      "accent": "#84ABFF",
-      "background": "#0d1117",
-      "surface": "#0d1421",
-      "surfaceAlt": "#141b24",
-      "text": "#c8d6e8",
-      "textMuted": "#8fa3c4",
-      "border": "#253044"
+      "background": "#0B0907",
+      "card": "#130F0D",
+      "elevated": "#1E1814",
+      "overlay": "#241D17",
+      "popover": "#1A1410",
+      "popover-foreground": "#F2EDE6",
+      "foreground": "#F2EDE6",
+      "card-foreground": "#F2EDE6",
+      "muted-foreground": "#9A8D80",
+      "placeholder": "#5C5248",
+      "primary": "#5B3F9A",
+      "primary-foreground": "#EDE8F8",
+      "primary-light": "#B8A4E0",
+      "primary-dark": "#3D2770",
+      "primary-50": "#EDE8F8",
+      "primary-100": "#CEC1F0",
+      "primary-200": "#B8A4E0",
+      "primary-300": "#A48ED5",
+      "primary-400": "#8B6FC6",
+      "primary-500": "#7254B0",
+      "primary-600": "#5B3F9A",
+      "primary-700": "#4C3482",
+      "primary-800": "#3D2770",
+      "primary-900": "#271852",
+      "accent": "#E2D5B0",
+      "accent-foreground": "#0B0907",
+      "secondary": "#1E1814",
+      "secondary-foreground": "#F2EDE6",
+      "muted": "#1E1814",
+      "border": "#2E271F",
+      "border-strong": "#4A3D30",
+      "input": "#2E271F",
+      "ring": "#5B3F9A",
+      "destructive": "#7F1D1D",
+      "destructive-foreground": "#FCA5A5",
+      "destructive-border": "#991B1B",
+      "destructive-ring": "#EF4444",
+      "success": "#14532D",
+      "success-foreground": "#86EFAC",
+      "success-border": "#166534",
+      "success-indicator": "#22C55E",
+      "warning": "#78350F",
+      "warning-foreground": "#FCD34D",
+      "warning-border": "#92400E",
+      "info": "#1E3A5F",
+      "info-foreground": "#93C5FD",
+      "info-border": "#1E40AF"
+    },
+    "modes": {
+      "light": {
+        "colors": {
+          "background": "#F2EDE6",
+          "card": "#FFFFFF",
+          "elevated": "#F5F2EE",
+          "overlay": "#EDE9E3",
+          "popover": "#FFFFFF",
+          "popover-foreground": "#1A1410",
+          "foreground": "#1A1410",
+          "card-foreground": "#1A1410",
+          "muted-foreground": "#6B6058",
+          "placeholder": "#A89E96",
+          "primary": "#5B3F9A",
+          "primary-foreground": "#FAFAF8",
+          "primary-light": "#7254B0",
+          "primary-dark": "#3D2770",
+          "primary-50": "#EDE8F8",
+          "primary-100": "#CEC1F0",
+          "primary-200": "#B8A4E0",
+          "primary-300": "#A48ED5",
+          "primary-400": "#8B6FC6",
+          "primary-500": "#7254B0",
+          "primary-600": "#5B3F9A",
+          "primary-700": "#4C3482",
+          "primary-800": "#3D2770",
+          "primary-900": "#271852",
+          "accent": "#2E271F",
+          "accent-foreground": "#FFFFFF",
+          "secondary": "#F5F2EE",
+          "secondary-foreground": "#1A1410",
+          "muted": "#F5F2EE",
+          "border": "#DDD8D2",
+          "border-strong": "#C4BEB8",
+          "input": "#DDD8D2",
+          "ring": "#5B3F9A",
+          "destructive": "#FEF2F2",
+          "destructive-foreground": "#991B1B",
+          "destructive-border": "#FECACA",
+          "destructive-ring": "#EF4444",
+          "success": "#F0FDF4",
+          "success-foreground": "#166534",
+          "success-border": "#BBF7D0",
+          "success-indicator": "#16A34A",
+          "warning": "#FFFBEB",
+          "warning-foreground": "#92400E",
+          "warning-border": "#FDE68A",
+          "info": "#EFF6FF",
+          "info-foreground": "#1E40AF",
+          "info-border": "#BFDBFE"
+        }
+      }
     },
     "typography": {
       "fontFamily": {
-        "primary": "'Instrument Sans', Helvetica, Arial, sans-serif",
-        "mono": "'JetBrains Mono', 'Fira Code', monospace",
-        "display": "'Instrument Sans', Helvetica, Arial, sans-serif"
+        "primary": "'Geist', 'Geist Fallback', system-ui, sans-serif",
+        "mono": "'Geist Mono', 'Geist Mono Fallback', monospace",
+        "display": "'Merriweather Variable', Georgia, serif"
+      },
+      "wordmark": {
+        "fontFamily": "'Merriweather Variable', sans-serif",
+        "weight": "500",
+        "width": "112"
+      },
+      "scale": {
+        "xs": "11px",
+        "sm": "13px",
+        "base": "1rem",
+        "md": "1.125rem",
+        "lg": "1.25rem",
+        "xl": "1.5rem",
+        "2xl": "1.625rem",
+        "3xl": "1.75rem",
+        "4xl": "2rem",
+        "5xl": "2.5rem",
+        "6xl": "3rem",
+        "7xl": "4.5rem"
+      },
+      "tracking": {
+        "tight": "-0.03em",
+        "display": "-0.035em",
+        "normal": "0em",
+        "wide": "0.04em",
+        "label": "0.12em"
+      },
+      "leading": {
+        "none": "1",
+        "tight": "1.2",
+        "snug": "1.35",
+        "normal": "1.65",
+        "relaxed": "1.75"
       }
     },
     "borderRadius": {
-      "sm": "0.25rem",
-      "md": "0.5rem",
-      "lg": "0.75rem"
+      "xl": "16px",
+      "lg": "12px",
+      "md": "8px",
+      "sm": "4px",
+      "full": "9999px"
+    },
+    "spacing": {
+      "container-max": "1152px",
+      "section-y": "96px",
+      "header-h": "56px",
+      "sidebar-w": "240px"
+    },
+    "zIndex": {
+      "base": "0",
+      "elevated": "10",
+      "dropdown": "100",
+      "sticky": "200",
+      "overlay": "300",
+      "modal": "400",
+      "toast": "500"
     }
   }
 }
 END_OF_FILE_CONTENT
+# SKIP: src/data/config/theme.json:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/data/pages"
+echo "Creating src/data/pages/design-system.json..."
+cat << 'END_OF_FILE_CONTENT' > "src/data/pages/design-system.json"
+{
+  "id": "design-system-page",
+  "slug": "design-system",
+  "global-header": false,
+  "meta": {
+    "title": "Olon Design System — Design Language",
+    "description": "Token reference, color system, typography, components and brand identity for the OlonJS design language."
+  },
+  "sections": [
+   
+    {
+      "id": "ds-main",
+      "type": "design-system",
+      "data": {
+        "title": "Olon"
+      },
+      "settings": {}
+    }
+  ]
+}
+
+END_OF_FILE_CONTENT
+# SKIP: src/data/pages/design-system.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/pages/docs.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/pages/docs.json"
 {
@@ -7967,7 +10958,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/docs.json"
       "id": "docs-main",
       "type": "tiptap",
       "data": {
-        "content": "# 📐 OlonJS Architecture Specifications v1.3\n\n**Status:** Mandatory Standard\\\n**Version:** 1.3.0 (Sovereign Core Edition — Architecture + Studio/ICE UX, Path-Deterministic Nested Editing)\\\n**Target:** Senior Architects / AI Agents / Enterprise Governance\n\n**Scope v1.3:** This edition preserves the complete v1.2 architecture (MTRP, JSP, TBP, CIP, ECIP, JAP + Studio/ICE UX contract: IDAC, TOCC, BSDS, ASC, JEB + Tenant Type & Code-Generation Annex) as a **faithful superset**, and adds strict path-based/nested-array behavior for Studio selection and Inspector expansion.\\\n**Scope note (breaking):** In strict v1.3 Studio semantics, the legacy flat protocol (`itemField` / `itemId`) is removed in favor of `itemPath` (root-to-leaf path segments).\n\n---\n\n## 1. 📐 Modular Type Registry Pattern (MTRP) v1.2\n\n**Objective:** Establish a strictly typed, open-ended protocol for extending content data structures where the **Core Engine** is the orchestrator and the **Tenant** is the provider.\n\n### 1.1 The Sovereign Dependency Inversion\n\nThe **Core** defines the empty `SectionDataRegistry`. The **Tenant** \"injects\" its specific definitions using **Module Augmentation**. This allows the Core to be distributed as a compiled NPM package while remaining aware of Tenant-specific types at compile-time.\n\n### 1.2 Technical Implementation (`@olonjs/core/kernel`)\n\n```typescript\nexport interface SectionDataRegistry {} // Augmented by Tenant\nexport interface SectionSettingsRegistry {} // Augmented by Tenant\n\nexport interface BaseSection<K extends keyof SectionDataRegistry> {\n  id: string;\n  type: K;\n  data: SectionDataRegistry[K];\n  settings?: K extends keyof SectionSettingsRegistry\n    ? SectionSettingsRegistry[K]\n    : BaseSectionSettings;\n}\n\nexport type Section = {\n  [K in keyof SectionDataRegistry]: BaseSection<K>\n}[keyof SectionDataRegistry];\n```\n\n**SectionType:** Core exports (or Tenant infers) `SectionType` as `keyof SectionDataRegistry`. After Tenant module augmentation, this is the union of all section type keys (e.g. `'header' | 'footer' | 'hero' | ...`). The Tenant uses this type for the ComponentRegistry and SECTION_SCHEMAS keys.\n\n**Perché servono:** Il Core deve poter renderizzare section senza conoscere i tipi concreti a compile-time; il Tenant deve poter aggiungere nuovi tipi senza modificare il Core. I registry vuoti + module augmentation permettono di distribuire Core come pacchetto NPM e mantenere type-safety end-to-end (Section, registry, config). Senza MTRP, ogni nuovo tipo richiederebbe cambi nel Core o tipi deboli (`any`).\n\n---\n\n## 2. 📐 JsonPages Site Protocol (JSP) v1.8\n\n**Objective:** Define the deterministic file system and the **Sovereign Projection Engine** (CLI).\n\n### 2.1 The File System Ontology (The Silo Contract)\n\nEvery site must reside in an isolated directory. Global Governance is physically separated from Local Content.\n\n- `/config/site.json` — Global Identity & Reserved System Blocks (Header/Footer). See Appendix A for typed shape.\n- `/config/menu.json` — Navigation Tree (SSOT for System Header). See Appendix A.\n- `/config/theme.json` — Theme tokens (optional but recommended). See Appendix A.\n- `/pages/[slug].json` — Local Body Content per page. See Appendix A (PageConfig).\n\n**Application path convention:** The runtime app typically imports these via an alias (e.g. `@/data/config/` and `@/data/pages/`). The physical silo may be `src/data/config/` and `src/data/pages/` so that `site.json`, `menu.json`, `theme.json` live under `src/data/config/`, and page JSONs under `src/data/pages/`. The CLI or projection script may use `/config/` and `/pages/` at repo root; the **contract** is that the app receives **siteConfig**, **menuConfig**, **themeConfig**, and **pages** as defined in JEB (§10) and Appendix A.\n\n### 2.2 Deterministic Projection (CLI Workflow)\n\nThe CLI (`@olonjs/cli`) creates new tenants by:\n\n1. **Infra Projection:** Generating `package.json`, `tsconfig.json`, and `vite.config.ts` (The Shell).\n2. **Source Projection:** Executing a deterministic script (`src_tenant_alpha.sh`) to reconstruct the `src` folder (The DNA).\n3. **Dependency Resolution:** Enforcing specific versions of React, Radix, and Tailwind v4.\n\n**Perché servono:** Una struttura file deterministica (config vs pages) separa governance globale (site, menu, theme) dal contenuto per pagina; il CLI può rigenerare tenant e tooling può trovare dati e schemi sempre negli stessi path. Senza JSP, ogni tenant sarebbe una struttura ad hoc e ingestione/export/Bake sarebbero fragili.\n\n---\n\n## 3. 🧱 Tenant Block Protocol (TBP) v1.0\n\n**Objective:** Standardize the \"Capsule\" structure for components to enable automated ingestion (Pull) by the SaaS.\n\n### 3.1 The Atomic Capsule Structure\n\nComponents are self-contained directories under `src/components/<sectionType>/`:\n\n- `View.tsx` — The pure React component (Dumb View). Props: see Appendix A (SectionComponentPropsMap).\n- `schema.ts` — Zod schema(s) for the **data** contract (and optionally **settings**). Exports at least one schema (e.g. `HeroSchema`) used as the **data** schema for that type. Must extend BaseSectionData (§8) for data; array items must extend BaseArrayItem (§8).\n- `types.ts` — TypeScript interfaces inferred from the schema (e.g. `HeroData`, `HeroSettings`). Export types with names `<SectionType>Data` and `<SectionType>Settings` (or equivalent) so the Tenant can aggregate them in a single types module.\n- `index.ts` — Public API: re-exports View, schema(s), and types.\n\n### 3.2 Reserved System Types\n\n- `type: 'header'` — Reserved for `site.json`. Receives `menu: MenuItem[]` in addition to `data` and `settings`. Menu is sourced from `menu.json` (see Appendix A). The Tenant **must** type `SectionComponentPropsMap['header']` as `{ data: HeaderData; settings?: HeaderSettings; menu: MenuItem[] }`.\n- `type: 'footer'` — Reserved for `site.json`. Props: `{ data: FooterData; settings?: FooterSettings }` only (no `menu`).\n- `type: 'sectionHeader'` — A standard local block. Must define its own `links` array in its local schema if used.\n\n**Perché servono:** La capsula (View + schema + types + index) è l’unità di estensione: il Core e il Form Factory possono scoprire tipi e contratti per tipo senza convenzioni ad hoc. Header/footer riservati evitano conflitti tra globale e locale. Senza TBP, aggregazione di SECTION_SCHEMAS e registry sarebbe incoerente e l’ingestion da SaaS non sarebbe automatizzabile.\n\n---\n\n## 4. 🧱 Component Implementation Protocol (CIP) v1.5\n\n**Objective:** Ensure system-wide stability and Admin UI integrity.\n\n1. **The \"Sovereign View\" Law:** Components receive `data` and `settings` (and `menu` for header only) and return JSX. They are metadata-blind (never import Zod schemas).\n2. **Z-Index Neutrality:** Components must not use `z-index > 1`. Layout delegation (sticky/fixed) is managed by the `SectionRenderer`.\n3. **Agnostic Asset Protocol:** Use `resolveAssetUrl(path, tenantId)` for all media. Resolved URLs are under `/assets/...` with no tenantId segment in the path (e.g. relative `img/hero.jpg` → `/assets/img/hero.jpg`).\n\n### 4.4 Local Design Tokens (v1.2)\n\nSection Views that control their own background, text, borders, or radii **shall** define a **local scope** via an inline `style` object on the section root: e.g. `--local-bg`, `--local-text`, `--local-text-muted`, `--local-surface`, `--local-border`, `--local-radius-lg`, `--local-accent`, mapped to theme variables. All Tailwind classes that affect color or radius in that section **must** use these variables (e.g. `bg-[var(--local-bg)]`, `text-[var(--local-text)]`). No naked utilities (e.g. `bg-blue-500`). An optional `label` in section data may be rendered with class `jp-section-label` for overlay type labels.\n\n### 4.5 Z-Index & Overlay Governance (v1.2)\n\nSection content root **must** stay at `z-index` **≤ 1** (prefer `z-0`) so the Sovereign Overlay can sit above with high z-index in Tenant CSS (§7). Header/footer may use a higher z-index (e.g. 50) only as a documented exception for global chrome.\n\n**Perché servono (CIP):** View “dumb” (solo data/settings) e senza import di Zod evita accoppiamento e permette al Form Factory di essere l’unica fonte di verità sugli schemi. Z-index basso evita che il contenuto copra l’overlay di selezione in Studio. Asset via `resolveAssetUrl`: i path relativi vengono risolti in `/assets/...` (senza segmento tenantId nel path). Token locali (`--local-*`) rendono le section temabili e coerenti con overlay e tema; senza, stili “nudi” creano drift visivo e conflitti con l’UI di editing.\n\n---\n\n## 5. 🛠️ Editor Component Implementation Protocol (ECIP) v1.5\n\n**Objective:** Standardize the Polymorphic ICE engine.\n\n1. **Recursive Form Factory:** The Admin UI builds forms by traversing the Zod ontology.\n2. **UI Metadata:** Use `.describe('ui:[widget]')` in schemas to pass instructions to the Form Factory.\n3. **Deterministic IDs:** Every object in a `ZodArray` must extend `BaseArrayItem` (containing an `id`) to ensure React reconciliation stability during reordering.\n\n### 5.4 UI Metadata Vocabulary (v1.2)\n\nStandard keys for the Form Factory:\n\nKey Use case `ui:text` Single-line text input. `ui:textarea` Multi-line text. `ui:select` Enum / single choice. `ui:number` Numeric input. `ui:list` Array of items; list editor (add/remove/reorder). `ui:icon-picker` Icon selection.\n\nUnknown keys may be treated as `ui:text`. Array fields must use `BaseArrayItem` for items.\n\n### 5.5 Path-Only Nested Selection & Expansion (v1.3, breaking)\n\nIn strict v1.3 Studio/Inspector behavior, nested editing targets are represented by **path segments from root to leaf**.\n\n```typescript\nexport type SelectionPathSegment = { fieldKey: string; itemId?: string };\nexport type SelectionPath = SelectionPathSegment[];\n```\n\nRules:\n\n- Expansion and focus for nested arrays **must** be computed from `SelectionPath` (root → leaf), not from a single flat pair.\n- Matching by `fieldKey` alone is non-compliant for nested structures.\n- Legacy flat payload fields `itemField` and `itemId` are removed from strict v1.3 selection protocol.\n\n**Perché servono (ECIP):** Il Form Factory deve sapere quale widget usare (text, textarea, select, list, …) senza hardcodare per tipo; `.describe('ui:...')` è il contratto. BaseArrayItem con `id` su ogni item di array garantisce chiavi stabili in React e reorder/delete corretti nell’Inspector. In v1.3 la selezione/espansione path-only elimina ambiguità su array annidati: senza path completo root→leaf, la sidebar può aprire il ramo sbagliato o non aprire il target.\n\n---\n\n## 6. 🎯 ICE Data Attribute Contract (IDAC) v1.1\n\n**Objective:** Mandatory data attributes so the Stage (iframe) and Inspector can bind selection and field/item editing without coupling to Tenant DOM.\n\n### 6.1 Section-Level Markup (Core-Provided)\n\n**SectionRenderer** (Core) wraps each section root with:\n\n- `data-section-id` — Section instance ID (e.g. UUID). On the wrapper that contains content + overlay.\n- Sibling overlay element `data-jp-section-overlay` — Selection ring and type label. **Tenant does not add this;** Core injects it.\n\nTenant Views render the **content** root only (e.g. `<section>` or `<div>`), placed **inside** the Core wrapper.\n\n### 6.2 Field-Level Binding (Tenant-Provided)\n\nFor every **editable scalar field** the View **must** attach `data-jp-field=\"<fieldKey>\"` (key matches schema path: e.g. `title`, `description`, `sectionTitle`, `label`).\n\n### 6.3 Array-Item Binding (Tenant-Provided)\n\nFor every **editable array item** the View **must** attach:\n\n- `data-jp-item-id=\"<stableId>\"` — Prefer `item.id`; fallback e.g. `legacy-${index}` only outside strict mode.\n- `data-jp-item-field=\"<arrayKey>\"` — e.g. `cards`, `layers`, `products`, `paragraphs`.\n\n### 6.4 Compliance\n\n**Reserved types** (`header`, `footer`): ICE attributes optional unless Studio edits them. **All other section types** in the Stage and in `SECTION_SCHEMAS` **must** implement §6.2 and §6.3 for every editable field and array item.\n\n### 6.5 Strict Path Extraction for Nested Arrays (v1.3, breaking)\n\nFor nested array targets, the Core/Inspector contract is path-based:\n\n- The runtime selection target is expressed as `itemPath: SelectionPath` (root → leaf).\n- Flat identity (`itemField` + `itemId`) is not sufficient for nested structures and is removed in strict v1.3 payloads.\n- In strict mode, index-based identity fallback is non-compliant for editable object arrays.\n\n**Perché servono (IDAC):** Lo Stage è in un iframe e l’Inspector deve sapere **quale campo o item** corrisponde al click (o alla selezione) senza conoscere la struttura DOM del Tenant. `data-jp-field` associa un nodo DOM al path dello schema (es. `title`, `description`): così il Core può evidenziare la riga giusta nella sidebar, applicare opacità attivo/inattivo e aprire il form sul campo corretto. `data-jp-item-id` e `data-jp-item-field` fanno lo stesso per gli item di array (liste, reorder, delete). In v1.3, `itemPath` rende deterministico anche il caso nested (array dentro array), eliminando mismatch tra selezione canvas e ramo aperto in sidebar.\n\n---\n\n## 7. 🎨 Tenant Overlay CSS Contract (TOCC) v1.0\n\n**Objective:** The Stage iframe loads only Tenant HTML/CSS. Core injects overlay **markup** but does **not** ship overlay styles. The Tenant **must** supply CSS so overlay is visible.\n\n### 7.1 Required Selectors (Tenant global CSS)\n\n1. `[data-jp-section-overlay]` — `position: absolute; inset: 0`; `pointer-events: none`; base state transparent.\n2. `[data-section-id]:hover [data-jp-section-overlay]` — Hover: e.g. dashed border, subtle tint.\n3. `[data-section-id][data-jp-selected] [data-jp-section-overlay]` — Selected: solid border, optional tint.\n4. `[data-jp-section-overlay] > div` (type label) — Position and visibility (e.g. visible on hover/selected).\n\n### 7.2 Z-Index\n\nOverlay **z-index** high (e.g. 9999). Section content at or below CIP limit (§4.5).\n\n### 7.3 Responsibility\n\n**Core:** Injects wrapper and overlay DOM; sets `data-jp-selected`. **Tenant:** All overlay **visual** rules.\n\n**Perché servono (TOCC):** L’iframe dello Stage carica solo HTML/CSS del Tenant; il Core inietta il markup dell’overlay ma non gli stili. Senza CSS Tenant per i selettori TOCC, bordo hover/selected e type label non sarebbero visibili: l’autore non vedrebbe quale section è selezionata né il label del tipo. TOCC chiarisce la responsabilità (Core = markup, Tenant = aspetto) e garantisce UX uniforme tra tenant.\n\n---\n\n## 8. 📦 Base Section Data & Settings (BSDS) v1.0\n\n**Objective:** Standardize base schema fragments for anchors, array items, and section settings.\n\n### 8.1 BaseSectionData\n\nEvery section data schema **must** extend a base with at least `anchorId` (optional string). Canonical Zod (Tenant `lib/base-schemas.ts` or equivalent):\n\n```typescript\nexport const BaseSectionData = z.object({\n  anchorId: z.string().optional().describe('ui:text'),\n});\n```\n\n### 8.2 BaseArrayItem\n\nEvery array item schema editable in the Inspector **must** include `id` (optional string minimum). Canonical Zod:\n\n```typescript\nexport const BaseArrayItem = z.object({\n  id: z.string().optional(),\n});\n```\n\nRecommended: required UUID for new items. Used by `data-jp-item-id` and React reconciliation.\n\n### 8.3 BaseSectionSettings (Optional)\n\nCommon section-level settings. Canonical Zod (name **BaseSectionSettingsSchema** or as exported by Core):\n\n```typescript\nexport const BaseSectionSettingsSchema = z.object({\n  paddingTop: z.enum(['none', 'sm', 'md', 'lg', 'xl', '2xl']).default('md').describe('ui:select'),\n  paddingBottom: z.enum(['none', 'sm', 'md', 'lg', 'xl', '2xl']).default('md').describe('ui:select'),\n  theme: z.enum(['dark', 'light', 'accent']).default('dark').describe('ui:select'),\n  container: z.enum(['boxed', 'fluid']).default('boxed').describe('ui:select'),\n});\n```\n\nCapsules may extend this for type-specific settings. Core may export **BaseSectionSettings** as the TypeScript type inferred from this or a superset.\n\n**Perché servono (BSDS):** anchorId permette deep-link e navigazione in-page; id sugli array item è necessario per `data-jp-item-id`, reorder e React reconciliation. BaseSectionSettings comuni (padding, theme, container) evitano ripetizione e allineano il Form Factory tra capsule. Senza base condivisi, ogni capsule inventa convenzioni e validazione/add-section diventano fragili.\n\n---\n\n## 9. 📌 AddSectionConfig (ASC) v1.0\n\n**Objective:** Formalize the \"Add Section\" contract used by the Studio.\n\n**Type (Core exports** `AddSectionConfig`**):**\n\n```typescript\ninterface AddSectionConfig {\n  addableSectionTypes: readonly string[];\n  sectionTypeLabels: Record<string, string>;\n  getDefaultSectionData(sectionType: string): Record<string, unknown>;\n}\n```\n\n**Shape:** Tenant provides one object (e.g. `addSectionConfig`) with:\n\n- `addableSectionTypes` — Readonly array of section type keys. Only these types appear in the Add Section Library. Must be a subset of (or equal to) the keys in SectionDataRegistry.\n- `sectionTypeLabels` — Map type key → display string (e.g. `{ hero: 'Hero', 'cta-banner': 'CTA Banner' }`).\n- `getDefaultSectionData(sectionType: string): Record<string, unknown>` — Returns default `data` for a new section. Must conform to the capsule’s data schema so the new section validates.\n\nCore creates a new section with deterministic UUID, `type`, and `data` from `getDefaultSectionData(type)`.\n\n**Perché servono (ASC):** Lo Studio deve mostrare una libreria “Aggiungi sezione” con nomi leggibili e, alla scelta, creare una section con dati iniziali validi. addableSectionTypes, sectionTypeLabels e getDefaultSectionData sono il contratto: il Tenant è l’unica fonte di verità su quali tipi sono addabili e con quali default. Senza ASC, il Core non saprebbe cosa mostrare in modal né come popolare i dati della nuova section.\n\n---\n\n## 10. ⚙️ JsonPagesConfig & Engine Bootstrap (JEB) v1.1\n\n**Objective:** Bootstrap contract between Tenant app and `@olonjs/core`.\n\n### 10.1 JsonPagesConfig (required fields)\n\nThe Tenant passes a single **config** object to **JsonPagesEngine**. Required fields:\n\nField Type Description **tenantId** string Passed to `resolveAssetUrl(path, tenantId)`; resolved asset URLs are `/assets/...` with no tenantId segment in the path. **registry** `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }` Component registry. Must match MTRP keys. See Appendix A. **schemas** `Record<SectionType, ZodType>` or equivalent SECTION_SCHEMAS: type → **data** Zod schema. Form Factory uses this. See Appendix A. **pages** `Record<string, PageConfig>` Slug → page config. See Appendix A. **siteConfig** SiteConfig Global site (identity, header/footer blocks). See Appendix A. **themeConfig** ThemeConfig Theme tokens. See Appendix A. **menuConfig** MenuConfig Navigation tree (SSOT for header menu). See Appendix A. **themeCss** `{ tenant: string }` At least **tenant**: string (inline CSS or URL) for Stage iframe injection. **addSection** AddSectionConfig Add-section config (§9).\n\nCore may define optional fields. The Tenant must not omit required fields.\n\n### 10.2 JsonPagesEngine\n\nRoot component: `<JsonPagesEngine config={config} />`. Responsibilities: route → page, SectionRenderer per section; in Studio mode Sovereign Shell (Inspector, Control Bar, postMessage); section wrappers and overlay per IDAC and JAP. Tenant does not implement the Shell.\n\n### 10.3 Studio Selection Event Contract (v1.3, breaking)\n\nIn strict v1.3 Studio, section selection payload for nested targets is path-based:\n\n```typescript\ntype SectionSelectMessage = {\n  type: 'SECTION_SELECT';\n  section: { id: string; type: string; scope: 'global' | 'local' };\n  itemPath?: SelectionPath; // root -> leaf\n};\n```\n\nRemoved from strict protocol:\n\n- `itemField`\n- `itemId`\n\n**Perché servono (JEB):** Un unico punto di bootstrap (config + Engine) evita che il Tenant replichi logica di routing, Shell e overlay. I campi obbligatori in JsonPagesConfig (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection) sono il minimo per far funzionare rendering, Studio e Form Factory; omissioni causano errori a runtime. In v1.3, il payload `itemPath` sincronizza in modo non ambiguo Stage e Inspector su nested arrays.\n\n---\n\n# 🏛️ OlonJS_ADMIN_PROTOCOL (JAP) v1.2\n\n**Status:** Mandatory Standard\\\n**Version:** 1.2.0 (Sovereign Shell Edition — Path/Nested Strictness)\\\n**Objective:** Deterministic orchestration of the \"Studio\" environment (ICE Level 1).\n\n---\n\n## 1. The Sovereign Shell Topology\n\nThe Admin interface is a **Sovereign Shell** from `@olonjs/core`.\n\n1. **The Stage (Canvas):** Isolated Iframe; postMessage for data updates and selection mirroring. Section markup follows **IDAC** (§6); overlay styling follows **TOCC** (§7).\n2. **The Inspector (Sidebar):** Consumes Tenant Zod schemas to generate editors; binding via `data-jp-field` and `data-jp-item-*`.\n3. **The Control Bar:** Save, Export, Add Section.\n\n## 2. State Orchestration & Persistence\n\n- **Working Draft:** Reactive local state for unsaved changes.\n- **Sync Law:** Inspector changes → Working Draft → Stage via `STUDIO_EVENTS.UPDATE_DRAFTS`.\n- **Bake Protocol:** \"Bake HTML\" requests snapshot from Iframe, injects `ProjectState` as JSON, triggers download.\n\n## 3. Context Switching (Global vs. Local)\n\n- **Header/Footer** selection → Global Mode, `site.json`.\n- Any other section → Page Mode, current `[slug].json`.\n\n## 4. Section Lifecycle Management\n\n1. **Add Section:** Modal from Tenant `SECTION_SCHEMAS`; UUID + default data via **AddSectionConfig** (§9).\n2. **Reorder:** Inspector or Stage Overlay; array mutation in Working Draft.\n3. **Delete:** Confirmation; remove from array, clear selection.\n\n## 5. Stage Isolation & Overlay\n\n- **CSS Shielding:** Stage in Iframe; Tenant CSS does not leak into Admin.\n- **Sovereign Overlay:** Selection ring and type labels injected per **IDAC** (§6); Tenant styles them per **TOCC** (§7).\n\n## 6. \"Green Build\" Validation\n\nStudio enforces `tsc && vite build`. No export with TypeScript errors.\n\n## 7. Path-Deterministic Selection & Sidebar Expansion (v1.3, breaking)\n\n- Section/item focus synchronization uses `itemPath` (root → leaf), not flat `itemField/itemId`.\n- Sidebar expansion state for nested arrays must be derived from all path segments.\n- Flat-only matching may open/close wrong branches and is non-compliant in strict mode.\n\n**Perché servono (JAP):** Stage in iframe + Inspector + Control Bar separano il contesto di editing dal sito; postMessage e Working Draft permettono modifiche senza toccare subito i file. Bake ed Export richiedono uno stato coerente. Global vs Page mode evita confusione su dove si sta editando (site.json vs \\[slug\\].json). Add/Reorder/Delete sono gestiti in un solo modo (Working Draft + ASC). Green Build garantisce che ciò che si esporta compili. In v1.3, il path completo elimina ambiguità nella sincronizzazione Stage↔Sidebar su strutture annidate.\n\n---\n\n## Compliance: Legacy vs Full UX (v1.3)\n\nDimension Legacy / Less UX Full UX (Core-aligned) **ICE binding** No `data-jp-*`; Inspector cannot bind. IDAC (§6) on every editable section/field/item. **Section wrapper** Plain `<section>`; no overlay contract. Core wrapper + overlay; Tenant CSS per TOCC (§7). **Design tokens** Raw BEM / fixed classes. Local tokens (§4.4); `var(--local-*)` only. **Base schemas** Ad hoc. BSDS (§8): BaseSectionData, BaseArrayItem, BaseSectionSettings. **Add Section** Ad hoc defaults. ASC (§9): addableSectionTypes, labels, getDefaultSectionData. **Bootstrap** Implicit. JEB (§10): JsonPagesConfig + JsonPagesEngine. **Selection payload** Flat `itemField/itemId`. Path-only `itemPath: SelectionPath` (JEB §10.3). **Nested array expansion** Single-segment or field-only heuristics. Root-to-leaf path expansion (ECIP §5.5, JAP §7). **Array item identity (strict)** Index fallback tolerated. Stable `id` required for editable object arrays.\n\n**Rule:** Every page section (non-header/footer) that appears in the Stage and in `SECTION_SCHEMAS` must comply with §6, §7, §4.4, §8, §9, §10 for full Studio UX.\n\n---\n\n## Summary of v1.3 Additions\n\n§ Title Purpose 5.5 Path-Only Nested Selection & Expansion ECIP: root→leaf `SelectionPath`; remove flat matching in strict mode. 6.5 Strict Path Extraction for Nested Arrays IDAC: path-based nested targeting; no strict flat fallback. 10.3 Studio Selection Event Contract JEB: `SECTION_SELECT` uses `itemPath`; remove `itemField/itemId`. JAP §7 Path-Deterministic Selection & Sidebar Expansion Studio state synchronization for nested arrays. Compliance Legacy vs Full UX (v1.3) Explicit breaking delta for flat protocol removal and strict IDs. **Appendix A.6** **v1.3 Path/Nested Strictness Addendum** Type/export and migration checklist for path-only protocol.\n\n---\n\n# Appendix A — Tenant Type & Code-Generation Annex\n\n**Objective:** Make the specification **sufficient** to generate or audit a full tenant (new site, new components, new data) without a reference codebase. Defines TypeScript types, JSON shapes, schema contract, file paths, and integration pattern.\n\n**Status:** Mandatory for code-generation and governance. Compliance ensures generated tenants are typed and wired like the reference implementation.\n\n---\n\n## A.1 Core-Provided Types (from `@olonjs/core`)\n\nThe following are assumed to be exported by Core. The Tenant augments **SectionDataRegistry** and **SectionSettingsRegistry**; all other types are consumed as-is.\n\nType Description **SectionType** `keyof SectionDataRegistry` (after Tenant augmentation). Union of all section type keys. **Section** Union of `BaseSection<K>` for all K in SectionDataRegistry. See MTRP §1.2. **BaseSectionSettings** Optional base type for section settings (may align with BSDS §8.3). **MenuItem** Navigation item. **Minimum shape:** `{ label: string; href: string }`. Core may extend (e.g. `children?: MenuItem[]`). **AddSectionConfig** See §9. **JsonPagesConfig** See §10.1.\n\n**Perché servono (A.1):** Il Tenant deve conoscere i tipi esportati dal Core (SectionType, MenuItem, AddSectionConfig, JsonPagesConfig) per tipizzare registry, config e augmentation senza dipendere da implementazioni interne.\n\n---\n\n## A.2 Tenant-Provided Types (single source: `src/types.ts` or equivalent)\n\nThe Tenant **must** define the following in one module (e.g. `src/types.ts`). This module **must** perform the **module augmentation** of `@olonjs/core` for **SectionDataRegistry** and **SectionSettingsRegistry**, and **must** export **SectionComponentPropsMap** and re-export from `@olonjs/core` so that **SectionType** is available after augmentation.\n\n### A.2.1 SectionComponentPropsMap\n\nMaps each section type to the props of its React component. **Header** is the only type that receives **menu**.\n\n**Option A — Explicit (recommended for clarity and tooling):** For each section type K, add one entry. Header receives **menu**.\n\n```typescript\nimport type { MenuItem } from '@olonjs/core';\n// Import Data/Settings from each capsule.\n\nexport type SectionComponentPropsMap = {\n  'header': { data: HeaderData; settings?: HeaderSettings; menu: MenuItem[] };\n  'footer': { data: FooterData; settings?: FooterSettings };\n  'hero': { data: HeroData; settings?: HeroSettings };\n  // ... one entry per SectionType, e.g. 'feature-grid', 'cta-banner', etc.\n};\n```\n\n**Option B — Mapped type (DRY, requires SectionDataRegistry/SectionSettingsRegistry in scope):**\n\n```typescript\nimport type { MenuItem } from '@olonjs/core';\n\nexport type SectionComponentPropsMap = {\n  [K in SectionType]: K extends 'header'\n    ? { data: SectionDataRegistry[K]; settings?: SectionSettingsRegistry[K]; menu: MenuItem[] }\n    : { data: SectionDataRegistry[K]; settings?: K extends keyof SectionSettingsRegistry ? SectionSettingsRegistry[K] : BaseSectionSettings };\n};\n```\n\nSectionType is imported from Core (after Tenant augmentation). In practice Option A is the reference pattern; Option B is valid if the Tenant prefers a single derived definition.\n\n**Perché servono (A.2):** SectionComponentPropsMap e i tipi di config (PageConfig, SiteConfig, MenuConfig, ThemeConfig) definiscono il contratto tra dati (JSON, API) e componente; l’augmentation è l’unico modo per estendere i registry del Core senza fork. Senza questi tipi, generazione tenant e refactor sarebbero senza guida e il type-check fallirebbe.\n\n### A.2.2 ComponentRegistry type\n\nThe registry object **must** be typed as:\n\n```typescript\nimport type { SectionType } from '@olonjs/core';\nimport type { SectionComponentPropsMap } from '@/types';\n\nexport const ComponentRegistry: {\n  [K in SectionType]: React.FC<SectionComponentPropsMap[K]>;\n} = { /* ... */ };\n```\n\nFile: `src/lib/ComponentRegistry.tsx` (or equivalent). Imports one View per section type and assigns it to the corresponding key.\n\n### A.2.3 PageConfig\n\nMinimum shape for a single page (used in **pages** and in each `[slug].json`):\n\n```typescript\nexport interface PageConfig {\n  id?: string;\n  slug: string;\n  meta?: {\n    title?: string;\n    description?: string;\n  };\n  sections: Section[];\n}\n```\n\n**Section** is the union type from MTRP (§1.2). Each element of **sections** has **id**, **type**, **data**, **settings** and conforms to the capsule schemas.\n\n### A.2.4 SiteConfig\n\nMinimum shape for **site.json** (and for **siteConfig** in JsonPagesConfig):\n\n```typescript\nexport interface SiteConfigIdentity {\n  title?: string;\n  logoUrl?: string;\n}\n\nexport interface SiteConfig {\n  identity?: SiteConfigIdentity;\n  pages?: Array<{ slug: string; label: string }>;\n  header: {\n    id: string;\n    type: 'header';\n    data: HeaderData;\n    settings?: HeaderSettings;\n  };\n  footer: {\n    id: string;\n    type: 'footer';\n    data: FooterData;\n    settings?: FooterSettings;\n  };\n}\n```\n\n**HeaderData**, **FooterData**, **HeaderSettings**, **FooterSettings** are the types exported from the header and footer capsules.\n\n### A.2.5 MenuConfig\n\nMinimum shape for **menu.json** (and for **menuConfig** in JsonPagesConfig). Structure is tenant-defined; Core expects the header to receive **MenuItem\\[\\]**. Common pattern: an object with a key (e.g. **main**) whose value is **MenuItem\\[\\]**.\n\n```typescript\nexport interface MenuConfig {\n  main?: MenuItem[];\n  [key: string]: MenuItem[] | undefined;\n}\n```\n\nOr simply `MenuItem[]` if the app uses a single flat list. The Tenant must ensure that the value passed to the header component as **menu** conforms to **MenuItem\\[\\]** (e.g. `menuConfig.main` or `menuConfig` if it is the array).\n\n### A.2.6 ThemeConfig\n\nMinimum shape for **theme.json** (and for **themeConfig** in JsonPagesConfig). Tenant-defined; typically tokens for colors, typography, radius.\n\n```typescript\nexport interface ThemeConfig {\n  name?: string;\n  tokens?: {\n    colors?: Record<string, string>;\n    typography?: Record<string, string | Record<string, string>>;\n    borderRadius?: Record<string, string>;\n  };\n  [key: string]: unknown;\n}\n```\n\n---\n\n## A.3 Schema Contract (SECTION_SCHEMAS)\n\n**Location:** `src/lib/schemas.ts` (or equivalent).\n\n**Contract:**\n\n- **SECTION_SCHEMAS** is a **single object** whose keys are **SectionType** and whose values are **Zod schemas for the section data** (not settings, unless the Form Factory contract expects a combined or per-type settings schema; then each value may be the data schema only, and settings may be defined per capsule and aggregated elsewhere if needed).\n- The Tenant **must** re-export **BaseSectionData**, **BaseArrayItem**, and optionally **BaseSectionSettingsSchema** from `src/lib/base-schemas.ts` (or equivalent). Each capsule’s data schema **must** extend BaseSectionData; each array item schema **must** extend or include BaseArrayItem.\n- **SECTION_SCHEMAS** is typed as `Record<SectionType, ZodType>` or `{ [K in SectionType]: ZodType }` so that keys match the registry and SectionDataRegistry.\n\n**Export:** The app imports **SECTION_SCHEMAS** and passes it as **config.schemas** to JsonPagesEngine. The Form Factory traverses these schemas to build editors.\n\n**Perché servono (A.3):** Un unico oggetto SECTION_SCHEMAS con chiavi = SectionType e valori = schema data permette al Form Factory di costruire form per tipo senza convenzioni ad hoc; i base schema garantiscono anchorId e id su item. Senza questo contratto, l’Inspector non saprebbe quali campi mostrare né come validare.\n\n---\n\n## A.4 File Paths & Data Layout\n\nPurpose Path (conventional) Description Site config `src/data/config/site.json` SiteConfig (identity, header, footer, pages list). Menu config `src/data/config/menu.json` MenuConfig (e.g. main nav). Theme config `src/data/config/theme.json` ThemeConfig (tokens). Page data `src/data/pages/<slug>.json` One file per page; content is PageConfig (slug, meta, sections). Base schemas `src/lib/base-schemas.ts` BaseSectionData, BaseArrayItem, BaseSectionSettingsSchema. Schema aggregate `src/lib/schemas.ts` SECTION_SCHEMAS; re-exports base schemas. Registry `src/lib/ComponentRegistry.tsx` ComponentRegistry object. Add-section config `src/lib/addSectionConfig.ts` addSectionConfig (AddSectionConfig). Tenant types & augmentation `src/types.ts` SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **declare module '@olonjs/core'** for SectionDataRegistry and SectionSettingsRegistry; re-export from Core. Bootstrap `src/App.tsx` Imports config (site, theme, menu, pages), registry, schemas, addSection, themeCss; builds JsonPagesConfig; renders .\n\nThe app entry (e.g. **main.tsx**) renders **App**. No other bootstrap contract is specified; the Tenant may use Vite aliases (e.g. **@/**) for the paths above.\n\n**Perché servono (A.4):** Path fissi (data/config, data/pages, lib/schemas, types.ts, App.tsx) permettono a CLI, tooling e agenti di trovare sempre gli stessi file; l’onboarding e la generazione da spec sono deterministici. Senza convenzione, ogni tenant sarebbe una struttura diversa.\n\n---\n\n## A.5 Integration Checklist (Code-Generation)\n\nWhen generating or auditing a tenant, ensure the following in order:\n\n 1. **Capsules** — For each section type, create `src/components/<type>/` with View.tsx, schema.ts, types.ts, index.ts. Data schema extends BaseSectionData; array items extend BaseArrayItem; View complies with CIP and IDAC (§6.2–6.3 for non-reserved types).\n 2. **Base schemas** — **src/lib/base-schemas.ts** exports BaseSectionData, BaseArrayItem, BaseSectionSettingsSchema (and optional CtaSchema or similar shared fragments).\n 3. **types.ts** — Define SectionComponentPropsMap (header with **menu**), PageConfig, SiteConfig, MenuConfig, ThemeConfig; **declare module '@olonjs/core'** and augment SectionDataRegistry and SectionSettingsRegistry; re-export from `@olonjs/core`.\n 4. **ComponentRegistry** — Import every View; build object **{ \\[K in SectionType\\]: ViewComponent }**; type as **{ \\[K in SectionType\\]: React.FC&lt;SectionComponentPropsMap\\[K\\]&gt; }**.\n 5. **schemas.ts** — Import base schemas and each capsule’s data schema; export SECTION_SCHEMAS as **{ \\[K in SectionType\\]: SchemaK }**; export SectionType as **keyof typeof SECTION_SCHEMAS** if not using Core’s SectionType.\n 6. **addSectionConfig** — addableSectionTypes, sectionTypeLabels, getDefaultSectionData; export as AddSectionConfig.\n 7. **App.tsx** — Import site, theme, menu, pages from data paths; build config (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss: { tenant }, addSection); render JsonPagesEngine.\n 8. **Data files** — Create or update site.json, menu.json, theme.json, and one or more **.json** under the paths in A.4. Ensure JSON shapes match SiteConfig, MenuConfig, ThemeConfig, PageConfig.\n 9. **Tenant CSS** — Include TOCC (§7) selectors in global CSS so the Stage overlay is visible.\n10. **Reserved types** — Header and footer capsules receive props per SectionComponentPropsMap; menu is populated from menuConfig (e.g. menuConfig.main) when building the config or inside Core when rendering the header.\n\n**Perché servono (A.5):** La checklist in ordine evita di dimenticare passi (es. augmentation prima del registry, TOCC dopo le View) e rende la spec sufficiente per generare o verificare un tenant senza codebase di riferimento.\n\n---\n\n## A.6 v1.3 Path/Nested Strictness Addendum (breaking)\n\nThis addendum extends Appendix A without removing prior v1.2 obligations:\n\n1. **Type exports** — Core and/or shared types module should expose `SelectionPathSegment` and `SelectionPath` for Studio messaging and Inspector expansion logic.\n2. **Protocol migration** — Replace flat payload fields `itemField` / `itemId` with `itemPath?: SelectionPath` in strict v1.3 channels.\n3. **Nested array compliance** — For editable object arrays, item identity must be stable (`id`) and propagated to DOM attributes (`data-jp-item-id`), schema items (BaseArrayItem), and selection path segments (`itemId` when segment targets array item).\n4. **Backward compatibility policy** — Legacy flat fields may exist only in transitional adapters outside strict mode; normative v1.3 contract is path-only.\n\n---\n\n**Validation:** Align with current `@olonjs/core` exports (SectionType, MenuItem, AddSectionConfig, JsonPagesConfig, and in v1.3 path types for Studio selection).\\\n**Distribution:** Core via `.yalc`; tenant projections via `@olonjs/cli`. This annex makes the spec **necessary and sufficient** for tenant code-generation and governance at enterprise grade."
+        "content": "# 📐 OlonJS Architecture Specifications v1.5s\n\n**Status:** Mandatory Standard\\\n**Version:** 1.5.0 (Sovereign Core Edition — Architecture + Studio/ICE UX, Path-Deterministic Nested Editing, Deterministic Local Design Tokens, Three-Layer CSS Bridge Contract)\\\n**Target:** Senior Architects / AI Agents / Enterprise Governance\n\n**Scope v1.5:** This edition preserves the complete v1.4 architecture (MTRP, JSP, TBP, CIP, ECIP, JAP + Studio/ICE UX contract: IDAC, TOCC, BSDS, ASC, JEB + Tenant Type & Code-Generation Annex + strict path-based/nested-array behavior) as a **faithful superset**, and upgrades **Local Design Tokens** from a principle to a deterministic implementation contract.\\\n⚠️ **Scope note (breaking):** In strict v1.3+ Studio semantics, the legacy flat protocol (`itemField` / `itemId`) is removed in favor of `itemPath` (root-to-leaf path segments).\\\nℹ️ **Scope note (clarification):** In v1.5, `theme.json` is the tenant theme source of truth for themed tenants; runtime theme publication is mandatory for compliant themed tenants; section-local tokens (`--local-*`) are the required scoping layer for section-owned color and radius concerns.\n\n---\n\n## 1. 📐 Modular Type Registry Pattern (MTRP) v1.2\n\n**Objective:** Establish a strictly typed, open-ended protocol for extending content data structures where the **Core Engine** is the orchestrator and the **Tenant** is the provider.\n\n### 1.1 The Sovereign Dependency Inversion\n\nThe **Core** defines the empty `SectionDataRegistry`. The **Tenant** \"injects\" its specific definitions using **Module Augmentation**. This allows the Core to be distributed as a compiled NPM package while remaining aware of Tenant-specific types at compile-time.\n\n### 1.2 Technical Implementation (`@olonjs/core/kernel`)\n\n```typescript\nexport interface SectionDataRegistry {} // Augmented by Tenant\nexport interface SectionSettingsRegistry {} // Augmented by Tenant\n\nexport interface BaseSection<K extends keyof SectionDataRegistry> {\n  id: string;\n  type: K;\n  data: SectionDataRegistry[K];\n  settings?: K extends keyof SectionSettingsRegistry\n    ? SectionSettingsRegistry[K]\n    : BaseSectionSettings;\n}\n\nexport type Section = {\n  [K in keyof SectionDataRegistry]: BaseSection<K>\n}[keyof SectionDataRegistry];\n```\n\n**SectionType:** Core exports (or Tenant infers) `SectionType` as `keyof SectionDataRegistry`. After Tenant module augmentation, this is the union of all section type keys (e.g. `'header' | 'footer' | 'hero' | ...`). The Tenant uses this type for the ComponentRegistry and SECTION_SCHEMAS keys.\n\n**Why ❔:** The Core must be able to render section without knowing the concrete types to compile-time; the Tenant must be able to add new types without modifying the Core. Empty registry + module augmentation allow you to deploy Core as an NPM package and keep type-safety end-to-end (Section, registry, config). Without MTRP, each new type would require changes in the Core or weak types (any).\n\n---\n\n## 2. 📐 JsonPages Site Protocol (JSP) v1.8\n\n**Objective:** Define the deterministic file system and the **Sovereign Projection Engine** (CLI).\n\n### 2.1 The File System Ontology (The Silo Contract)\n\nEvery site must reside in an isolated directory. Global Governance is physically separated from Local Content.\n\n- `/config/site.json` — Global Identity & Reserved System Blocks (Header/Footer). See Appendix A for typed shape.\n- `/config/menu.json` — Navigation Tree (SSOT for System Header). See Appendix A.\n- `/config/theme.json` — Theme tokens for themed tenants. See Appendix A.\n- `/pages/[slug].json` — Local Body Content per page. See Appendix A (PageConfig).\n\n**Application path convention:** The runtime app typically imports these via an alias (e.g. `@/data/config/` and `@/data/pages/`). The physical silo may be `src/data/config/` and `src/data/pages/` so that `site.json`, `menu.json`, `theme.json` live under `src/data/config/`, and page JSONs under `src/data/pages/`. The CLI or projection script may use `/config/` and `/pages/` at repo root; the **contract** is that the app receives **siteConfig**, **menuConfig**, **themeConfig**, and **pages** as defined in JEB (§10) and Appendix A.\n\n**Rule:** For a tenant that claims v1.4 design-token compliance, `theme.json` is not optional in practice. If a tenant omits a physical `theme.json`, it must still provide an equivalent `ThemeConfig` object before bootstrap; otherwise the tenant is outside full v1.4 theme compliance.\n\n### 2.2 Deterministic Projection (CLI Workflow)\n\nThe CLI (`@olonjs/cli`) creates new tenants by:\n\n1. **Infra Projection:** Generating `package.json`, `tsconfig.json`, and `vite.config.ts` (The Shell).\n2. **Source Projection:** Executing a deterministic script (`src_tenant_alpha.sh`) to reconstruct the `src` folder (The DNA).\n3. **Dependency Resolution:** Enforcing specific versions of React, Radix, and Tailwind v4.\n\n**Why they are needed:** A deterministic file structure (config vs pages) separates global governance (site, menu, theme) from content per page; CLI can regenerate tenants and tooling can find data and schematics always in the same paths. Without JSP, each tenant would be an ad hoc structure and ingestion/export/Bake would be fragile.\n\n---\n\n## 3. 🧱 Tenant Block Protocol (TBP) v1.0\n\n**Objective:** Standardize the \"Capsule\" structure for components to enable automated ingestion (Pull) by the SaaS.\n\n### 3.1 The Atomic Capsule Structure\n\nComponents are self-contained directories under `src/components/<sectionType>/`:\n\n- `View.tsx` — The pure React component (Dumb View). Props: see Appendix A (SectionComponentPropsMap).\n- `schema.ts` — Zod schema(s) for the **data** contract (and optionally **settings**). Exports at least one schema (e.g. `HeroSchema`) used as the **data** schema for that type. Must extend BaseSectionData (§8) for data; array items must extend BaseArrayItem (§8).\n- `types.ts` — TypeScript interfaces inferred from the schema (e.g. `HeroData`, `HeroSettings`). Export types with names `<SectionType>Data` and `<SectionType>Settings` (or equivalent) so the Tenant can aggregate them in a single types module.\n- `index.ts` — Public API: re-exports View, schema(s), and types.\n\n### 3.2 Reserved System Types\n\n- `type: 'header'` — Reserved for `site.json`. Receives `menu: MenuItem[]` in addition to `data` and `settings`. Menu is sourced from `menu.json` (see Appendix A). The Tenant **must** type `SectionComponentPropsMap['header']` as `{ data: HeaderData; settings?: HeaderSettings; menu: MenuItem[] }`.\n- `type: 'footer'` — Reserved for `site.json`. Props: `{ data: FooterData; settings?: FooterSettings }` only (no `menu`).\n- `type: 'sectionHeader'` — A standard local block. Must define its own `links` array in its local schema if used.\n\n**Perché servono:** La capsula (View + schema + types + index) è l’unità di estensione: il Core e il Form Factory possono scoprire tipi e contratti per tipo senza convenzioni ad hoc. Header/footer riservati evitano conflitti tra globale e locale. Senza TBP, aggregazione di SECTION_SCHEMAS e registry sarebbe incoerente e l’ingestion da SaaS non sarebbe automatizzabile.\n\n---\n\n## 4. 🧱 Component Implementation Protocol (CIP) v1.6\n\n**Objective:** Ensure system-wide stability and Admin UI integrity.\n\n1. **The \"Sovereign View\" Law:** Components receive `data` and `settings` (and `menu` for header only) and return JSX. They are metadata-blind (never import Zod schemas).\n2. **Z-Index Neutrality:** Components must not use `z-index > 1`. Layout delegation (sticky/fixed) is managed by the `SectionRenderer`.\n3. **Agnostic Asset Protocol:** Use `resolveAssetUrl(path, tenantId)` for all media. Resolved URLs are under `/assets/...` with no tenantId segment in the path (e.g. relative `img/hero.jpg` → `/assets/img/hero.jpg`).\n\n### 4.4 Local Design Tokens (v1.4)\n\n**Objective:** Standardize how a section consumes tenant theme values without leaking global styling assumptions into the section implementation.\n\n#### 4.4.1 The Required Four-Layer Chain\n\nFor any section that controls background, text color, border color, accent color, or radii, the following chain is normative:\n\n1. **Tenant theme source of truth** — Values are declared in `src/data/config/theme.json`.\n2. **Runtime theme publication** — The Core and/or tenant bootstrap **must** publish those values as CSS custom properties.\n3. **Section-local scope** — The View root **must** define `--local-*` variables mapped to the published theme variables for the concerns the section owns.\n4. **Rendered classes** — Section-owned color/radius utilities **must** consume `var(--local-*)`.\n\n**Rule:** A section may not skip layer 3 when it visually owns those concerns. Directly using global theme variables throughout the JSX is non-canonical for a fully themed section and must be treated as non-compliant unless the usage falls under an explicitly allowed exception.\n\n#### 4.4.2 Source Of Truth: `theme.json`\n\n`theme.json` is the tenant-level source of truth for theme values. Example:\n\n```json\n{\n  \"name\": \"JsonPages Landing\",\n  \"tokens\": {\n    \"colors\": {\n      \"primary\": \"#3b82f6\",\n      \"secondary\": \"#22d3ee\",\n      \"accent\": \"#60a5fa\",\n      \"background\": \"#060d1b\",\n      \"surface\": \"#0b1529\",\n      \"surfaceAlt\": \"#101e38\",\n      \"text\": \"#e2e8f0\",\n      \"textMuted\": \"#94a3b8\",\n      \"border\": \"#162a4d\"\n    },\n    \"typography\": {\n      \"fontFamily\": {\n        \"primary\": \"'Instrument Sans', system-ui, sans-serif\",\n        \"mono\": \"'JetBrains Mono', monospace\",\n        \"display\": \"'Bricolage Grotesque', system-ui, sans-serif\"\n      }\n    },\n    \"borderRadius\": {\n      \"sm\": \"0px\",\n      \"md\": \"0px\",\n      \"lg\": \"2px\"\n    }\n  }\n}\n```\n\n**Rule:** For a themed tenant, `theme.json` must contain the canonical semantic keys defined in Appendix A. Extra brand-specific keys are allowed only as extensions to those canonical groups, not as replacements for them.\n\n#### 4.4.3 Runtime Theme Publication\n\nThe tenant and/or Core **must** expose theme values as CSS variables before section rendering. The compliant bridge is a **three-layer chain** implemented in the tenant's `index.css`. Runtime publication is mandatory for themed tenants.\n\n##### Layer architecture\n\n```\ntheme.json  →  engine injection  →  :root bridge  →  @theme (Tailwind)  →  JSX classes\n```\n\n**Layer 0 — Engine injection (Core-provided)** `@olonjs/core` reads `theme.json` and injects all token values as flattened CSS custom properties before section rendering. The naming convention is:\n\nJSON path Injected CSS var `tokens.colors.{name}` `--theme-colors-{name}` `tokens.typography.fontFamily.{role}` `--theme-font-{role}` `tokens.typography.scale.{step}` `--theme-typography-scale-{step}` `tokens.typography.tracking.{name}` `--theme-typography-tracking-{name}` `tokens.typography.leading.{name}` `--theme-typography-leading-{name}` `tokens.typography.wordmark.*` `--theme-typography-wordmark-*` `tokens.borderRadius.{name}` `--theme-border-radius-{name}` `tokens.spacing.{name}` `--theme-spacing-{name}` `tokens.zIndex.{name}` `--theme-z-index-{name}` `tokens.modes.{mode}.colors.{name}` `--theme-modes-{mode}-colors-{name}`\n\nThe engine also publishes shorthand aliases for the most common radius and font tokens (e.g. `--theme-radius-sm`, `--theme-font-primary`). Tokens not covered by the shorthand aliases must be bridged in the tenant `:root`.\n\n**Layer 1 —** `:root` **semantic bridge (Tenant-provided,** `index.css`**)** The tenant maps engine-injected vars to its own semantic naming. **The naming in this layer is the tenant's sovereign choice** — it is not imposed by the Core. Any naming convention is valid as long as it is consistent throughout the tenant.\n\n```css\n:root {\n  /* Backgrounds */\n  --background:           var(--theme-colors-background);\n  --card:                 var(--theme-colors-card);\n  --elevated:             var(--theme-colors-elevated);\n  --overlay:              var(--theme-colors-overlay);\n  --popover:              var(--theme-colors-popover);\n  --popover-foreground:   var(--theme-colors-popover-foreground);\n\n  /* Foregrounds */\n  --foreground:           var(--theme-colors-foreground);\n  --card-foreground:      var(--theme-colors-card-foreground);\n  --muted-foreground:     var(--theme-colors-muted-foreground);\n  --placeholder:          var(--theme-colors-placeholder);\n\n  /* Brand ramp */\n  --primary:              var(--theme-colors-primary);\n  --primary-foreground:   var(--theme-colors-primary-foreground);\n  --primary-light:        var(--theme-colors-primary-light);\n  --primary-dark:         var(--theme-colors-primary-dark);\n  /* ... full ramp --primary-50 through --primary-900 ... */\n\n  /* Accent, secondary, muted, border, input, ring */\n  --accent:               var(--theme-colors-accent);\n  --accent-foreground:    var(--theme-colors-accent-foreground);\n  --secondary:            var(--theme-colors-secondary);\n  --secondary-foreground: var(--theme-colors-secondary-foreground);\n  --muted:                var(--theme-colors-muted);\n  --border:               var(--theme-colors-border);\n  --border-strong:        var(--theme-colors-border-strong);\n  --input:                var(--theme-colors-input);\n  --ring:                 var(--theme-colors-ring);\n\n  /* Feedback */\n  --destructive:              var(--theme-colors-destructive);\n  --destructive-foreground:   var(--theme-colors-destructive-foreground);\n  --success:                  var(--theme-colors-success);\n  --success-foreground:       var(--theme-colors-success-foreground);\n  --warning:                  var(--theme-colors-warning);\n  --warning-foreground:       var(--theme-colors-warning-foreground);\n  --info:                     var(--theme-colors-info);\n  --info-foreground:          var(--theme-colors-info-foreground);\n\n  /* Typography scale, tracking, leading */\n  --theme-text-xs:        var(--theme-typography-scale-xs);\n  --theme-text-sm:        var(--theme-typography-scale-sm);\n  /* ... full scale ... */\n  --theme-tracking-tight: var(--theme-typography-tracking-tight);\n  --theme-leading-normal: var(--theme-typography-leading-normal);\n  /* ... */\n\n  /* Spacing */\n  --theme-container-max:  var(--theme-spacing-container-max);\n  --theme-section-y:      var(--theme-spacing-section-y);\n  --theme-header-h:       var(--theme-spacing-header-h);\n  --theme-sidebar-w:      var(--theme-spacing-sidebar-w);\n\n  /* Z-index */\n  --z-base:     var(--theme-z-index-base);\n  --z-elevated: var(--theme-z-index-elevated);\n  --z-dropdown: var(--theme-z-index-dropdown);\n  --z-sticky:   var(--theme-z-index-sticky);\n  --z-overlay:  var(--theme-z-index-overlay);\n  --z-modal:    var(--theme-z-index-modal);\n  --z-toast:    var(--theme-z-index-toast);\n}\n```\n\n**Layer 2 —** `@theme` **Tailwind v4 bridge (Tenant-provided,** `index.css`**)** Every semantic variable from Layer 1 is re-exposed under the Tailwind v4 `@theme` namespace so it becomes a utility class. Pattern: `--color-{slug}: var(--{slug})`.\n\n```css\n@theme {\n  --color-background:    var(--background);\n  --color-card:          var(--card);\n  --color-foreground:    var(--foreground);\n  --color-primary:       var(--primary);\n  --color-accent:        var(--accent);\n  --color-border:        var(--border);\n  /* ... full token set ... */\n\n  --font-primary:        var(--theme-font-primary);\n  --font-mono:           var(--theme-font-mono);\n  --font-display:        var(--theme-font-display);\n\n  --radius-sm:           var(--theme-radius-sm);\n  --radius-md:           var(--theme-radius-md);\n  --radius-lg:           var(--theme-radius-lg);\n  --radius-xl:           var(--theme-radius-xl);\n  --radius-full:         var(--theme-radius-full);\n}\n```\n\nAfter this bridge, the full Tailwind utility vocabulary (`bg-primary`, `text-foreground`, `rounded-lg`, `font-display`, etc.) resolves to live theme values — with no hardcoded hex anywhere in the React layer.\n\n**Light mode / additional modes** are bridged by overriding the Layer 1 semantic vars under a `[data-theme=\"light\"]` selector (or equivalent), pointing to the engine-injected mode vars (`--theme-modes-light-colors-*`). The `@theme` layer requires no changes.\n\n**Rule:** A tenant `index.css` must implement all three layers. Skipping Layer 2 breaks Tailwind utility resolution. Skipping Layer 1 couples sections to engine-internal naming. Hardcoding values in either layer is non-compliant.\n\n#### 4.4.4 Section-Local Scope\n\nIf a section controls its own visual language, it **shall** establish a local token scope on the section root. Example:\n\n```tsx\n<section\n  style={{\n    '--local-bg': 'var(--background)',\n    '--local-text': 'var(--foreground)',\n    '--local-text-muted': 'var(--muted-foreground)',\n    '--local-primary': 'var(--primary)',\n    '--local-border': 'var(--border)',\n    '--local-surface': 'var(--card)',\n    '--local-radius-sm': 'var(--theme-radius-sm)',\n    '--local-radius-md': 'var(--theme-radius-md)',\n    '--local-radius-lg': 'var(--theme-radius-lg)',\n  } as React.CSSProperties}\n>\n```\n\n**Rule:** `--local-*` values must map to published theme variables. They must **not** be defined as hardcoded brand values such as `#fff`, `#111827`, `12px`, or `Inter, sans-serif` if those values belong to the tenant theme layer.\n\n**Rule:** Local tokens are **mandatory** for section-owned color and radius concerns. They are **optional** for font-family concerns unless the section must remap or isolate font roles locally.\n\n#### 4.4.5 Canonical Typography Rule\n\nTypography follows a deterministic rule distinct from color/radius:\n\n1. **Canonical font publication** — Tenant/Core must publish semantic font variables such as `--theme-font-primary`, `--theme-font-mono`, and `--theme-font-display` when those roles exist in the theme.\n2. **Canonical font consumption** — Sections must consume typography through semantic tenant font utilities or variables backed by those published theme roles (for example `.font-display` backed by `--font-display`, itself backed by `--theme-font-display`).\n3. **Local font tokens** — `--local-font-*` is optional and should be used only when a section needs to remap a font role locally rather than simply consume the canonical tenant font role.\n\nExample of canonical global semantic bridge:\n\n```css\n:root {\n  --font-primary: var(--theme-font-primary);\n  --font-display: var(--theme-font-display);\n}\n\n.font-display {\n  font-family: var(--font-display, var(--font-primary));\n}\n```\n\n**Rule:** A section is compliant if it consumes themed fonts through this published semantic chain. It is **not** required to define `--local-font-display` unless the section needs local remapping. This closes the ambiguity between global semantic typography utilities and local color/radius scoping.\n\n#### 4.4.6 View Consumption\n\nAll section-owned classes that affect color or radius must consume local variables. Font consumption must follow the typography rule above. Example:\n\n```tsx\n<section\n  style={{\n    '--local-bg': 'var(--background)',\n    '--local-text': 'var(--foreground)',\n    '--local-primary': 'var(--primary)',\n    '--local-border': 'var(--border)',\n    '--local-radius-md': 'var(--theme-radius-md)',\n    '--local-radius-lg': 'var(--theme-radius-lg)',\n  } as React.CSSProperties}\n  className=\"bg-[var(--local-bg)]\"\n>\n  <h1 className=\"font-display text-[var(--local-text)]\">Build Tenant DNA</h1>\n\n  <a className=\"bg-[var(--local-primary)] rounded-[var(--local-radius-md)] text-white\">\n    Read the Docs\n  </a>\n\n  <div className=\"border border-[var(--local-border)] rounded-[var(--local-radius-lg)]\">\n    {/* illustration / mockup / card */}\n  </div>\n</section>\n```\n\n#### 4.4.7 Compliance Rules\n\nA section is compliant when all of the following are true:\n\n1. `theme.json` is the source of truth for the theme values being used.\n2. Those values are published at runtime as CSS custom properties before the section renders.\n3. The section root defines a local token scope for the color/radius concerns it controls.\n4. Local color/radius tokens map to published theme variables rather than hardcoded literals.\n5. JSX classes use `var(--local-*)` for section-owned color/radius concerns.\n6. Fonts are consumed through the published semantic font chain, and only use local font tokens when local remapping is required.\n7. Hardcoded colors/radii are absent from the primary visual contract of the section.\n\n#### 4.4.8 Allowed Exceptions\n\nThe following are acceptable if documented and intentionally limited:\n\n- Tiny decorative one-off values that are not part of the tenant theme contract (for example an isolated translucent pixel-grid overlay).\n- Temporary compatibility shims during migration, provided the section still exposes a clear compliant path and the literal is not the primary themed value.\n- Semantic alias bridges in tenant CSS (for example `--font-display: var(--theme-font-display)`), as long as the source remains the theme layer.\n\n#### 4.4.9 Non-Compliant Patterns\n\nThe following are non-compliant:\n\n- `style={{ '--local-bg': '#060d1b' }}` when that background belongs to tenant theme.\n- Buttons using `rounded-[7px]`, `bg-blue-500`, `text-zinc-100`, or similar hardcoded utilities inside a section that claims to be theme-driven.\n- A section root that defines `--local-*`, but child elements still use raw `bg-*`, `text-*`, or `rounded-*` utilities for the same owned concerns.\n- Reading `theme.json` directly inside a View instead of consuming published runtime theme variables.\n- Treating brand-specific extension keys as a replacement for canonical semantic keys such as `primary`, `background`, `text`, `border`, or `fontFamily.primary`.\n\n#### 4.4.10 Practical Interpretation\n\n`--local-*` is not the source of truth. It is the **local scoping layer** between tenant theme and section implementation.\n\nCanonical chain:\n\n`theme.json` → published runtime theme vars → section `--local-*` → JSX classes\\`\n\nCanonical font chain:\n\n`theme.json` → published semantic font vars → tenant font utility/variable → section typography\\`\n\n### 4.5 Z-Index & Overlay Governance (v1.2)\n\nSection content root **must** stay at `z-index` **≤ 1** (prefer `z-0`) so the Sovereign Overlay can sit above with high z-index in Tenant CSS (§7). Header/footer may use a higher z-index (e.g. 50) only as a documented exception for global chrome.\n\n**Perché servono (CIP):** View “dumb” (solo data/settings) e senza import di Zod evita accoppiamento e permette al Form Factory di essere l’unica fonte di verità sugli schemi. Z-index basso evita che il contenuto copra l’overlay di selezione in Studio. Asset via `resolveAssetUrl`: i path relativi vengono risolti in `/assets/...` (senza segmento tenantId nel path). In v1.4 la catena `theme.json -> runtime vars -> --local-* -> JSX classes` rende i tenant temabili, riproducibili e compatibili con la Studio UX; senza questa separazione, stili “nudi” o valori hardcoded creano drift visivo, rompono il contratto del brand, e rendono ambiguo ciò che appartiene al tema contro ciò che appartiene alla section.\n\n---\n\n## 5. 🛠️ Editor Component Implementation Protocol (ECIP) v1.5\n\n**Objective:** Standardize the Polymorphic ICE engine.\n\n1. **Recursive Form Factory:** The Admin UI builds forms by traversing the Zod ontology.\n2. **UI Metadata:** Use `.describe('ui:[widget]')` in schemas to pass instructions to the Form Factory.\n3. **Deterministic IDs:** Every object in a `ZodArray` must extend `BaseArrayItem` (containing an `id`) to ensure React reconciliation stability during reordering.\n\n### 5.4 UI Metadata Vocabulary (v1.2)\n\nStandard keys for the Form Factory:\n\nKey Use case `ui:text` Single-line text input. `ui:textarea` Multi-line text. `ui:select` Enum / single choice. `ui:number` Numeric input. `ui:list` Array of items; list editor (add/remove/reorder). `ui:icon-picker` Icon selection.\n\nUnknown keys may be treated as `ui:text`. Array fields must use `BaseArrayItem` for items.\n\n### 5.5 Path-Only Nested Selection & Expansion (v1.3, breaking)\n\nIn strict v1.3 Studio/Inspector behavior, nested editing targets are represented by **path segments from root to leaf**.\n\n```typescript\nexport type SelectionPathSegment = { fieldKey: string; itemId?: string };\nexport type SelectionPath = SelectionPathSegment[];\n```\n\nRules:\n\n- Expansion and focus for nested arrays **must** be computed from `SelectionPath` (root → leaf), not from a single flat pair.\n- Matching by `fieldKey` alone is non-compliant for nested structures.\n- Legacy flat payload fields `itemField` and `itemId` are removed in strict v1.3 selection protocol.\n\n**Perché servono (ECIP):** Il Form Factory deve sapere quale widget usare (text, textarea, select, list, …) senza hardcodare per tipo; `.describe('ui:...')` è il contratto. BaseArrayItem con `id` su ogni item di array garantisce chiavi stabili in React e reorder/delete corretti nell’Inspector. In v1.3 la selezione/espansione path-only elimina ambiguità su array annidati: senza path completo root→leaf, la sidebar può aprire il ramo sbagliato o non aprire il target.\n\n---\n\n## 6. 🎯 ICE Data Attribute Contract (IDAC) v1.1\n\n**Objective:** Mandatory data attributes so the Stage (iframe) and Inspector can bind selection and field/item editing without coupling to Tenant DOM.\n\n### 6.1 Section-Level Markup (Core-Provided)\n\n**SectionRenderer** (Core) wraps each section root with:\n\n- `data-section-id` — Section instance ID (e.g. UUID). On the wrapper that contains content + overlay.\n- Sibling overlay element `data-jp-section-overlay` — Selection ring and type label. **Tenant does not add this;** Core injects it.\n\nTenant Views render the **content** root only (e.g. `<section>` or `<div>`), placed **inside** the Core wrapper.\n\n### 6.2 Field-Level Binding (Tenant-Provided)\n\nFor every **editable scalar field** the View **must** attach `data-jp-field=\"<fieldKey>\"` (key matches schema path: e.g. `title`, `description`, `sectionTitle`, `label`).\n\n### 6.3 Array-Item Binding (Tenant-Provided)\n\nFor every **editable array item** the View **must** attach:\n\n- `data-jp-item-id=\"<stableId>\"` — Prefer `item.id`; fallback e.g. `legacy-${index}` only outside strict mode.\n- `data-jp-item-field=\"<arrayKey>\"` — e.g. `cards`, `layers`, `products`, `paragraphs`.\n\n### 6.4 Compliance\n\n**Reserved types** (`header`, `footer`): ICE attributes optional unless Studio edits them. **All other section types** in the Stage and in `SECTION_SCHEMAS` **must** implement §6.2 and §6.3 for every editable field and array item.\n\n### 6.5 Strict Path Extraction for Nested Arrays (v1.3, breaking)\n\nFor nested array targets, the Core/Inspector contract is path-based:\n\n- The runtime selection target is expressed as `itemPath: SelectionPath` (root → leaf).\n- Flat identity (`itemField` + `itemId`) is not sufficient for nested structures and is removed in strict v1.3 payloads.\n- In strict mode, index-based identity fallback is non-compliant for editable object arrays.\n\n**Perché servono (IDAC):** Lo Stage è in un iframe e l’Inspector deve sapere **quale campo o item** corrisponde al click (o alla selezione) senza conoscere la struttura DOM del Tenant. `data-jp-field` associa un nodo DOM al path dello schema (es. `title`, `description`): così il Core può evidenziare la riga giusta nella sidebar, applicare opacità attivo/inattivo e aprire il form sul campo corretto. `data-jp-item-id` e `data-jp-item-field` fanno lo stesso per gli item di array (liste, reorder, delete). In v1.3, `itemPath` rende deterministico anche il caso nested (array dentro array), eliminando mismatch tra selezione canvas e ramo aperto in sidebar.\n\n---\n\n## 7. 🎨 Tenant Overlay CSS Contract (TOCC) v1.0\n\n**Objective:** The Stage iframe loads only Tenant HTML/CSS. Core injects overlay **markup** but does **not** ship overlay styles. The Tenant **must** supply CSS so overlay is visible.\n\n### 7.1 Required Selectors (Tenant global CSS)\n\n1. `[data-jp-section-overlay]` — `position: absolute; inset: 0`; `pointer-events: none`; base state transparent.\n2. `[data-section-id]:hover [data-jp-section-overlay]` — Hover: e.g. dashed border, subtle tint.\n3. `[data-section-id][data-jp-selected] [data-jp-section-overlay]` — Selected: solid border, optional tint.\n4. `[data-jp-section-overlay] > div` (type label) — Position and visibility (e.g. visible on hover/selected).\n\n### 7.2 Z-Index\n\nOverlay **z-index** high (e.g. 9999). Section content at or below CIP limit (§4.5).\n\n### 7.3 Responsibility\n\n**Core:** Injects wrapper and overlay DOM; sets `data-jp-selected`. **Tenant:** All overlay **visual** rules.\n\n**Perché servono (TOCC):** L’iframe dello Stage carica solo HTML/CSS del Tenant; il Core inietta il markup dell’overlay ma non gli stili. Senza CSS Tenant per i selettori TOCC, bordo hover/selected e type label non sarebbero visibili: l’autore non vedrebbe quale section è selezionata né il label del tipo. TOCC chiarisce la responsabilità (Core = markup, Tenant = aspetto) e garantisce UX uniforme tra tenant.\n\n---\n\n## 8. 📦 Base Section Data & Settings (BSDS) v1.0\n\n**Objective:** Standardize base schema fragments for anchors, array items, and section settings.\n\n### 8.1 BaseSectionData\n\nEvery section data schema **must** extend a base with at least `anchorId` (optional string). Canonical Zod (Tenant `lib/base-schemas.ts` or equivalent):\n\n```typescript\nexport const BaseSectionData = z.object({\n  anchorId: z.string().optional().describe('ui:text'),\n});\n```\n\n### 8.2 BaseArrayItem\n\nEvery array item schema editable in the Inspector **must** include `id` (optional string minimum). Canonical Zod:\n\n```typescript\nexport const BaseArrayItem = z.object({\n  id: z.string().optional(),\n});\n```\n\nRecommended: required UUID for new items. Used by `data-jp-item-id` and React reconciliation.\n\n### 8.3 BaseSectionSettings (Optional)\n\nCommon section-level settings. Canonical Zod (name **BaseSectionSettingsSchema** or as exported by Core):\n\n```typescript\nexport const BaseSectionSettingsSchema = z.object({\n  paddingTop: z.enum(['none', 'sm', 'md', 'lg', 'xl', '2xl']).default('md').describe('ui:select'),\n  paddingBottom: z.enum(['none', 'sm', 'md', 'lg', 'xl', '2xl']).default('md').describe('ui:select'),\n  theme: z.enum(['dark', 'light', 'accent']).default('dark').describe('ui:select'),\n  container: z.enum(['boxed', 'fluid']).default('boxed').describe('ui:select'),\n});\n```\n\nCapsules may extend this for type-specific settings. Core may export **BaseSectionSettings** as the TypeScript type inferred from this or a superset.\n\n**Perché servono (BSDS):** anchorId permette deep-link e navigazione in-page; id sugli array item è necessario per `data-jp-item-id`, reorder e React reconciliation. BaseSectionSettings comuni (padding, theme, container) evitano ripetizione e allineano il Form Factory tra capsule. Senza base condivisi, ogni capsule inventa convenzioni e validazione/add-section diventano fragili.\n\n---\n\n## 9. 📌 AddSectionConfig (ASC) v1.0\n\n**Objective:** Formalize the \"Add Section\" contract used by the Studio.\n\n**Type (Core exports** `AddSectionConfig`**):**\n\n```typescript\ninterface AddSectionConfig {\n  addableSectionTypes: readonly string[];\n  sectionTypeLabels: Record<string, string>;\n  getDefaultSectionData(sectionType: string): Record<string, unknown>;\n}\n```\n\n**Shape:** Tenant provides one object (e.g. `addSectionConfig`) with:\n\n- `addableSectionTypes` — Readonly array of section type keys. Only these types appear in the Add Section Library. Must be a subset of (or equal to) the keys in SectionDataRegistry.\n- `sectionTypeLabels` — Map type key → display string (e.g. `{ hero: 'Hero', 'cta-banner': 'CTA Banner' }`).\n- `getDefaultSectionData(sectionType: string): Record<string, unknown>` — Returns default `data` for a new section. Must conform to the capsule’s data schema so the new section validates.\n\nCore creates a new section with deterministic UUID, `type`, and `data` from `getDefaultSectionData(type)`.\n\n**Perché servono (ASC):** Lo Studio deve mostrare una libreria “Aggiungi sezione” con nomi leggibili e, alla scelta, creare una section con dati iniziali validi. addableSectionTypes, sectionTypeLabels e getDefaultSectionData sono il contratto: il Tenant è l’unica fonte di verità su quali tipi sono addabili e con quali default. Senza ASC, il Core non saprebbe cosa mostrare in modal né come popolare i dati della nuova section.\n\n---\n\n## 10. ⚙️ JsonPagesConfig & Engine Bootstrap (JEB) v1.1\n\n**Objective:** Bootstrap contract between Tenant app and `@olonjs/core`.\n\n### 10.1 JsonPagesConfig (required fields)\n\nThe Tenant passes a single **config** object to **JsonPagesEngine**. Required fields:\n\nField Type Description **tenantId** string Passed to `resolveAssetUrl(path, tenantId)`; resolved asset URLs are `/assets/...` with no tenantId segment in the path. **registry** `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }` Component registry. Must match MTRP keys. See Appendix A. **schemas** `Record<SectionType, ZodType>` or equivalent SECTION_SCHEMAS: type → **data** Zod schema. Form Factory uses this. See Appendix A. **pages** `Record<string, PageConfig>` Slug → page config. See Appendix A. **siteConfig** SiteConfig Global site (identity, header/footer blocks). See Appendix A. **themeConfig** ThemeConfig Theme tokens. See Appendix A. **menuConfig** MenuConfig Navigation tree (SSOT for header menu). See Appendix A. **themeCss** `{ tenant: string }` At least **tenant**: string (inline CSS or URL) for Stage iframe injection. **addSection** AddSectionConfig Add-section config (§9).\n\nCore may define optional fields. The Tenant must not omit required fields.\n\n### 10.2 JsonPagesEngine\n\nRoot component: `<JsonPagesEngine config={config} />`. Responsibilities: route → page, SectionRenderer per section; in Studio mode Sovereign Shell (Inspector, Control Bar, postMessage); section wrappers and overlay per IDAC and JAP. Tenant does not implement the Shell.\n\n### 10.3 Studio Selection Event Contract (v1.3, breaking)\n\nIn strict v1.3 Studio, section selection payload for nested targets is path-based:\n\n```typescript\ntype SectionSelectMessage = {\n  type: 'SECTION_SELECT';\n  section: { id: string; type: string; scope: 'global' | 'local' };\n  itemPath?: SelectionPath; // root -> leaf\n};\n```\n\nRemoved from strict protocol:\n\n- `itemField`\n- `itemId`\n\n**Perché servono (JEB):** Un unico punto di bootstrap (config + Engine) evita che il Tenant replichi logica di routing, Shell e overlay. I campi obbligatori in JsonPagesConfig (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection) sono il minimo per far funzionare rendering, Studio e Form Factory; omissioni causano errori a runtime. In v1.3, il payload `itemPath` sincronizza in modo non ambiguo Stage e Inspector su nested arrays.\n\n---\n\n# 🏛️ OlonJS_ADMIN_PROTOCOL (JAP) v1.2\n\n**Status:** Mandatory Standard\\\n**Version:** 1.2.0 (Sovereign Shell Edition — Path/Nested Strictness)\\\n**Objective:** Deterministic orchestration of the \"Studio\" environment (ICE Level 1).\n\n---\n\n## 1. The Sovereign Shell Topology\n\nThe Admin interface is a **Sovereign Shell** from `@olonjs/core`.\n\n1. **The Stage (Canvas):** Isolated Iframe; postMessage for data updates and selection mirroring. Section markup follows **IDAC** (§6); overlay styling follows **TOCC** (§7).\n2. **The Inspector (Sidebar):** Consumes Tenant Zod schemas to generate editors; binding via `data-jp-field` and `data-jp-item-*`.\n3. **The Control Bar:** Save, Export, Add Section.\n\n## 2. State Orchestration & Persistence\n\n- **Working Draft:** Reactive local state for unsaved changes.\n- **Sync Law:** Inspector changes → Working Draft → Stage via `STUDIO_EVENTS.UPDATE_DRAFTS`.\n- **Bake Protocol:** \"Bake HTML\" requests snapshot from Iframe, injects `ProjectState` as JSON, triggers download.\n\n## 3. Context Switching (Global vs. Local)\n\n- **Header/Footer** selection → Global Mode, `site.json`.\n- Any other section → Page Mode, current `[slug].json`.\n\n## 4. Section Lifecycle Management\n\n1. **Add Section:** Modal from Tenant `SECTION_SCHEMAS`; UUID + default data via **AddSectionConfig** (§9).\n2. **Reorder:** Inspector or Stage Overlay; array mutation in Working Draft.\n3. **Delete:** Confirmation; remove from array, clear selection.\n\n## 5. Stage Isolation & Overlay\n\n- **CSS Shielding:** Stage in Iframe; Tenant CSS does not leak into Admin.\n- **Sovereign Overlay:** Selection ring and type labels injected per **IDAC** (§6); Tenant styles them per **TOCC** (§7).\n\n## 6. \"Green Build\" Validation\n\nStudio enforces `tsc && vite build`. No export with TypeScript errors.\n\n## 7. Path-Deterministic Selection & Sidebar Expansion (v1.3, breaking)\n\n- Section/item focus synchronization uses `itemPath` (root → leaf), not flat `itemField/itemId`.\n- Sidebar expansion state for nested arrays must be derived from all path segments.\n- Flat-only matching may open/close wrong branches and is non-compliant in strict mode.\n\n**Perché servono (JAP):** Stage in iframe + Inspector + Control Bar separano il contesto di editing dal sito; postMessage e Working Draft permettono modifiche senza toccare subito i file. Bake ed Export richiedono uno stato coerente. Global vs Page mode evita confusione su dove si sta editando (site.json vs \\[slug\\].json). Add/Reorder/Delete sono gestiti in un solo modo (Working Draft + ASC). Green Build garantisce che ciò che si esporta compili. In v1.3, il path completo elimina ambiguità nella sincronizzazione Stage↔Sidebar su strutture annidate.\n\n---\n\n## Compliance: Legacy vs Full UX (v1.4)\n\nDimension Legacy / Less UX Full UX (Core-aligned) **ICE binding** No `data-jp-*`; Inspector cannot bind. IDAC (§6) on every editable section/field/item. **Section wrapper** Plain `<section>`; no overlay contract. Core wrapper + overlay; Tenant CSS per TOCC (§7). **Design tokens** Raw BEM / fixed classes, or local vars fed by literals. `theme.json` as source of truth, mandatory runtime publication, local color/radius scope via `--local-*`, typography via canonical semantic font chain, no primary hardcoded themed values. **Base schemas** Ad hoc. BSDS (§8): BaseSectionData, BaseArrayItem, BaseSectionSettings. **Add Section** Ad hoc defaults. ASC (§9): addableSectionTypes, labels, getDefaultSectionData. **Bootstrap** Implicit. JEB (§10): JsonPagesConfig + JsonPagesEngine. **Selection payload** Flat `itemField/itemId`. Path-only `itemPath: SelectionPath` (JEB §10.3). **Nested array expansion** Single-segment or field-only heuristics. Root-to-leaf path expansion (ECIP §5.5, JAP §7). **Array item identity (strict)** Index fallback tolerated. Stable `id` required for editable object arrays.\n\n**Rule:** Every page section (non-header/footer) that appears in the Stage and in `SECTION_SCHEMAS` must comply with §6, §7, §4.4, §8, §9, §10 for full Studio UX.\n\n---\n\n## Summary of v1.5 Additions\n\n§ Title Purpose 4.4.3 Three-Layer CSS Bridge Replaces the informal \"publish CSS vars\" rule with the deterministic Layer 0 (engine injection) → Layer 1 (`:root` semantic bridge) → Layer 2 (`@theme` Tailwind bridge) architecture. Documents the engine's `--theme-colors-{name}` naming convention and the tenant's sovereign naming freedom in Layer 1. A.2.6 ThemeConfig (v1.5) Replaces the incorrect `surface/surfaceAlt/text/textMuted` canonical keys with the actual schema-aligned keys (`card`, `elevated`, `foreground`, `muted-foreground`, etc.). Adds `spacing`, `zIndex`, full typography sub-interfaces (`scale`, `tracking`, `leading`, `wordmark`), and `modes`. Establishes `theme.json` as SOT with schema as the formalisation layer.\n\n---\n\n## Summary of v1.4 Additions\n\n§ Title Purpose 4.4 Local Design Tokens Makes the `theme.json -> runtime vars -> --local-* -> JSX classes` chain explicit and normative. 4.4.3 Runtime Theme Publication Makes runtime CSS publication mandatory for themed tenants. 4.4.5 Canonical Typography Rule Removes ambiguity between global semantic font utilities and local token scoping. 4.4.7 Compliance Rules Turns Local Design Tokens into a checklist-grade compliance contract. 4.4.9 Non-Compliant Patterns Makes hardcoded token anti-patterns explicit. **Appendix A.2.6** **Deterministic ThemeConfig** Aligns the spec-level theme contract with the core’s structured semantic keys plus extension policy. **Appendix A.7** **Local Design Tokens Implementation Addendum** Operational checklist and implementation examples for compliant tenant sections.\n\n---\n\n# Appendix A — Tenant Type & Code-Generation Annex\n\n**Objective:** Make the specification **sufficient** to generate or audit a full tenant (new site, new components, new data) without a reference codebase. Defines TypeScript types, JSON shapes, schema contract, file paths, and integration pattern.\n\n**Status:** Mandatory for code-generation and governance. Compliance ensures generated tenants are typed and wired like the reference implementation.\n\n---\n\n## A.1 Core-Provided Types (from `@olonjs/core`)\n\nThe following are assumed to be exported by Core. The Tenant augments **SectionDataRegistry** and **SectionSettingsRegistry**; all other types are consumed as-is.\n\nType Description **SectionType** `keyof SectionDataRegistry` (after Tenant augmentation). Union of all section type keys. **Section** Union of `BaseSection<K>` for all K in SectionDataRegistry. See MTRP §1.2. **BaseSectionSettings** Optional base type for section settings (may align with BSDS §8.3). **MenuItem** Navigation item. **Minimum shape:** `{ label: string; href: string }`. Core may extend (e.g. `children?: MenuItem[]`). **AddSectionConfig** See §9. **JsonPagesConfig** See §10.1.\n\n**Perché servono (A.1):** Il Tenant deve conoscere i tipi esportati dal Core (SectionType, MenuItem, AddSectionConfig, JsonPagesConfig) per tipizzare registry, config e augmentation senza dipendere da implementazioni interne.\n\n---\n\n## A.2 Tenant-Provided Types (single source: `src/types.ts` or equivalent)\n\nThe Tenant **must** define the following in one module (e.g. `src/types.ts`). This module **must** perform the **module augmentation** of `@olonjs/core` for **SectionDataRegistry** and **SectionSettingsRegistry**, and **must** export **SectionComponentPropsMap** and re-export from `@olonjs/core` so that **SectionType** is available after augmentation.\n\n### A.2.1 SectionComponentPropsMap\n\nMaps each section type to the props of its React component. **Header** is the only type that receives **menu**.\n\n**Option A — Explicit (recommended for clarity and tooling):** For each section type K, add one entry. Header receives **menu**.\n\n```typescript\nimport type { MenuItem } from '@olonjs/core';\n// Import Data/Settings from each capsule.\n\nexport type SectionComponentPropsMap = {\n  'header': { data: HeaderData; settings?: HeaderSettings; menu: MenuItem[] };\n  'footer': { data: FooterData; settings?: FooterSettings };\n  'hero': { data: HeroData; settings?: HeroSettings };\n  // ... one entry per SectionType, e.g. 'feature-grid', 'cta-banner', etc.\n};\n```\n\n**Option B — Mapped type (DRY, requires SectionDataRegistry/SectionSettingsRegistry in scope):**\n\n```typescript\nimport type { MenuItem } from '@olonjs/core';\n\nexport type SectionComponentPropsMap = {\n  [K in SectionType]: K extends 'header'\n    ? { data: SectionDataRegistry[K]; settings?: SectionSettingsRegistry[K]; menu: MenuItem[] }\n    : { data: SectionDataRegistry[K]; settings?: K extends keyof SectionSettingsRegistry ? SectionSettingsRegistry[K] : BaseSectionSettings };\n};\n```\n\nSectionType is imported from Core (after Tenant augmentation). In practice Option A is the reference pattern; Option B is valid if the Tenant prefers a single derived definition.\n\n**Perché servono (A.2):** SectionComponentPropsMap e i tipi di config (PageConfig, SiteConfig, MenuConfig, ThemeConfig) definiscono il contratto tra dati (JSON, API) e componente; l’augmentation è l’unico modo per estendere i registry del Core senza fork. Senza questi tipi, generazione tenant e refactor sarebbero senza guida e il type-check fallirebbe.\n\n### A.2.2 ComponentRegistry type\n\nThe registry object **must** be typed as:\n\n```typescript\nimport type { SectionType } from '@olonjs/core';\nimport type { SectionComponentPropsMap } from '@/types';\n\nexport const ComponentRegistry: {\n  [K in SectionType]: React.FC<SectionComponentPropsMap[K]>;\n} = { /* ... */ };\n```\n\nFile: `src/lib/ComponentRegistry.tsx` (or equivalent). Imports one View per section type and assigns it to the corresponding key.\n\n### A.2.3 PageConfig\n\nMinimum shape for a single page (used in **pages** and in each `[slug].json`):\n\n```typescript\nexport interface PageConfig {\n  id?: string;\n  slug: string;\n  meta?: {\n    title?: string;\n    description?: string;\n  };\n  sections: Section[];\n}\n```\n\n**Section** is the union type from MTRP (§1.2). Each element of **sections** has **id**, **type**, **data**, **settings** and conforms to the capsule schemas.\n\n### A.2.4 SiteConfig\n\nMinimum shape for **site.json** (and for **siteConfig** in JsonPagesConfig):\n\n```typescript\nexport interface SiteConfigIdentity {\n  title?: string;\n  logoUrl?: string;\n}\n\nexport interface SiteConfig {\n  identity?: SiteConfigIdentity;\n  pages?: Array<{ slug: string; label: string }>;\n  header: {\n    id: string;\n    type: 'header';\n    data: HeaderData;\n    settings?: HeaderSettings;\n  };\n  footer: {\n    id: string;\n    type: 'footer';\n    data: FooterData;\n    settings?: FooterSettings;\n  };\n}\n```\n\n**HeaderData**, **FooterData**, **HeaderSettings**, **FooterSettings** are the types exported from the header and footer capsules.\n\n### A.2.5 MenuConfig\n\nMinimum shape for **menu.json** (and for **menuConfig** in JsonPagesConfig). Structure is tenant-defined; Core expects the header to receive **MenuItem\\[\\]**. Common pattern: an object with a key (e.g. **main**) whose value is **MenuItem\\[\\]**.\n\n```typescript\nexport interface MenuConfig {\n  main?: MenuItem[];\n  [key: string]: MenuItem[] | undefined;\n}\n```\n\nOr simply `MenuItem[]` if the app uses a single flat list. The Tenant must ensure that the value passed to the header component as **menu** conforms to **MenuItem\\[\\]** (e.g. `menuConfig.main` or `menuConfig` if it is the array).\n\n### A.2.6 ThemeConfig\n\nMinimum shape for **theme.json** (and for **themeConfig** in JsonPagesConfig). `theme.json` is the **source of truth** for the entire visual contract of the tenant. The schema (`design-system.schema.json`) is the machine-readable formalisation of this contract — if the TypeScript interfaces and the JSON Schema diverge, the JSON Schema wins.\n\n**Naming policy:** The keys within `tokens.colors` are the tenant's sovereign choice. The engine flattens all keys to `--theme-colors-{name}` regardless of naming convention. The required keys listed below are the ones the engine's `:root` bridge and the `@theme` Tailwind bridge must be able to resolve. Extra brand-specific keys are always allowed as additive extensions.\n\n```typescript\nexport interface ThemeColors {\n  /* Required — backgrounds */\n  background: string;\n  card: string;\n  elevated: string;\n  overlay: string;\n  popover: string;\n  'popover-foreground': string;\n\n  /* Required — foregrounds */\n  foreground: string;\n  'card-foreground': string;\n  'muted-foreground': string;\n  placeholder: string;\n\n  /* Required — brand */\n  primary: string;\n  'primary-foreground': string;\n  'primary-light': string;\n  'primary-dark': string;\n\n  /* Optional — brand ramp (50–900) */\n  'primary-50'?: string;\n  'primary-100'?: string;\n  'primary-200'?: string;\n  'primary-300'?: string;\n  'primary-400'?: string;\n  'primary-500'?: string;\n  'primary-600'?: string;\n  'primary-700'?: string;\n  'primary-800'?: string;\n  'primary-900'?: string;\n\n  /* Required — accent, secondary, muted */\n  accent: string;\n  'accent-foreground': string;\n  secondary: string;\n  'secondary-foreground': string;\n  muted: string;\n\n  /* Required — border, form */\n  border: string;\n  'border-strong': string;\n  input: string;\n  ring: string;\n\n  /* Required — feedback */\n  destructive: string;\n  'destructive-foreground': string;\n  'destructive-border': string;\n  'destructive-ring': string;\n  success: string;\n  'success-foreground': string;\n  'success-border': string;\n  'success-indicator': string;\n  warning: string;\n  'warning-foreground': string;\n  'warning-border': string;\n  info: string;\n  'info-foreground': string;\n  'info-border': string;\n\n  [key: string]: string | undefined;\n}\n\nexport interface ThemeFontFamily {\n  primary: string;\n  mono: string;\n  display?: string;\n  [key: string]: string | undefined;\n}\n\nexport interface ThemeWordmark {\n  fontFamily: string;\n  weight: string;\n  width: string;\n}\n\nexport interface ThemeTypography {\n  fontFamily: ThemeFontFamily;\n  wordmark?: ThemeWordmark;\n  scale?: Record<string, string>;     /* xs sm base md lg xl 2xl 3xl 4xl 5xl 6xl 7xl */\n  tracking?: Record<string, string>;  /* tight display normal wide label */\n  leading?: Record<string, string>;   /* none tight snug normal relaxed */\n}\n\nexport interface ThemeBorderRadius {\n  sm: string;\n  md: string;\n  lg: string;\n  xl?: string;\n  full?: string;\n  [key: string]: string | undefined;\n}\n\nexport interface ThemeSpacing {\n  'container-max'?: string;\n  'section-y'?: string;\n  'header-h'?: string;\n  'sidebar-w'?: string;\n  [key: string]: string | undefined;\n}\n\nexport interface ThemeZIndex {\n  base?: string;\n  elevated?: string;\n  dropdown?: string;\n  sticky?: string;\n  overlay?: string;\n  modal?: string;\n  toast?: string;\n  [key: string]: string | undefined;\n}\n\nexport interface ThemeModes {\n  [mode: string]: { colors: Partial<ThemeColors> };\n}\n\nexport interface ThemeTokens {\n  colors: ThemeColors;\n  typography: ThemeTypography;\n  borderRadius: ThemeBorderRadius;\n  spacing?: ThemeSpacing;\n  zIndex?: ThemeZIndex;\n  modes?: ThemeModes;\n}\n\nexport interface ThemeConfig {\n  name: string;\n  tokens: ThemeTokens;\n}\n```\n\n**Rule:** `theme.json` is the single source of truth. All layers downstream (engine injection, `:root` bridge, `@theme` bridge, React JSX) are read-only consumers. No layer below `theme.json` may hardcode a value that belongs to the theme contract.\n\n**Rule:** Brand-specific extension keys (e.g. `colors.primary-50` through `primary-900`, custom spacing tokens) are always allowed as additive extensions within the canonical groups. They must not replace the required semantic keys.\n\n---\n\n## A.3 Schema Contract (SECTION_SCHEMAS)\n\n**Location:** `src/lib/schemas.ts` (or equivalent).\n\n**Contract:**\n\n- **SECTION_SCHEMAS** is a **single object** whose keys are **SectionType** and whose values are **Zod schemas for the section data** (not settings, unless the Form Factory contract expects a combined or per-type settings schema; then each value may be the data schema only, and settings may be defined per capsule and aggregated elsewhere if needed).\n- The Tenant **must** re-export **BaseSectionData**, **BaseArrayItem**, and optionally **BaseSectionSettingsSchema** from `src/lib/base-schemas.ts` (or equivalent). Each capsule’s data schema **must** extend BaseSectionData; each array item schema **must** extend or include BaseArrayItem.\n- **SECTION_SCHEMAS** is typed as `Record<SectionType, ZodType>` or `{ [K in SectionType]: ZodType }` so that keys match the registry and SectionDataRegistry.\n\n**Export:** The app imports **SECTION_SCHEMAS** and passes it as **config.schemas** to JsonPagesEngine. The Form Factory traverses these schemas to build editors.\n\n**Perché servono (A.3):** Un unico oggetto SECTION_SCHEMAS con chiavi = SectionType e valori = schema data permette al Form Factory di costruire form per tipo senza convenzioni ad hoc; i base schema garantiscono anchorId e id su item. Senza questo contratto, l’Inspector non saprebbe quali campi mostrare né come validare.\n\n---\n\n## A.4 File Paths & Data Layout\n\nPurpose Path (conventional) Description Site config `src/data/config/site.json` SiteConfig (identity, header, footer, pages list). Menu config `src/data/config/menu.json` MenuConfig (e.g. main nav). Theme config `src/data/config/theme.json` ThemeConfig (tokens). Page data `src/data/pages/<slug>.json` One file per page; content is PageConfig (slug, meta, sections). Base schemas `src/lib/base-schemas.ts` BaseSectionData, BaseArrayItem, BaseSectionSettingsSchema. Schema aggregate `src/lib/schemas.ts` SECTION_SCHEMAS; re-exports base schemas. Registry `src/lib/ComponentRegistry.tsx` ComponentRegistry object. Add-section config `src/lib/addSectionConfig.ts` addSectionConfig (AddSectionConfig). Tenant types & augmentation `src/types.ts` SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **declare module '@olonjs/core'** for SectionDataRegistry and SectionSettingsRegistry; re-export from `@olonjs/core`. Bootstrap `src/App.tsx` Imports config (site, theme, menu, pages), registry, schemas, addSection, themeCss; builds JsonPagesConfig; renders .\n\nThe app entry (e.g. **main.tsx**) renders **App**. No other bootstrap contract is specified; the Tenant may use Vite aliases (e.g. **@/**) for the paths above.\n\n**Perché servono (A.4):** Path fissi (data/config, data/pages, lib/schemas, types.ts, App.tsx) permettono a CLI, tooling e agenti di trovare sempre gli stessi file; l’onboarding e la generazione da spec sono deterministici. Senza convenzione, ogni tenant sarebbe una struttura diversa.\n\n---\n\n## A.5 Integration Checklist (Code-Generation)\n\nWhen generating or auditing a tenant, ensure the following in order:\n\n 1. **Capsules** — For each section type, create `src/components/<type>/` with View.tsx, schema.ts, types.ts, index.ts. Data schema extends BaseSectionData; array items extend BaseArrayItem; View complies with CIP and IDAC (§6.2–6.3 for non-reserved types).\n 2. **Base schemas** — **src/lib/base-schemas.ts** exports BaseSectionData, BaseArrayItem, BaseSectionSettingsSchema (and optional CtaSchema or similar shared fragments).\n 3. **types.ts** — Define SectionComponentPropsMap (header with **menu**), PageConfig, SiteConfig, MenuConfig, ThemeConfig; **declare module '@olonjs/core'** and augment SectionDataRegistry and SectionSettingsRegistry; re-export from `@olonjs/core`.\n 4. **ComponentRegistry** — Import every View; build object **{ \\[K in SectionType\\]: ViewComponent }**; type as **{ \\[K in SectionType\\]: React.FC&lt;SectionComponentPropsMap\\[K\\]&gt; }**.\n 5. **schemas.ts** — Import base schemas and each capsule’s data schema; export SECTION_SCHEMAS as **{ \\[K in SectionType\\]: SchemaK }**; export SectionType as **keyof typeof SECTION_SCHEMAS** if not using Core’s SectionType.\n 6. **addSectionConfig** — addableSectionTypes, sectionTypeLabels, getDefaultSectionData; export as AddSectionConfig.\n 7. **App.tsx** — Import site, theme, menu, pages from data paths; build config (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss: { tenant }, addSection); render JsonPagesEngine.\n 8. **Data files** — Create or update site.json, menu.json, theme.json, and one or more **.json** under the paths in A.4. Ensure JSON shapes match SiteConfig, MenuConfig, ThemeConfig, PageConfig.\n 9. **Runtime theme publication** — Publish the theme contract as runtime CSS custom properties before themed sections render.\n10. **Tenant CSS** — Include TOCC (§7) selectors in global CSS so the Stage overlay is visible, and bridge semantic theme variables where needed.\n11. **Reserved types** — Header and footer capsules receive props per SectionComponentPropsMap; menu is populated from menuConfig (e.g. menuConfig.main) when building the config or inside Core when rendering the header.\n\n**Perché servono (A.5):** La checklist in ordine evita di dimenticare passi (es. augmentation prima del registry, TOCC dopo le View) e rende la spec sufficiente per generare o verificare un tenant senza codebase di riferimento.\n\n---\n\n## A.6 v1.3 Path/Nested Strictness Addendum (breaking)\n\nThis addendum extends Appendix A without removing prior v1.2 obligations:\n\n1. **Type exports** — Core and/or shared types module should expose `SelectionPathSegment` and `SelectionPath` for Studio messaging and Inspector expansion logic.\n2. **Protocol migration** — Replace flat payload fields `itemField` / `itemId` with `itemPath?: SelectionPath` in strict v1.3 channels.\n3. **Nested array compliance** — For editable object arrays, item identity must be stable (`id`) and propagated to DOM attributes (`data-jp-item-id`), schema items (BaseArrayItem), and selection path segments (`itemId` when segment targets array item).\n4. **Backward compatibility policy** — Legacy flat fields may exist only in transitional adapters outside strict mode; normative v1.3 contract is path-only.\n\n---\n\n## A.7 v1.4 Local Design Tokens Implementation Addendum\n\nThis addendum extends Appendix A without removing prior v1.3 obligations:\n\n1. **Theme source of truth** — Tenant theme values belong in `src/data/config/theme.json`.\n2. **Runtime publication** — Core and/or tenant bootstrap **must** expose those values as runtime CSS custom properties before section rendering.\n3. **Local scope** — A themed section must define `--local-*` variables on its root for the color/radius concerns it owns.\n4. **Class consumption** — Section-owned color/radius utilities must consume `var(--local-*)`, not raw hardcoded theme values.\n5. **Typography policy** — Fonts must consume the published semantic font chain; local font tokens are optional and only for local remapping.\n6. **Migration policy** — Hardcoded colors/radii may exist only as temporary compatibility shims or purely decorative exceptions, not as the primary section contract.\n\nCanonical implementation pattern:\n\n```text\ntheme.json -> published runtime theme vars -> section --local-* -> JSX classes\n```\n\nCanonical typography pattern:\n\n```text\ntheme.json -> published semantic font vars -> tenant font utility/variable -> section typography\n```\n\nMinimal compliant example:\n\n```tsx\n<section\n  style={{\n    '--local-bg': 'var(--background)',\n    '--local-text': 'var(--foreground)',\n    '--local-primary': 'var(--primary)',\n    '--local-radius-md': 'var(--theme-radius-md)',\n  } as React.CSSProperties}\n  className=\"bg-[var(--local-bg)]\"\n>\n  <h2 className=\"font-display text-[var(--local-text)]\">Title</h2>\n  <a className=\"bg-[var(--local-primary)] rounded-[var(--local-radius-md)]\">CTA</a>\n</section>\n```\n\nDeterministic compliance checklist:\n\n1. Canonical semantic theme keys exist.\n2. Runtime publication exists.\n3. Section-local color/radius scope exists.\n4. Section-owned color/radius classes consume `var(--local-*)`.\n5. Fonts consume the semantic published font chain.\n6. Primary themed values are not hardcoded.\n\n---\n\n**Validation:** Align with current `@olonjs/core` exports (SectionType, MenuItem, AddSectionConfig, JsonPagesConfig, and in v1.3+ path types for Studio selection), with the deterministic `ThemeConfig` contract, and with the runtime theme publication contract used by tenant CSS.\\\n**Distribution:** Core via `.yalc`; tenant projections via `@olonjs/cli`. This annex makes the spec **necessary and sufficient** for tenant code-generation and governance at enterprise grade."
       },
       "settings": {}
     }
@@ -7981,121 +10972,137 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
   "slug": "home",
   "meta": {
     "title": "OlonJS — The Contract Layer for the Agentic Web",
-    "description": "A deterministic machine contract for websites: typed, schema-driven content endpoints that make any site reliably readable and operable by AI agents."
+    "description": "OlonJS standardizes machine-readable web content across tenants. Predictable page endpoints for agents, typed schema contracts, repeatable governance."
   },
   "sections": [
+    {
+      "id": "global-header",
+      "type": "header",
+      "data": {
+        "logoText": "Olon",
+        "badge": "",
+        "links": {
+          "$ref": "../config/menu.json#/main"
+        },
+        "ctaLabel": "Get started →",
+        "ctaHref": "#contact",
+        "signinHref": "#login"
+      },
+      "settings": {
+        "sticky": true
+      }
+    },
     {
       "id": "hero-main",
       "type": "hero",
       "data": {
-        "badge": "Open source · MIT License",
-        "title": "The Contract Layer\nfor the",
-        "titleHighlight": "Agentic Web",
-        "description": "AI agents are becoming operational actors in commerce, marketing, and support. OlonJS introduces a deterministic machine contract for websites — so agents can reliably read and operate any site, without custom glue.",
+        "eyebrow": "Contract layer · v1.4 · Open Core",
+        "title": "Start building   ",
+        "titleHighlight": "for the agentic web.",
+        "description": "AI agents are becoming operational actors in commerce, marketing, and support. But websites are still built for humans first: HTML-heavy, CMS-fragmented, and inconsistent across properties. That makes agent integration slow, brittle, and expensive. Olon introduces a deterministic machine contract for websites OlonJS. This makes content reliably readable and operable by agents while preserving normal human UI.",
         "ctas": [
           {
-            "id": "cta-1",
-            "label": "Read the Spec",
-            "href": "/docs",
-            "variant": "primary"
+            "id": "cta-started",
+            "label": "Get started",
+            "href": "#contact",
+            "variant": "accent"
           },
           {
-            "id": "cta-2",
-            "label": "View on GitHub",
-            "href": "https://github.com/olonjs/npm-jpcore",
+            "id": "cta-github",
+            "label": "GitHub",
+            "href": "#",
             "variant": "secondary"
           }
         ],
-        "metrics": []
+        "docsLabel": "Read the docs",
+        "docsHref": "#",
+        "heroImage": {
+          "url": "https://bat5elmxofxdroan.public.blob.vercel-storage.com/tenant-assets/511f18d7-d8ac-4292-ad8a-b0efa99401a3/1774286598548-adac7c36-9001-451d-9b16-c3787ac27f57-signup-hero-olon-graded_1_.png",
+          "alt": ""
+        }
       },
-      "settings": {}
+      "settings": {
+        "showCode": false
+      }
     },
     {
-      "id": "problem-section",
-      "type": "problem-statement",
-      "data": {
-        "anchorId": "problem",
-        "label": "The challenge",
-        "problemTag": "The problem",
-        "problemTitle": "Websites aren't built for agents",
-        "problemItems": [
-          {
-            "id": "pi-1",
-            "text": "Agentic workflows are growing, but integration is mostly custom glue — rebuilt tenant by tenant"
-          },
-          {
-            "id": "pi-2",
-            "text": "Every site has a different content structure, routing assumptions, and edge cases"
-          },
-          {
-            "id": "pi-3",
-            "text": "HTML-heavy, CMS-fragmented, inconsistent across properties — slow, brittle, expensive"
-          }
-        ],
-        "solutionTag": "Our solution",
-        "solutionTitle": "A standard machine contract across tenants",
-        "solutionItems": [
-          {
-            "id": "si-1",
-            "text": "Predictable page endpoints for agents —",
-            "code": "/{slug}.json"
-          },
-          {
-            "id": "si-2",
-            "text": "Typed, schema-driven content contracts — validated, versioned, auditable"
-          },
-          {
-            "id": "si-3",
-            "text": "Repeatable governance and deployment patterns across every tenant"
-          }
-        ]
-      },
-      "settings": {}
-    },
-    {
-      "id": "architecture-section",
+      "id": "features-section",
       "type": "feature-grid",
       "data": {
-        "anchorId": "architecture",
-        "label": "Architecture",
-        "sectionTitle": "Built for enterprise scale",
-        "sectionLead": "Every layer is designed for determinism — from file system layout to component contracts to Studio UX.",
+        "label": "Why OlonJS",
+        "sectionTitle": "A whole in itself,",
+        "sectionTitleItalic": "part of something greater.",
+        "sectionLead": "Built on the concept of the holon — every component autonomous yet part of the larger contract. Governance and developer experience, unified.",
         "cards": [
           {
-            "id": "fc-1",
-            "emoji": "📐",
-            "title": "Modular Type Registry",
-            "description": "Core defines empty registries; tenants inject types via module augmentation. Full TypeScript safety, zero Core changes."
+            "id": "card-endpoints",
+            "icon": {
+              "url": "/icons/features/icon-json-files.svg",
+              "alt": "JSON files icon"
+            },
+            "title": "Canonical JSON endpoints",
+            "description": "Every page available at /{slug}.json — deterministic, typed, agent-readable. No custom integration per tenant."
           },
           {
-            "id": "fc-2",
-            "emoji": "🧱",
-            "title": "Tenant Block Protocol",
-            "description": "Self-contained capsules (View + schema + types) enable automated ingestion and consistent editor generation."
+            "id": "card-schema",
+            "icon": {
+              "url": "/icons/features/icon-zod-schemas.svg",
+              "alt": "Zod schemas icon"
+            },
+            "title": "Schema-driven contracts",
+            "description": "Typed components validated against your schema. Shared conventions eliminate prompt ambiguity across teams."
           },
           {
-            "id": "fc-3",
-            "emoji": "⚙️",
-            "title": "Deterministic CLI",
-            "description": "@olonjs/cli projects new tenants from a canonical script — reproducible across every environment."
+            "id": "card-ai",
+            "icon": {
+              "url": "/icons/features/icon-ai-specs.svg",
+              "alt": "AI specs icon"
+            },
+            "title": "AI-native velocity",
+            "description": "Structure is deterministic, so AI can scaffold and evolve tenants faster. Ship new experiences in hours, not weeks."
           },
           {
-            "id": "fc-4",
-            "emoji": "🎯",
-            "title": "ICE Data Contract",
-            "description": "Mandatory DOM attributes bind the Studio canvas to Inspector fields without coupling to tenant DOM structure."
+            "id": "card-multitenant",
+            "icon": {
+              "url": "/icons/features/icon-own-data.svg",
+              "alt": "Own data icon"
+            },
+            "title": "Multi-tenant at scale",
+            "description": "One convention across many tenants enables reusable automations. No per-tenant custom integration work."
           },
           {
-            "id": "fc-5",
-            "emoji": "📦",
-            "title": "Base Schema Fragments",
-            "description": "Shared BaseSectionData and BaseArrayItem enforce anchor IDs and stable React keys across all capsules."
+            "id": "card-governance",
+            "icon": {
+              "url": "/icons/features/icon-governance.svg",
+              "alt": "Governance icon"
+            },
+            "title": "Enterprise governance",
+            "description": "Audit trails, compliance controls, and private cloud deployment via NX monorepo. SOC2-ready by design."
           },
           {
-            "id": "fc-6",
-            "emoji": "🔗",
-            "title": "Path-Based Selection",
-            "description": "v1.4 strict path semantics eliminate nested array ambiguity. Studio selection is root-to-leaf, always deterministic."
+            "id": "card-deploy",
+            "icon": {
+              "url": "/icons/features/icon-clean-commits.svg",
+              "alt": "Clean commits icon"
+            },
+            "title": "Deployment flexibility",
+            "description": "OSS core you can trust. Vercel-native cloud for speed. Private cloud for governance-heavy orgs."
+          }
+        ],
+        "proofStatement": "Working end-to-end with production routing parity.",
+        "proofSub": "Early customer usage across real tenant deployments · Clear hardening path to enterprise-grade governance.",
+        "tiers": [
+          {
+            "id": "tier-oss",
+            "label": "OSS"
+          },
+          {
+            "id": "tier-cloud",
+            "label": "Cloud"
+          },
+          {
+            "id": "tier-enterprise",
+            "label": "Enterprise"
           }
         ]
       },
@@ -8104,104 +11111,94 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
       }
     },
     {
-      "id": "why-now",
-      "type": "git-section",
+      "id": "contact-section",
+      "type": "contact",
       "data": {
-        "anchorId": "why",
-        "label": "Timing",
-        "title": "Why this matters",
-        "titleAccent": "now",
-        "cards": [
+        "label": "Contact",
+        "title": "Ready to define",
+        "titleHighlight": "your contract?",
+        "description": "Whether you're running a single tenant or deploying enterprise-grade governance across dozens of properties — let's talk.",
+        "tiers": [
           {
-            "id": "wc-1",
-            "title": "Agentic commerce is live",
-            "description": "Operational standards are missing. Without a contract layer, teams face high integration cost and low reliability."
+            "id": "tier-oss",
+            "label": "OSS",
+            "desc": "Open source core — free forever",
+            "sub": "Adoption, trust, ecosystem growth"
           },
           {
-            "id": "wc-2",
-            "title": "Enterprises need governance",
-            "description": "A contract layer you can audit, version, and scale — not a one-off adapter for every new agent workflow."
+            "id": "tier-cloud",
+            "label": "Cloud",
+            "desc": "Vercel-native self-serve workflow",
+            "sub": "Fast for modern dev teams"
           },
           {
-            "id": "wc-3",
-            "title": "AI tooling is ready",
-            "description": "Deterministic structure means AI can scaffold, validate, and evolve tenants with less prompt ambiguity."
-          },
-          {
-            "id": "wc-4",
-            "title": "Speed compounds",
-            "description": "Teams that standardize now ship new experiences in hours while others rebuild integration logic repeatedly."
-          }
-        ]
-      },
-      "settings": {}
-    },
-    {
-      "id": "dx-section",
-      "type": "devex",
-      "data": {
-        "anchorId": "devex",
-        "label": "Developer Velocity",
-        "title": "AI-native advantage,\nfrom day one",
-        "description": "OlonJS dramatically increases AI-assisted development speed. Because structure is deterministic, agents scaffold and evolve tenants faster — with lower regression risk.",
-        "features": [
-          {
-            "id": "df-1",
-            "text": "AI scaffolds and evolves tenants faster because structure is deterministic"
-          },
-          {
-            "id": "df-2",
-            "text": "Shared conventions reduce prompt ambiguity and implementation drift"
-          },
-          {
-            "id": "df-3",
-            "text": "Ship new tenant experiences in hours, not weeks"
+            "id": "tier-enterprise",
+            "label": "Enterprise",
+            "desc": "Private cloud + NX monorepo",
+            "sub": "Security, compliance, controlled deployment"
           }
         ],
-        "stats": [
-          {
-            "id": "ds-1",
-            "value": "10×",
-            "label": "Faster scaffolding"
-          },
-          {
-            "id": "ds-2",
-            "value": "∅",
-            "label": "Glue per tenant"
-          },
-          {
-            "id": "ds-3",
-            "value": "100%",
-            "label": "Type-safe contracts"
-          }
-        ]
+        "formTitle": "Get in touch",
+        "successTitle": "Message received",
+        "successBody": "We'll respond within one business day.",
+        "disclaimer": "No spam. Unsubscribe at any time."
       },
-      "settings": {}
+      "settings": {
+        "showTiers": true
+      }
     },
     {
-      "id": "cta-final",
-      "type": "cta-banner",
+      "id": "login-section",
+      "type": "login",
       "data": {
-        "anchorId": "get-started",
-        "title": "Ready to give your site\na machine contract?",
-        "description": "Read the full specification or explore the source on GitHub. Zero dependencies to start — one JSON endpoint per page.",
-        "cliCommand": "npx @olonjs/cli@latest new tenant",
-        "ctas": [
+        "title": "Start your journey",
+        "subtitle": "Enter your credentials to continue",
+        "forgotHref": "#",
+        "signupHref": "#contact",
+        "termsHref": "#",
+        "privacyHref": "#"
+      },
+      "settings": {
+        "showOauth": true
+      }
+    }
+  ],
+  "global-header": false
+}
+END_OF_FILE_CONTENT
+mkdir -p "src/data/pages/platform"
+# SKIP: src/data/pages/platform.json:Zone.Identifier is binary and cannot be embedded as text.
+echo "Creating src/data/pages/platform/overview.json..."
+cat << 'END_OF_FILE_CONTENT' > "src/data/pages/platform/overview.json"
+{
+  "id": "overview-page",
+  "slug": "platform/overview",
+  "meta": {
+    "title": "OlonJS — Documentation",
+    "description": "Architecture specifications, tenant protocol, and developer reference for the OlonJS contract layer."
+  },
+  "sections": [
+    {
+      "id": "doc-page-hero",
+      "type": "page-hero",
+      "data": {
+        "breadcrumb": [
           {
-            "id": "cta-docs",
-            "label": "Read the Specification",
-            "href": "/docs",
-            "variant": "primary"
+            "id": "crumb-home",
+            "label": "Home",
+            "href": "/"
           },
           {
-            "id": "cta-gh",
-            "label": "View on GitHub",
-            "href": "https://github.com/olonjs/npm-jpcore",
-            "variant": "secondary"
+            "id": "crumb-docs",
+            "label": "Docs",
+            "href": "/doc"
           }
-        ]
-      },
-      "settings": {}
+        ],
+        "badge": "",
+        "title": "Platssform",
+        "titleItalic": "Infra you can rers",
+        "description": "wsf"
+      }
     }
   ]
 }
@@ -8538,6 +11535,145 @@ export function LeadSenderConfirmationEmail({
 export default LeadSenderConfirmationEmail;
 
 END_OF_FILE_CONTENT
+echo "Creating src/entry-ssg.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/entry-ssg.tsx"
+import { renderToString } from 'react-dom/server';
+import { StaticRouter } from 'react-router-dom/server';
+import { ConfigProvider, PageRenderer, StudioProvider } from '@olonjs/core';
+import type { JsonPagesConfig, MenuConfig, PageConfig, SiteConfig, ThemeConfig } from '@/types';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { ComponentRegistry } from '@/lib/ComponentRegistry';
+import { SECTION_SCHEMAS } from '@/lib/schemas';
+import { getFilePages } from '@/lib/getFilePages';
+import siteData from '@/data/config/site.json';
+import menuData from '@/data/config/menu.json';
+import themeData from '@/data/config/theme.json';
+import tenantCss from '@/index.css?inline';
+
+const siteConfig = siteData as unknown as SiteConfig;
+const menuConfig = menuData as unknown as MenuConfig;
+const themeConfig = themeData as unknown as ThemeConfig;
+const pages = getFilePages();
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeSlug(input: string): string {
+  return input.trim().toLowerCase().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+}
+
+function getSortedSlugs(): string[] {
+  return Object.keys(pages).sort((a, b) => a.localeCompare(b));
+}
+
+function resolvePage(slug: string): { slug: string; page: PageConfig } {
+  const normalized = normalizeSlug(slug);
+  if (normalized && pages[normalized]) {
+    return { slug: normalized, page: pages[normalized] };
+  }
+
+  const slugs = getSortedSlugs();
+  if (slugs.length === 0) {
+    throw new Error('[SSG_CONFIG_ERROR] No pages found under src/data/pages');
+  }
+
+  const home = slugs.find((item) => item === 'home');
+  const fallbackSlug = home ?? slugs[0];
+  return { slug: fallbackSlug, page: pages[fallbackSlug] };
+}
+
+function flattenThemeTokens(
+  input: unknown,
+  pathSegments: string[] = [],
+  out: Array<{ name: string; value: string }> = []
+): Array<{ name: string; value: string }> {
+  if (typeof input === 'string') {
+    const cleaned = input.trim();
+    if (cleaned.length > 0 && pathSegments.length > 0) {
+      out.push({ name: `--theme-${pathSegments.join('-')}`, value: cleaned });
+    }
+    return out;
+  }
+
+  if (!isRecord(input)) return out;
+
+  const entries = Object.entries(input).sort(([a], [b]) => a.localeCompare(b));
+  for (const [key, value] of entries) {
+    flattenThemeTokens(value, [...pathSegments, key], out);
+  }
+  return out;
+}
+
+function buildThemeCssFromSot(theme: ThemeConfig): string {
+  const root: Record<string, unknown> = isRecord(theme) ? theme : {};
+  const tokens = root['tokens'];
+  const flattened = flattenThemeTokens(tokens);
+  if (flattened.length === 0) return '';
+  const serialized = flattened.map((item) => `${item.name}:${item.value}`).join(';');
+  return `:root{${serialized}}`;
+}
+
+function resolveTenantId(): string {
+  const site: Record<string, unknown> = isRecord(siteConfig) ? siteConfig : {};
+  const identityRaw = site['identity'];
+  const identity: Record<string, unknown> = isRecord(identityRaw) ? identityRaw : {};
+  const titleRaw = typeof identity.title === 'string' ? identity.title : '';
+  const title = titleRaw.trim();
+  if (title.length > 0) {
+    const normalized = title.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+    if (normalized.length > 0) return normalized;
+  }
+
+  const slugs = getSortedSlugs();
+  if (slugs.length === 0) {
+    throw new Error('[SSG_CONFIG_ERROR] Cannot resolve tenantId without site.identity.title or pages');
+  }
+  return slugs[0].replace(/\//g, '-');
+}
+
+export function render(slug: string): string {
+  const resolved = resolvePage(slug);
+  const location = resolved.slug === 'home' ? '/' : `/${resolved.slug}`;
+
+  return renderToString(
+    <StaticRouter location={location}>
+      <ConfigProvider
+        config={{
+          registry: ComponentRegistry as JsonPagesConfig['registry'],
+          schemas: SECTION_SCHEMAS as unknown as JsonPagesConfig['schemas'],
+          tenantId: resolveTenantId(),
+        }}
+      >
+        <StudioProvider mode="visitor">
+          <ThemeProvider>
+            <PageRenderer pageConfig={resolved.page} siteConfig={siteConfig} menuConfig={menuConfig} />
+          </ThemeProvider>
+        </StudioProvider>
+      </ConfigProvider>
+    </StaticRouter>
+  );
+}
+
+export function getCss(): string {
+  const themeCss = buildThemeCssFromSot(themeConfig);
+  if (!themeCss) return tenantCss;
+  return `${themeCss}\n${tenantCss}`;
+}
+
+export function getPageMeta(slug: string): { title: string; description: string } {
+  const resolved = resolvePage(slug);
+  const rawMeta = isRecord((resolved.page as unknown as { meta?: unknown }).meta)
+    ? ((resolved.page as unknown as { meta?: Record<string, unknown> }).meta as Record<string, unknown>)
+    : {};
+
+  const title = typeof rawMeta.title === 'string' ? rawMeta.title : resolved.slug;
+  const description = typeof rawMeta.description === 'string' ? rawMeta.description : '';
+  return { title, description };
+}
+
+END_OF_FILE_CONTENT
+# SKIP: src/entry-ssg.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/fonts.css..."
 cat << 'END_OF_FILE_CONTENT' > "src/fonts.css"
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -8574,313 +11710,741 @@ echo "Creating src/index.css..."
 cat << 'END_OF_FILE_CONTENT' > "src/index.css"
 @import "tailwindcss";
 
-@source "./**/*.tsx";
+/* ═══════════════════════════════════════════════════════════════
+   OLON DESIGN SYSTEM — index.css
+   v1.4 · Holon · Labradorite
 
-@theme {
-  /* 
-     🎯 MASTER MAPPING (V2.7 Landing) 
-  */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+   Architecture:
+   1. :root      — bridge: reads vars injected by @olonjs/core from theme.json
+                   SOT lives in src/data/config/theme.json
+   2. @theme      — Tailwind v4 bridge: --color-{slug}: var(--{slug})
+   3. @layer base — global resets + base element styles
+   4. @layer utilities — custom utility classes
+═══════════════════════════════════════════════════════════════ */
 
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
 
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-
-  --color-accent: var(--accent);
-  --color-border: var(--border);
-  
-  --radius-lg: var(--theme-radius-lg);
-  --radius-md: var(--theme-radius-md);
-  --radius-sm: var(--theme-radius-sm);
-
-  --font-primary: var(--theme-font-primary);
-  --font-mono: var(--theme-font-mono);
-
-  /*
-     DISPLAY FONT bridge
-     The core now emits --theme-font-display from theme.json, so this keeps
-     the tenant on the stable semantic alias rather than depending on the
-     flattened internal variable path.
-  */
-  --font-display: var(--theme-font-display);
-}
-
-/* 
-   🌍 TENANT BRAND TOKENS (JSP 1.5)
-*/
+/* ─────────────────────────────────────────────────────────────
+   1. TOKEN BRIDGE
+   Reads CSS vars injected by @olonjs/core engine from theme.json.
+   engine injects: --theme-colors-{name}, --theme-typography-*,
+                   --theme-border-radius-*, --theme-spacing-*
+   Aliases: --theme-font-*, --theme-radius-*, --theme-primary etc.
+───────────────────────────────────────────────────────────── */
 :root {
-  --background: var(--theme-background);
-  --foreground: var(--theme-text);
-  --card: var(--theme-surface);
-  --card-foreground: var(--theme-text);
-  --primary: var(--theme-primary);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: var(--theme-secondary);
-  --secondary-foreground: var(--theme-text);
-  --muted: var(--theme-surface-alt);
-  --muted-foreground: var(--theme-text-muted);
-  --border: var(--theme-border);
-  --radius: var(--theme-radius-lg);
 
-  /* 
-     🔧 ACCENT CHAIN — Forward-compatible workaround
-     theme-manager.ts already injects --theme-accent on :root,
-     but the original index.css never bridged it into the semantic layer.
-     This closes the gap: --theme-accent → --accent → --color-accent.
-     Falls back to --theme-primary if accent is undefined.
-  */
-  --accent: var(--theme-accent, var(--theme-primary));
+  /* ── Backgrounds ─────────────────────────────────────────── */
+  --background:           var(--theme-colors-background);
+  --card:                 var(--theme-colors-card);
+  --elevated:             var(--theme-colors-elevated);
+  --overlay:              var(--theme-colors-overlay);
+  --popover:              var(--theme-colors-popover);
+  --popover-foreground:   var(--theme-colors-popover-foreground);
 
-  /* Olon brand primitives — consumed by OlonMark SVG gradients */
-  --olon-ring-top:    #84ABFF;
-  --olon-ring-bottom: #0F52E0;
-  --olon-ground:      #080808;
-  --olon-figure:      #e8f0f8;
-  --olon-nucleus:     var(--olon-figure);
+  /* ── Foregrounds ─────────────────────────────────────────── */
+  --foreground:           var(--theme-colors-foreground);
+  --card-foreground:      var(--theme-colors-card-foreground);
+  --muted-foreground:     var(--theme-colors-muted-foreground);
+  --placeholder:          var(--theme-colors-placeholder);
 
-  /*
-     Shared demo/mockup helpers
-     These are still theme-derived, but give the tenant a stable semantic
-     palette for browser/terminal/inspector style surfaces.
-  */
-  --demo-surface: color-mix(in oklch, var(--card) 86%, var(--background));
-  --demo-surface-soft: color-mix(in oklch, var(--card) 72%, var(--background));
-  --demo-surface-strong: color-mix(in oklch, var(--background) 82%, black);
-  --demo-surface-deep: color-mix(in oklch, var(--background) 70%, black);
-  --demo-border-soft: color-mix(in oklch, var(--foreground) 8%, transparent);
-  --demo-border-strong: color-mix(in oklch, var(--primary) 24%, transparent);
-  --demo-accent-soft: color-mix(in oklch, var(--primary) 10%, transparent);
-  --demo-accent-strong: color-mix(in oklch, var(--primary) 18%, transparent);
-  --demo-text-soft: color-mix(in oklch, var(--foreground) 88%, var(--muted-foreground));
-  --demo-text-faint: color-mix(in oklch, var(--muted-foreground) 72%, transparent);
+  /* ── Brand — Labradorite ramp ────────────────────────────── */
+  --primary:              var(--theme-colors-primary);
+  --primary-foreground:   var(--theme-colors-primary-foreground);
+  --primary-light:        var(--theme-colors-primary-light);
+  --primary-dark:         var(--theme-colors-primary-dark);
+  --primary-50:           var(--theme-colors-primary-50);
+  --primary-100:          var(--theme-colors-primary-100);
+  --primary-200:          var(--theme-colors-primary-200);
+  --primary-300:          var(--theme-colors-primary-300);
+  --primary-400:          var(--theme-colors-primary-400);
+  --primary-500:          var(--theme-colors-primary-500);
+  --primary-600:          var(--theme-colors-primary-600);
+  --primary-700:          var(--theme-colors-primary-700);
+  --primary-800:          var(--theme-colors-primary-800);
+  --primary-900:          var(--theme-colors-primary-900);
+
+  /* ── Accent ──────────────────────────────────────────────── */
+  --accent:               var(--theme-colors-accent);
+  --accent-foreground:    var(--theme-colors-accent-foreground);
+
+  /* ── Secondary ───────────────────────────────────────────── */
+  --secondary:            var(--theme-colors-secondary);
+  --secondary-foreground: var(--theme-colors-secondary-foreground);
+
+  /* ── Muted ───────────────────────────────────────────────── */
+  --muted:                var(--theme-colors-muted);
+
+  /* ── Border ──────────────────────────────────────────────── */
+  --border:               var(--theme-colors-border);
+  --border-strong:        var(--theme-colors-border-strong);
+
+  /* ── Form ────────────────────────────────────────────────── */
+  --input:                var(--theme-colors-input);
+  --ring:                 var(--theme-colors-ring);
+
+  /* ── Feedback — Destructive ──────────────────────────────── */
+  --destructive:              var(--theme-colors-destructive);
+  --destructive-foreground:   var(--theme-colors-destructive-foreground);
+  --destructive-border:       var(--theme-colors-destructive-border);
+  --destructive-ring:         var(--theme-colors-destructive-ring);
+
+  /* ── Feedback — Success ──────────────────────────────────── */
+  --success:              var(--theme-colors-success);
+  --success-foreground:   var(--theme-colors-success-foreground);
+  --success-border:       var(--theme-colors-success-border);
+  --success-indicator:    var(--theme-colors-success-indicator);
+
+  /* ── Feedback — Warning ──────────────────────────────────── */
+  --warning:              var(--theme-colors-warning);
+  --warning-foreground:   var(--theme-colors-warning-foreground);
+  --warning-border:       var(--theme-colors-warning-border);
+
+  /* ── Feedback — Info ─────────────────────────────────────── */
+  --info:                 var(--theme-colors-info);
+  --info-foreground:      var(--theme-colors-info-foreground);
+  --info-border:          var(--theme-colors-info-border);
+
+  /* ── Radius (xl/full not aliased by engine, bridge here) ─── */
+  --theme-radius-xl:      var(--theme-border-radius-xl);
+  --theme-radius-full:    var(--theme-border-radius-full);
+
+  /* ── Typography — scale ──────────────────────────────────── */
+  --theme-text-xs:        var(--theme-typography-scale-xs);
+  --theme-text-sm:        var(--theme-typography-scale-sm);
+  --theme-text-base:      var(--theme-typography-scale-base);
+  --theme-text-md:        var(--theme-typography-scale-md);
+  --theme-text-lg:        var(--theme-typography-scale-lg);
+  --theme-text-xl:        var(--theme-typography-scale-xl);
+  --theme-text-2xl:       var(--theme-typography-scale-2xl);
+  --theme-text-3xl:       var(--theme-typography-scale-3xl);
+  --theme-text-4xl:       var(--theme-typography-scale-4xl);
+  --theme-text-5xl:       var(--theme-typography-scale-5xl);
+  --theme-text-6xl:       var(--theme-typography-scale-6xl);
+  --theme-text-7xl:       var(--theme-typography-scale-7xl);
+
+  /* ── Typography — tracking ───────────────────────────────── */
+  --theme-tracking-tight:   var(--theme-typography-tracking-tight);
+  --theme-tracking-display: var(--theme-typography-tracking-display);
+  --theme-tracking-normal:  var(--theme-typography-tracking-normal);
+  --theme-tracking-wide:    var(--theme-typography-tracking-wide);
+  --theme-tracking-label:   var(--theme-typography-tracking-label);
+
+  /* ── Typography — wordmark ───────────────────────────────── */
+  --wordmark-font:     var(--theme-typography-wordmark-font-family);
+  --wordmark-tracking: var(--theme-typography-wordmark-tracking);
+  --wordmark-weight:   var(--theme-typography-wordmark-weight);
+  --wordmark-width:    var(--theme-typography-wordmark-width);
+
+  /* ── Typography — leading ────────────────────────────────── */
+  --theme-leading-none:    var(--theme-typography-leading-none);
+  --theme-leading-tight:   var(--theme-typography-leading-tight);
+  --theme-leading-snug:    var(--theme-typography-leading-snug);
+  --theme-leading-normal:  var(--theme-typography-leading-normal);
+  --theme-leading-relaxed: var(--theme-typography-leading-relaxed);
+
+  /* ── Spacing ─────────────────────────────────────────────── */
+  --theme-container-max:  var(--theme-spacing-container-max);
+  --theme-section-y:      var(--theme-spacing-section-y);
+  --theme-header-h:       var(--theme-spacing-header-h);
+  --theme-sidebar-w:      var(--theme-spacing-sidebar-w);
+
+  /* ── Z-index ─────────────────────────────────────────────── */
+  --z-base:     var(--theme-z-index-base);
+  --z-elevated: var(--theme-z-index-elevated);
+  --z-dropdown: var(--theme-z-index-dropdown);
+  --z-sticky:   var(--theme-z-index-sticky);
+  --z-overlay:  var(--theme-z-index-overlay);
+  --z-modal:    var(--theme-z-index-modal);
+  --z-toast:    var(--theme-z-index-toast);
 }
 
+
+/* ─────────────────────────────────────────────────────────────
+   2. @theme — Tailwind v4 TOKEN BRIDGE
+   Pattern: --color-{slug}: var(--{slug})
+   Every token exposed here becomes a Tailwind utility class.
+───────────────────────────────────────────────────────────── */
+@theme {
+
+  /* Colors — Backgrounds */
+  --color-background:              var(--background);
+  --color-card:                    var(--card);
+  --color-elevated:                var(--elevated);
+  --color-overlay:                 var(--overlay);
+  --color-popover:                 var(--popover);
+  --color-popover-foreground:      var(--popover-foreground);
+
+  /* Colors — Foregrounds */
+  --color-foreground:              var(--foreground);
+  --color-card-foreground:         var(--card-foreground);
+  --color-muted-foreground:        var(--muted-foreground);
+  --color-placeholder:             var(--placeholder);
+
+  /* Colors — Brand ramp */
+  --color-primary:                 var(--primary);
+  --color-primary-foreground:      var(--primary-foreground);
+  --color-primary-light:           var(--primary-light);
+  --color-primary-dark:            var(--primary-dark);
+  --color-primary-50:              var(--primary-50);
+  --color-primary-100:             var(--primary-100);
+  --color-primary-200:             var(--primary-200);
+  --color-primary-300:             var(--primary-300);
+  --color-primary-400:             var(--primary-400);
+  --color-primary-500:             var(--primary-500);
+  --color-primary-600:             var(--primary-600);
+  --color-primary-700:             var(--primary-700);
+  --color-primary-800:             var(--primary-800);
+  --color-primary-900:             var(--primary-900);
+
+  /* Colors — Accent */
+  --color-accent:                  var(--accent);
+  --color-accent-foreground:       var(--accent-foreground);
+
+  /* Colors — Secondary */
+  --color-secondary:               var(--secondary);
+  --color-secondary-foreground:    var(--secondary-foreground);
+
+  /* Colors — Muted */
+  --color-muted:                   var(--muted);
+
+  /* Colors — Border */
+  --color-border:                  var(--border);
+  --color-border-strong:           var(--border-strong);
+
+  /* Colors — Form */
+  --color-input:                   var(--input);
+  --color-ring:                    var(--ring);
+
+  /* Colors — Feedback */
+  --color-destructive:             var(--destructive);
+  --color-destructive-foreground:  var(--destructive-foreground);
+  --color-destructive-border:      var(--destructive-border);
+  --color-destructive-ring:        var(--destructive-ring);
+  --color-success:                 var(--success);
+  --color-success-foreground:      var(--success-foreground);
+  --color-success-border:          var(--success-border);
+  --color-success-indicator:       var(--success-indicator);
+  --color-warning:                 var(--warning);
+  --color-warning-foreground:      var(--warning-foreground);
+  --color-warning-border:          var(--warning-border);
+  --color-info:                    var(--info);
+  --color-info-foreground:         var(--info-foreground);
+  --color-info-border:             var(--info-border);
+
+  /* Radius */
+  --radius-xl:                     var(--theme-radius-xl);
+  --radius-lg:                     var(--theme-radius-lg);
+  --radius-md:                     var(--theme-radius-md);
+  --radius-sm:                     var(--theme-radius-sm);
+  --radius-full:                   var(--theme-radius-full);
+
+  /* Fonts */
+  --font-primary:                  var(--theme-font-primary);
+  --font-mono:                     var(--theme-font-mono);
+  --font-display:                  var(--theme-font-display);
+
+  /* Text scale */
+  --text-xs:                       var(--theme-text-xs);
+  --text-sm:                       var(--theme-text-sm);
+  --text-base:                     var(--theme-text-base);
+  --text-md:                       var(--theme-text-md);
+  --text-lg:                       var(--theme-text-lg);
+  --text-xl:                       var(--theme-text-xl);
+  --text-2xl:                      var(--theme-text-2xl);
+  --text-3xl:                      var(--theme-text-3xl);
+  --text-4xl:                      var(--theme-text-4xl);
+  --text-5xl:                      var(--theme-text-5xl);
+  --text-6xl:                      var(--theme-text-6xl);
+  --text-7xl:                      var(--theme-text-7xl);
+
+  /* Line heights */
+  --leading-none:                  var(--theme-leading-none);
+  --leading-tight:                 var(--theme-leading-tight);
+  --leading-snug:                  var(--theme-leading-snug);
+  --leading-normal:                var(--theme-leading-normal);
+  --leading-relaxed:               var(--theme-leading-relaxed);
+
+  /* Tracking */
+  --tracking-tight:                var(--theme-tracking-tight);
+  --tracking-display:              var(--theme-tracking-display);
+  --tracking-normal:               var(--theme-tracking-normal);
+  --tracking-wide:                 var(--theme-tracking-wide);
+  --tracking-label:                var(--theme-tracking-label);
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   3. BASE LAYER
+───────────────────────────────────────────────────────────── */
 @layer base {
-  * { border-color: var(--border); }
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    text-size-adjust: 100%;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: var(--font-primary);
-    line-height: 1.7;
-    overflow-x: hidden;
-    @apply antialiased;
+    font-family: var(--theme-font-primary);
+    font-size: var(--theme-text-base);
+    line-height: var(--theme-leading-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--theme-font-primary);
+    font-weight: 500;
+    line-height: var(--theme-leading-tight);
+    color: var(--foreground);
+  }
+
+  h1 {
+    font-size: var(--theme-text-5xl);
+  }
+  h2 {
+    font-size: var(--theme-text-4xl);
+  }
+  h3 {
+    font-size: var(--theme-text-3xl);
+  }
+  h4 {
+    font-size: var(--theme-text-2xl);
+  }
+  h5 {
+    font-size: var(--theme-text-xl);
+  }
+  h6 {
+    font-size: var(--theme-text-lg);
+  }
+
+  @media (min-width: 768px) {
+    h1 { font-size: var(--theme-text-6xl); }
+    h2 { font-size: var(--theme-text-5xl); }
+    h3 { font-size: var(--theme-text-4xl); }
+    h4 { font-size: var(--theme-text-3xl); }
+    h5 { font-size: var(--theme-text-2xl); }
+    h6 { font-size: var(--theme-text-xl);  }
+  }
+
+  @media (min-width: 1024px) {
+    h1 { font-size: var(--theme-text-7xl); }
+    h2 { font-size: var(--theme-text-6xl); }
+    h3 { font-size: var(--theme-text-5xl); }
+    h4 { font-size: var(--theme-text-4xl); }
+    h5 { font-size: var(--theme-text-3xl); }
+    h6 { font-size: var(--theme-text-2xl); }
+  }
+
+  p {
+    line-height: var(--theme-leading-normal);
+  }
+
+  code, pre, kbd, samp {
+    font-family: var(--theme-font-mono);
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  input, textarea, select {
+    font-family: var(--theme-font-primary);
+    font-size: var(--theme-text-sm);
+  }
+
+  ::selection {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar           { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track     { background: var(--background); }
+  ::-webkit-scrollbar-thumb     { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   4. UTILITIES LAYER
+───────────────────────────────────────────────────────────── */
+@layer utilities {
+
+  /* ── Typography helpers ─────────────────────────────────── */
+  .font-display   { font-family: var(--theme-font-display); }
+  .font-mono-olon { font-family: var(--theme-font-mono); }
+
+  .tracking-label { letter-spacing: var(--theme-tracking-label); }
+  .tracking-display { letter-spacing: var(--theme-tracking-display); }
+
+  /* ── Layout ─────────────────────────────────────────────── */
+  .container-olon {
+    width: 100%;
+    max-width: var(--theme-container-max);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .section-anchor {
+    scroll-margin-top: calc(var(--theme-header-h) + 24px);
+  }
+
+  /* TOCC — required overlay visuals for Studio stage */
+  [data-section-id] {
+    position: relative;
+  }
+
+  [data-jp-section-overlay] {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border: 1px dashed transparent;
+    background: transparent;
+    z-index: 9999;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+
+  [data-section-id]:hover [data-jp-section-overlay] {
+    border-color: color-mix(in srgb, var(--primary-light) 75%, transparent);
+    background-color: color-mix(in srgb, var(--primary-900) 12%, transparent);
+  }
+
+  [data-section-id][data-jp-selected] [data-jp-section-overlay] {
+    border-color: var(--primary-light);
+    background-color: color-mix(in srgb, var(--primary-900) 20%, transparent);
+  }
+
+  [data-jp-section-overlay] > div {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-family: var(--theme-font-mono);
+    font-size: var(--theme-text-xs);
+    letter-spacing: var(--theme-tracking-label);
+    text-transform: uppercase;
+    color: var(--primary-light);
+    background: color-mix(in srgb, var(--background) 82%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary-light) 50%, transparent);
+    border-radius: var(--theme-radius-sm);
+    padding: 2px 8px;
+    opacity: 0;
+    transform: translateY(-2px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  [data-section-id]:hover [data-jp-section-overlay] > div,
+  [data-section-id][data-jp-selected] [data-jp-section-overlay] > div {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── DS-specific ────────────────────────────────────────── */
+  .ds-divider {
+    border: none;
+    border-top: 0.5px solid var(--border);
+    margin: 0;
+  }
+
+  .token-label {
+    font-family: var(--theme-font-mono);
+    font-size: var(--theme-text-xs);
+    color: var(--muted-foreground);
+  }
+
+  /* ── DS Sidebar nav link ────────────────────────────────── */
+  .nav-link {
+    display: block;
+    font-size: var(--theme-text-sm);
+    color: var(--muted-foreground);
+    padding: 5px 12px;
+    border-radius: var(--theme-radius-sm);
+    transition: color 0.15s, background-color 0.15s;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .nav-link:hover {
+    color: var(--foreground);
+    background-color: var(--elevated);
+  }
+  .nav-link.active {
+    color: var(--primary-light);
+    background-color: var(--elevated);
+  }
+
+  /* ── Focus ring ─────────────────────────────────────────── */
+  .focus-ring {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring);
+  }
+
+  /* ── Inline code ────────────────────────────────────────── */
+  .code-inline {
+    font-family: var(--theme-font-mono);
+    font-size: 0.85em;
+    background-color: var(--primary-900);
+    color: var(--primary-light);
+    padding: 1px 6px;
+    border-radius: var(--theme-radius-sm);
+  }
+
+  /* ── Surface elevations ─────────────────────────────────── */
+  .surface-base     { background-color: var(--background); }
+  .surface-card     { background-color: var(--card); }
+  .surface-elevated { background-color: var(--elevated); }
+  .surface-overlay  { background-color: var(--overlay); }
+
+  /* ── Feedback surfaces ──────────────────────────────────── */
+  .surface-destructive {
+    background-color: var(--destructive);
+    color: var(--destructive-foreground);
+    border-color: var(--destructive-border);
+  }
+  .surface-success {
+    background-color: var(--success);
+    color: var(--success-foreground);
+    border-color: var(--success-border);
+  }
+  .surface-warning {
+    background-color: var(--warning);
+    color: var(--warning-foreground);
+    border-color: var(--warning-border);
+  }
+  .surface-info {
+    background-color: var(--info);
+    color: var(--info-foreground);
+    border-color: var(--info-border);
+  }
+
+  /* ── Syntax highlight roles (code blocks) ───────────────── */
+  .syntax-keyword   { color: var(--primary-400); }
+  .syntax-string    { color: var(--primary-200); }
+  .syntax-property  { color: var(--accent); }
+  .syntax-variable  { color: var(--primary-light); }
+  .syntax-comment   { color: var(--muted-foreground); }
+  .syntax-value     { color: var(--primary-light); }
+
+  /* Hero image blend overlay */
+  .hero-media-overlay {
+    background:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--background) 100%, transparent) 0%,
+        color-mix(in srgb, var(--background) 82%, transparent) 16%,
+        color-mix(in srgb, var(--background) 56%, transparent) 34%,
+        color-mix(in srgb, var(--background) 22%, transparent) 54%,
+        color-mix(in srgb, var(--background) 6%, transparent) 74%,
+        color-mix(in srgb, var(--background) 0%, transparent) 100%
+      ),
+      linear-gradient(
+        to top,
+        color-mix(in srgb, var(--background) 24%, transparent) 0%,
+        color-mix(in srgb, var(--background) 8%, transparent) 28%,
+        color-mix(in srgb, var(--background) 0%, transparent) 56%
+      );
+  }
+
+  .hero-media-portrait {
+    aspect-ratio: 3 / 4;
+    min-height: 26rem;
+  }
+
+  @media (min-width: 768px) {
+    .hero-media-portrait {
+      min-height: 34rem;
+    }
   }
 }
 
-/* ==========================================================================
-   FONT DISPLAY UTILITY
-   Maps .font-display class to the display font family (Playfair Display)
-   ========================================================================== */
-.font-display {
-  font-family: var(--font-display, var(--font-primary));
-}
 
-/* ==========================================================================
-   LANDING ANIMATIONS
-   ========================================================================== */
-@keyframes jp-fadeUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+/* ─────────────────────────────────────────────────────────────
+   4b. TIPTAP — visitor markdown (.jp-tiptap-content) + Studio ProseMirror
+   Typography, color, radius: :root bridge only (theme.json → engine).
+───────────────────────────────────────────────────────────── */
 
-@keyframes jp-pulseDot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-.jp-animate-in {
-  opacity: 0;
-  animation: jp-fadeUp 0.7s ease forwards;
-}
-.jp-d1 { animation-delay: 0.1s; }
-.jp-d2 { animation-delay: 0.2s; }
-.jp-d3 { animation-delay: 0.3s; }
-.jp-d4 { animation-delay: 0.4s; }
-.jp-d5 { animation-delay: 0.5s; }
-
-.jp-pulse-dot {
-  animation: jp-pulseDot 2s ease infinite;
-}
-
-/* ==========================================================================
-   SMOOTH SCROLL
-   ========================================================================== */
-html {
-  scroll-behavior: smooth;
-}
-
-/* ==========================================================================
-   ICE ADMIN — Section highlight in preview iframe
-   The preview iframe only receives tenant CSS; core's overlay classes
-   (z-[50], absolute, etc.) are not in this build. Define them here so
-   the section highlight is always visible in /admin.
-   ========================================================================== */
-[data-jp-section-overlay] {
-  position: absolute;
-  inset: 0;
-  z-index: 9999;
-  pointer-events: none;
-  transition: border-color 0.2s, background-color 0.2s;
-  border: 2px solid transparent;
-}
-
-[data-section-id]:hover [data-jp-section-overlay] {
-  border-color: rgba(96, 165, 250, 0.5);
-  border-style: dashed;
-}
-
-[data-section-id][data-jp-selected] [data-jp-section-overlay] {
-  border-color: rgb(37, 99, 235);
-  border-style: solid;
-  background-color: rgba(59, 130, 246, 0.05);
-}
-
-[data-jp-section-overlay] > div {
-  position: absolute;
-  top: 0;
-  right: 0;
-  padding: 0.25rem 0.5rem;
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  background: rgb(37, 99, 235);
-  color: white;
-  transition: opacity 0.2s;
-}
-
-[data-section-id]:hover [data-jp-section-overlay] > div,
-[data-section-id][data-jp-selected] [data-jp-section-overlay] > div {
-  opacity: 1;
-}
-
-[data-section-id] [data-jp-section-overlay] > div {
-  opacity: 0;
-}
-
-/* Editorial focus lock: avoid section reselection while selecting text in inline editor. */
-[data-section-id].jp-editorial-focus [data-jp-section-overlay] {
-  border-color: transparent !important;
-  background: transparent !important;
-}
-
-[data-section-id].jp-editorial-focus [data-jp-section-overlay] > div {
-  opacity: 0 !important;
-  pointer-events: none;
-}
-
-/* ==========================================================================
-   TIPTAP — Public content typography (visitor view)
-   ReactMarkdown renders plain HTML; preflight resets it. Re-apply here.
-   ========================================================================== */
-.jp-tiptap-content > * + * { margin-top: 0.75em; }
-
-.jp-tiptap-content h1 { font-size: 2em;    font-weight: 700; line-height: 1.2; margin-top: 1.25em; margin-bottom: 0.25em; }
-.jp-tiptap-content h2 { font-size: 1.5em;  font-weight: 700; line-height: 1.3; margin-top: 1.25em; margin-bottom: 0.25em; }
-.jp-tiptap-content h3 { font-size: 1.25em; font-weight: 600; line-height: 1.4; margin-top: 1.25em; margin-bottom: 0.25em; }
-.jp-tiptap-content h4 { font-size: 1em;    font-weight: 600; line-height: 1.5; margin-top: 1em;    margin-bottom: 0.25em; }
-
-.jp-tiptap-content p  { line-height: 1.7; }
-
-.jp-tiptap-content strong { font-weight: 700; }
-.jp-tiptap-content em     { font-style: italic; }
-.jp-tiptap-content s      { text-decoration: line-through; }
-
-.jp-tiptap-content a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
-.jp-tiptap-content a:hover { opacity: 0.8; }
-
-.jp-tiptap-content code {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.875em;
-  background: color-mix(in oklch, var(--foreground) 8%, transparent);
-  border-radius: var(--theme-radius-sm);
-  padding: 0.1em 0.35em;
-}
-.jp-tiptap-content pre {
-  background: color-mix(in oklch, var(--background) 60%, black);
-  border-radius: var(--theme-radius-lg);
-  padding: 1em 1.25em;
-  overflow-x: auto;
-}
-.jp-tiptap-content pre code { background: none; padding: 0; }
-
-.jp-tiptap-content ul { list-style-type: disc;    padding-left: 1.625em; }
-.jp-tiptap-content ol { list-style-type: decimal; padding-left: 1.625em; }
-.jp-tiptap-content li { line-height: 1.7; margin-top: 0.25em; }
-.jp-tiptap-content li + li { margin-top: 0.25em; }
-
-.jp-tiptap-content blockquote {
-  border-left: 3px solid var(--border);
-  padding-left: 1em;
-  color: var(--muted-foreground);
-  font-style: italic;
-}
-
-.jp-tiptap-content hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 1.5em 0;
-}
-
-.jp-tiptap-content img { max-width: 100%; height: auto; border-radius: var(--theme-radius-lg); }
-
-/* ==========================================================================
-   TIPTAP / PROSEMIRROR — Editor typography
-   Tailwind preflight resets all heading/list styles. Re-apply here using
-   tenant theme tokens so the editor is WYSIWYG.
-   ========================================================================== */
 .jp-simple-editor .ProseMirror {
   outline: none;
   word-break: break-word;
 }
-.jp-simple-editor .ProseMirror > * + * { margin-top: 0.75em; }
 
-.jp-simple-editor .ProseMirror h1 { font-size: 2em;    font-weight: 700; line-height: 1.2; margin-top: 1.25em; margin-bottom: 0.25em; }
-.jp-simple-editor .ProseMirror h2 { font-size: 1.5em;  font-weight: 700; line-height: 1.3; margin-top: 1.25em; margin-bottom: 0.25em; }
-.jp-simple-editor .ProseMirror h3 { font-size: 1.25em; font-weight: 600; line-height: 1.4; margin-top: 1.25em; margin-bottom: 0.25em; }
-.jp-simple-editor .ProseMirror h4 { font-size: 1em;    font-weight: 600; line-height: 1.5; margin-top: 1em;    margin-bottom: 0.25em; }
+.jp-tiptap-content,
+.jp-simple-editor .ProseMirror {
+  color: var(--foreground);
+  font-family: var(--theme-font-primary);
+  font-size: var(--theme-text-md);
+  line-height: var(--theme-leading-relaxed);
+}
 
-.jp-simple-editor .ProseMirror p  { line-height: 1.7; }
+.jp-tiptap-content > * + *,
+.jp-simple-editor .ProseMirror > * + * {
+  margin-top: 0.75em;
+}
 
-.jp-simple-editor .ProseMirror strong { font-weight: 700; }
-.jp-simple-editor .ProseMirror em     { font-style: italic; }
-.jp-simple-editor .ProseMirror s      { text-decoration: line-through; }
+.jp-tiptap-content h1,
+.jp-simple-editor .ProseMirror h1 {
+  font-family: var(--theme-font-display, var(--theme-font-primary));
+  font-size: var(--theme-text-4xl);
+  font-weight: 700;
+  line-height: var(--theme-leading-tight);
+  letter-spacing: var(--theme-tracking-display);
+  color: var(--foreground);
+  margin-top: 1.25em;
+  margin-bottom: 0.25em;
+}
 
-.jp-simple-editor .ProseMirror a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
-.jp-simple-editor .ProseMirror a:hover { opacity: 0.8; }
+@media (min-width: 768px) {
+  .jp-tiptap-content h1,
+  .jp-simple-editor .ProseMirror h1 {
+    font-size: var(--theme-text-5xl);
+  }
+}
 
+.jp-tiptap-content h2,
+.jp-simple-editor .ProseMirror h2 {
+  font-family: var(--theme-font-display, var(--theme-font-primary));
+  font-size: var(--theme-text-3xl);
+  font-weight: 700;
+  line-height: var(--theme-leading-tight);
+  letter-spacing: var(--theme-tracking-tight);
+  color: var(--foreground);
+  margin-top: 1.25em;
+  margin-bottom: 0.25em;
+}
+
+.jp-tiptap-content h3,
+.jp-simple-editor .ProseMirror h3 {
+  font-size: var(--theme-text-2xl);
+  font-weight: 600;
+  line-height: var(--theme-leading-snug);
+  color: var(--foreground);
+  margin-top: 1.25em;
+  margin-bottom: 0.25em;
+}
+
+.jp-tiptap-content h4,
+.jp-simple-editor .ProseMirror h4 {
+  font-size: var(--theme-text-xl);
+  font-weight: 600;
+  line-height: var(--theme-leading-snug);
+  color: var(--foreground);
+  margin-top: 1em;
+  margin-bottom: 0.25em;
+}
+
+.jp-tiptap-content h5,
+.jp-simple-editor .ProseMirror h5 {
+  font-size: var(--theme-text-lg);
+  font-weight: 600;
+  line-height: var(--theme-leading-snug);
+  color: var(--foreground);
+  margin-top: 1em;
+  margin-bottom: 0.25em;
+}
+
+.jp-tiptap-content h6,
+.jp-simple-editor .ProseMirror h6 {
+  font-size: var(--theme-text-md);
+  font-weight: 600;
+  line-height: var(--theme-leading-normal);
+  letter-spacing: var(--theme-tracking-wide);
+  color: var(--muted-foreground);
+  margin-top: 1em;
+  margin-bottom: 0.25em;
+}
+
+.jp-tiptap-content p,
+.jp-simple-editor .ProseMirror p {
+  line-height: var(--theme-leading-relaxed);
+}
+
+.jp-tiptap-content strong,
+.jp-simple-editor .ProseMirror strong {
+  font-weight: 700;
+}
+
+.jp-tiptap-content em,
+.jp-simple-editor .ProseMirror em {
+  font-style: italic;
+}
+
+.jp-tiptap-content s,
+.jp-simple-editor .ProseMirror s {
+  text-decoration: line-through;
+}
+
+.jp-tiptap-content a,
+.jp-simple-editor .ProseMirror a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.jp-tiptap-content a:hover,
+.jp-simple-editor .ProseMirror a:hover {
+  opacity: 0.88;
+}
+
+.jp-tiptap-content code,
 .jp-simple-editor .ProseMirror code {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.875em;
-  background: color-mix(in oklch, var(--foreground) 8%, transparent);
+  font-family: var(--theme-font-mono);
+  font-size: var(--theme-text-sm);
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
   border-radius: var(--theme-radius-sm);
   padding: 0.1em 0.35em;
 }
+
+.jp-tiptap-content pre,
 .jp-simple-editor .ProseMirror pre {
-  background: color-mix(in oklch, var(--background) 60%, black);
-  border-radius: var(--theme-radius-lg);
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--theme-radius-md);
   padding: 1em 1.25em;
   overflow-x: auto;
+  font-size: var(--theme-text-sm);
+  line-height: var(--theme-leading-relaxed);
 }
+
+.jp-tiptap-content pre code,
 .jp-simple-editor .ProseMirror pre code {
   background: none;
   padding: 0;
+  font-size: inherit;
 }
 
-.jp-simple-editor .ProseMirror ul { list-style-type: disc;    padding-left: 1.625em; }
-.jp-simple-editor .ProseMirror ol { list-style-type: decimal; padding-left: 1.625em; }
-.jp-simple-editor .ProseMirror li { line-height: 1.7; margin-top: 0.25em; }
-.jp-simple-editor .ProseMirror li + li { margin-top: 0.25em; }
+.jp-tiptap-content ul,
+.jp-simple-editor .ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.625em;
+}
 
+.jp-tiptap-content ol,
+.jp-simple-editor .ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.625em;
+}
+
+.jp-tiptap-content li,
+.jp-simple-editor .ProseMirror li {
+  line-height: var(--theme-leading-relaxed);
+  margin-top: 0.25em;
+}
+
+.jp-tiptap-content li + li,
+.jp-simple-editor .ProseMirror li + li {
+  margin-top: 0.25em;
+}
+
+.jp-tiptap-content blockquote,
 .jp-simple-editor .ProseMirror blockquote {
   border-left: 3px solid var(--border);
   padding-left: 1em;
@@ -8888,31 +12452,32 @@ html {
   font-style: italic;
 }
 
+.jp-tiptap-content hr,
 .jp-simple-editor .ProseMirror hr {
   border: none;
   border-top: 1px solid var(--border);
   margin: 1.5em 0;
 }
 
+.jp-tiptap-content img,
 .jp-simple-editor .ProseMirror img {
   max-width: 100%;
   height: auto;
-  border-radius: var(--theme-radius-lg);
+  border-radius: var(--theme-radius-md);
 }
 
 .jp-simple-editor .ProseMirror img[data-uploading="true"] {
   opacity: 0.6;
   filter: grayscale(0.25);
-  outline: 2px dashed color-mix(in oklch, var(--primary) 70%, transparent);
+  outline: 2px dashed color-mix(in srgb, var(--primary) 70%, transparent);
   outline-offset: 2px;
 }
 
 .jp-simple-editor .ProseMirror img[data-upload-error="true"] {
-  outline: 2px solid color-mix(in oklch, var(--accent) 70%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--destructive) 85%, transparent);
   outline-offset: 2px;
 }
 
-/* Placeholder when editor is empty */
 .jp-simple-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: var(--muted-foreground);
@@ -8922,38 +12487,163 @@ html {
   height: 0;
 }
 
+/* Tiptap docs — scrollable TOC rail */
+.jp-docs-toc-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
 
+.jp-docs-toc-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.jp-docs-toc-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--theme-radius-sm);
+}
+
+.jp-docs-toc-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   5. CLOUD-AI-NATIVE-GRID — ported from platform-frontend
+   Classes used by cloud-ai-native-grid component.
+───────────────────────────────────────────────────────────── */
+.animate-fadeInUp {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+}
+
+.jp-feature-card {
+  border-radius: 1rem;
+  border-width: 1px;
+  border-style: solid;
+  transition: all 0.2s;
+  background-color: var(--card);
+  border-color: var(--border);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   6. LIGHT MODE
+   Applied when <html data-theme="light">.
+   Overrides the bridge vars directly.
+   SOT future: move to theme.json when engine supports modes.
+───────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+
+  /* Backgrounds — warm whites */
+  --background:                 var(--theme-modes-light-colors-background);
+  --card:                       var(--theme-modes-light-colors-card);
+  --elevated:                   var(--theme-modes-light-colors-elevated);
+  --overlay:                    var(--theme-modes-light-colors-overlay);
+  --popover:                    var(--theme-modes-light-colors-popover);
+  --popover-foreground:         var(--theme-modes-light-colors-popover-foreground);
+
+  /* Foregrounds */
+  --foreground:                 var(--theme-modes-light-colors-foreground);
+  --card-foreground:            var(--theme-modes-light-colors-card-foreground);
+  --muted-foreground:           var(--theme-modes-light-colors-muted-foreground);
+  --placeholder:                var(--theme-modes-light-colors-placeholder);
+
+  /* Brand — Labradorite (same hues, adjusted for light bg) */
+  --primary:                    var(--theme-modes-light-colors-primary);
+  --primary-foreground:         var(--theme-modes-light-colors-primary-foreground);
+  --primary-light:              var(--theme-modes-light-colors-primary-light);
+  --primary-dark:               var(--theme-modes-light-colors-primary-dark);
+  --primary-50:                 var(--theme-modes-light-colors-primary-50);
+  --primary-100:                var(--theme-modes-light-colors-primary-100);
+  --primary-200:                var(--theme-modes-light-colors-primary-200);
+  --primary-300:                var(--theme-modes-light-colors-primary-300);
+  --primary-400:                var(--theme-modes-light-colors-primary-400);
+  --primary-500:                var(--theme-modes-light-colors-primary-500);
+  --primary-600:                var(--theme-modes-light-colors-primary-600);
+  --primary-700:                var(--theme-modes-light-colors-primary-700);
+  --primary-800:                var(--theme-modes-light-colors-primary-800);
+  --primary-900:                var(--theme-modes-light-colors-primary-900);
+
+  /* Accent — Parchment darker for light bg contrast */
+  --accent:                     var(--theme-modes-light-colors-accent);
+  --accent-foreground:          var(--theme-modes-light-colors-accent-foreground);
+
+  /* Secondary */
+  --secondary:                  var(--theme-modes-light-colors-secondary);
+  --secondary-foreground:       var(--theme-modes-light-colors-secondary-foreground);
+
+  /* Muted */
+  --muted:                      var(--theme-modes-light-colors-muted);
+
+  /* Border */
+  --border:                     var(--theme-modes-light-colors-border);
+  --border-strong:              var(--theme-modes-light-colors-border-strong);
+
+  /* Form */
+  --input:                      var(--theme-modes-light-colors-input);
+  --ring:                       var(--theme-modes-light-colors-ring);
+
+  /* Feedback */
+  --destructive:                var(--theme-modes-light-colors-destructive);
+  --destructive-foreground:     var(--theme-modes-light-colors-destructive-foreground);
+  --destructive-border:         var(--theme-modes-light-colors-destructive-border);
+  --destructive-ring:           var(--theme-modes-light-colors-destructive-ring);
+  --success:                    var(--theme-modes-light-colors-success);
+  --success-foreground:         var(--theme-modes-light-colors-success-foreground);
+  --success-border:             var(--theme-modes-light-colors-success-border);
+  --success-indicator:          var(--theme-modes-light-colors-success-indicator);
+  --warning:                    var(--theme-modes-light-colors-warning);
+  --warning-foreground:         var(--theme-modes-light-colors-warning-foreground);
+  --warning-border:             var(--theme-modes-light-colors-warning-border);
+  --info:                       var(--theme-modes-light-colors-info);
+  --info-foreground:            var(--theme-modes-light-colors-info-foreground);
+  --info-border:                var(--theme-modes-light-colors-info-border);
+}
 
 END_OF_FILE_CONTENT
 mkdir -p "src/lib"
 echo "Creating src/lib/ComponentRegistry.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/ComponentRegistry.tsx"
-import React from 'react';
+import type { SectionType } from '@/types';
+import type { SectionComponentPropsMap } from '@/types';
 import { Header }           from '@/components/header';
 import { Footer }           from '@/components/footer';
 import { Hero }             from '@/components/hero';
 import { FeatureGrid }      from '@/components/feature-grid';
-import { ProblemStatement } from '@/components/problem-statement';
-import { CtaBanner }        from '@/components/cta-banner';
-import { GitSection }       from '@/components/git-section';
-import { Devex }            from '@/components/devex';
+import { Contact }          from '@/components/contact';
+import { Login }            from '@/components/login';
+import { DesignSystemView }       from '@/components/design-system';
+import { CloudAiNativeGridView } from '@/components/cloud-ai-native-grid';
+import { PageHero }             from '@/components/page-hero';
 import { Tiptap }           from '@/components/tiptap';
-
-import type { SectionType }              from '@olonjs/core';
-import type { SectionComponentPropsMap } from '@/types';
 
 export const ComponentRegistry: {
   [K in SectionType]: React.FC<SectionComponentPropsMap[K]>;
 } = {
-  'header':            Header,
-  'footer':            Footer,
-  'hero':              Hero,
-  'feature-grid':      FeatureGrid,
-  'problem-statement': ProblemStatement,
-  'cta-banner':        CtaBanner,
-  'git-section':       GitSection,
-  'devex':             Devex,
-  'tiptap':            Tiptap,
+  'header':                Header               as React.FC<SectionComponentPropsMap['header']>,
+  'footer':                Footer               as React.FC<SectionComponentPropsMap['footer']>,
+  'hero':                  Hero                 as React.FC<SectionComponentPropsMap['hero']>,
+  'feature-grid':          FeatureGrid          as React.FC<SectionComponentPropsMap['feature-grid']>,
+  'contact':               Contact              as React.FC<SectionComponentPropsMap['contact']>,
+  'login':                 Login                as React.FC<SectionComponentPropsMap['login']>,
+  'design-system':         DesignSystemView     as React.FC<SectionComponentPropsMap['design-system']>,
+  'cloud-ai-native-grid':  CloudAiNativeGridView as React.FC<SectionComponentPropsMap['cloud-ai-native-grid']>,
+  'page-hero':             PageHero             as React.FC<SectionComponentPropsMap['page-hero']>,
+  'tiptap':                Tiptap               as React.FC<SectionComponentPropsMap['tiptap']>,
 };
 
 END_OF_FILE_CONTENT
@@ -9092,7 +12782,7 @@ export const CtaSchema = z.object({
   id: z.string().optional(),
   label: z.string().describe('ui:text'),
   href: z.string().describe('ui:text'),
-  variant: z.enum(['primary', 'secondary']).default('primary').describe('ui:select'),
+  variant: z.enum(['primary', 'secondary', 'accent']).default('primary').describe('ui:select'),
 });
 
 END_OF_FILE_CONTENT
@@ -9344,31 +13034,39 @@ export function getFilePages(): Record<string, PageConfig> {
 END_OF_FILE_CONTENT
 echo "Creating src/lib/schemas.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/schemas.ts"
-export { BaseSectionData, BaseArrayItem, BaseSectionSettingsSchema, CtaSchema } from './base-schemas';
-
-import { HeaderSchema }           from '@/components/header';
-import { FooterSchema }           from '@/components/footer';
-import { HeroSchema }             from '@/components/hero';
-import { FeatureGridSchema }      from '@/components/feature-grid';
-import { ProblemStatementSchema } from '@/components/problem-statement';
-import { CtaBannerSchema }        from '@/components/cta-banner';
-import { GitSectionSchema }       from '@/components/git-section';
-import { DevexSchema }            from '@/components/devex';
+import { HeaderSchema }        from '@/components/header';
+import { FooterSchema }        from '@/components/footer';
+import { HeroSchema }          from '@/components/hero';
+import { FeatureGridSchema }   from '@/components/feature-grid';
+import { ContactSchema }       from '@/components/contact';
+import { LoginSchema }         from '@/components/login';
+import { DesignSystemSchema }         from '@/components/design-system';
+import { CloudAiNativeGridSchema }    from '@/components/cloud-ai-native-grid';
+import { PageHeroSchema }             from '@/components/page-hero';
 import { TiptapSchema }           from '@/components/tiptap';
 
 export const SECTION_SCHEMAS = {
-  'header':            HeaderSchema,
-  'footer':            FooterSchema,
-  'hero':              HeroSchema,
-  'feature-grid':      FeatureGridSchema,
-  'problem-statement': ProblemStatementSchema,
-  'cta-banner':        CtaBannerSchema,
-  'git-section':       GitSectionSchema,
-  'devex':             DevexSchema,
+  'header':                HeaderSchema,
+  'footer':                FooterSchema,
+  'hero':                  HeroSchema,
+  'feature-grid':          FeatureGridSchema,
+  'contact':               ContactSchema,
+  'login':                 LoginSchema,
+  'design-system':         DesignSystemSchema,
+  'cloud-ai-native-grid':  CloudAiNativeGridSchema,
+  'page-hero':             PageHeroSchema,
   'tiptap':            TiptapSchema,
 } as const;
 
 export type SectionType = keyof typeof SECTION_SCHEMAS;
+
+export {
+  BaseSectionData,
+  BaseArrayItem,
+  BaseSectionSettingsSchema,
+  CtaSchema,
+  ImageSelectionSchema,
+} from '@/lib/base-schemas';
 
 END_OF_FILE_CONTENT
 echo "Creating src/lib/useFormSubmit.ts..."
@@ -9494,50 +13192,54 @@ mkdir -p "src/types"
 echo "Creating src/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/types.ts"
 import type { MenuItem } from '@olonjs/core';
-import type { HeaderData,           HeaderSettings }           from '@/components/header';
-import type { FooterData,           FooterSettings }           from '@/components/footer';
-import type { HeroData,             HeroSettings }             from '@/components/hero';
-import type { FeatureGridData,      FeatureGridSettings }      from '@/components/feature-grid';
-import type { ProblemStatementData, ProblemStatementSettings } from '@/components/problem-statement';
-import type { CtaBannerData,        CtaBannerSettings }        from '@/components/cta-banner';
-import type { GitSectionData,       GitSectionSettings }       from '@/components/git-section';
-import type { DevexData,            DevexSettings }            from '@/components/devex';
-import type { TiptapData,           TiptapSettings }           from '@/components/tiptap';
+import type { HeaderData,        HeaderSettings        } from '@/components/header';
+import type { FooterData,        FooterSettings        } from '@/components/footer';
+import type { HeroData,          HeroSettings          } from '@/components/hero';
+import type { FeatureGridData,   FeatureGridSettings   } from '@/components/feature-grid';
+import type { ContactData,       ContactSettings       } from '@/components/contact';
+import type { LoginData,         LoginSettings         } from '@/components/login';
+import type { DesignSystemData,        DesignSystemSettings        } from '@/components/design-system';
+import type { CloudAiNativeGridData,   CloudAiNativeGridSettings   } from '@/components/cloud-ai-native-grid';
+import type { PageHeroData,            PageHeroSettings            } from '@/components/page-hero';
+import type { TiptapData,              TiptapSettings              } from '@/components/tiptap';
 
 export type SectionComponentPropsMap = {
-  'header':            { data: HeaderData;           settings?: HeaderSettings;           menu: MenuItem[] };
-  'footer':            { data: FooterData;            settings?: FooterSettings            };
-  'hero':              { data: HeroData;              settings?: HeroSettings              };
-  'feature-grid':      { data: FeatureGridData;       settings?: FeatureGridSettings       };
-  'problem-statement': { data: ProblemStatementData;  settings?: ProblemStatementSettings  };
-  'cta-banner':        { data: CtaBannerData;         settings?: CtaBannerSettings         };
-  'git-section':       { data: GitSectionData;        settings?: GitSectionSettings        };
-  'devex':             { data: DevexData;             settings?: DevexSettings             };
-  'tiptap':            { data: TiptapData;            settings?: TiptapSettings            };
+  'header':                { data: HeaderData;              settings?: HeaderSettings;              menu: MenuItem[] };
+  'footer':                { data: FooterData;              settings?: FooterSettings               };
+  'hero':                  { data: HeroData;                settings?: HeroSettings                 };
+  'feature-grid':          { data: FeatureGridData;         settings?: FeatureGridSettings          };
+  'contact':               { data: ContactData;             settings?: ContactSettings              };
+  'login':                 { data: LoginData;               settings?: LoginSettings                };
+  'design-system':         { data: DesignSystemData;        settings?: DesignSystemSettings         };
+  'cloud-ai-native-grid':  { data: CloudAiNativeGridData;   settings?: CloudAiNativeGridSettings    };
+  'page-hero':             { data: PageHeroData;            settings?: PageHeroSettings             };
+  'tiptap':                { data: TiptapData;               settings?: TiptapSettings                };
 };
 
 declare module '@olonjs/core' {
   export interface SectionDataRegistry {
-    'header':            HeaderData;
-    'footer':            FooterData;
-    'hero':              HeroData;
-    'feature-grid':      FeatureGridData;
-    'problem-statement': ProblemStatementData;
-    'cta-banner':        CtaBannerData;
-    'git-section':       GitSectionData;
-    'devex':             DevexData;
-    'tiptap':            TiptapData;
+    'header':                HeaderData;
+    'footer':                FooterData;
+    'hero':                  HeroData;
+    'feature-grid':          FeatureGridData;
+    'contact':               ContactData;
+    'login':                 LoginData;
+    'design-system':         DesignSystemData;
+    'cloud-ai-native-grid':  CloudAiNativeGridData;
+    'page-hero':             PageHeroData;
+    'tiptap':                TiptapData;
   }
   export interface SectionSettingsRegistry {
-    'header':            HeaderSettings;
-    'footer':            FooterSettings;
-    'hero':              HeroSettings;
-    'feature-grid':      FeatureGridSettings;
-    'problem-statement': ProblemStatementSettings;
-    'cta-banner':        CtaBannerSettings;
-    'git-section':       GitSectionSettings;
-    'devex':             DevexSettings;
-    'tiptap':            TiptapSettings;
+    'header':                HeaderSettings;
+    'footer':                FooterSettings;
+    'hero':                  HeroSettings;
+    'feature-grid':          FeatureGridSettings;
+    'contact':               ContactSettings;
+    'login':                 LoginSettings;
+    'design-system':         DesignSystemSettings;
+    'cloud-ai-native-grid':  CloudAiNativeGridSettings;
+    'page-hero':             PageHeroSettings;
+    'tiptap':                TiptapSettings;
   }
 }
 
@@ -9620,6 +13322,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS_IMAGES_DIR = path.resolve(__dirname, 'public', 'assets', 'images');
 const DATA_CONFIG_DIR = path.resolve(__dirname, 'src', 'data', 'config');
 const DATA_PAGES_DIR = path.resolve(__dirname, 'src', 'data', 'pages');
+const MONOREPO_ROOT_DIR = path.resolve(__dirname, '../..');
+const CORE_SRC_INDEX = path.resolve(__dirname, '../../packages/core/src/index.ts');
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif']);
 const IMAGE_MIMES = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml', 'image/avif',
@@ -9661,6 +13365,37 @@ function isTenantPageJsonRequest(req, pathname) {
   const viteOrStaticPrefixes = ['/api/', '/assets/', '/src/', '/node_modules/', '/public/', '/@'];
   return !viteOrStaticPrefixes.some((prefix) => pathname.startsWith(prefix));
 }
+
+function sanitizeNestedSlug(rawSlug) {
+  const normalized = String(rawSlug || '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+|\/+$/g, '');
+  const segments = normalized
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .map((segment) => segment.replace(/[^a-zA-Z0-9-_]/g, '_'))
+    .filter((segment) => segment && segment !== '.' && segment !== '..');
+  return segments.join('/');
+}
+
+function writeJsonWithoutWatcher(server, targetPath, value) {
+  const normalized = path.resolve(targetPath);
+  try {
+    server.watcher.unwatch(normalized);
+  } catch {
+    // best-effort
+  }
+  fs.mkdirSync(path.dirname(normalized), { recursive: true });
+  fs.writeFileSync(normalized, JSON.stringify(value, null, 2), 'utf8');
+  setTimeout(() => {
+    try {
+      server.watcher.add(normalized);
+    } catch {
+      // best-effort
+    }
+  }, 250);
+}
 export default defineConfig({
   plugins: [
     react(),
@@ -9700,12 +13435,29 @@ export default defineConfig({
                 if (!projectState || typeof slug !== 'string') { sendJson(res, 400, { error: 'Missing projectState or slug' }); return; }
                 if (!fs.existsSync(DATA_CONFIG_DIR)) fs.mkdirSync(DATA_CONFIG_DIR, { recursive: true });
                 if (!fs.existsSync(DATA_PAGES_DIR)) fs.mkdirSync(DATA_PAGES_DIR, { recursive: true });
-                if (projectState.site != null) fs.writeFileSync(path.join(DATA_CONFIG_DIR, 'site.json'), JSON.stringify(projectState.site, null, 2), 'utf8');
-                if (projectState.theme != null) fs.writeFileSync(path.join(DATA_CONFIG_DIR, 'theme.json'), JSON.stringify(projectState.theme, null, 2), 'utf8');
-                if (projectState.menu != null) fs.writeFileSync(path.join(DATA_CONFIG_DIR, 'menu.json'), JSON.stringify(projectState.menu, null, 2), 'utf8');
+                const touchedFiles = [];
+                if (projectState.site != null) {
+                  const sitePath = path.join(DATA_CONFIG_DIR, 'site.json');
+                  writeJsonWithoutWatcher(server, sitePath, projectState.site);
+                  touchedFiles.push(sitePath);
+                }
+                if (projectState.theme != null) {
+                  const themePath = path.join(DATA_CONFIG_DIR, 'theme.json');
+                  writeJsonWithoutWatcher(server, themePath, projectState.theme);
+                  touchedFiles.push(themePath);
+                }
+                if (projectState.menu != null) {
+                  const menuPath = path.join(DATA_CONFIG_DIR, 'menu.json');
+                  writeJsonWithoutWatcher(server, menuPath, projectState.menu);
+                  touchedFiles.push(menuPath);
+                }
                 if (projectState.page != null) {
-                  const safeSlug = (slug.replace(/[^a-zA-Z0-9-_]/g, '_') || 'page');
-                  fs.writeFileSync(path.join(DATA_PAGES_DIR, `${safeSlug}.json`), JSON.stringify(projectState.page, null, 2), 'utf8');
+                  const safeSlug = sanitizeNestedSlug(slug) || 'page';
+                  const pagePath = path.resolve(DATA_PAGES_DIR, `${safeSlug}.json`);
+                  const isInsidePagesDir = pagePath.startsWith(`${DATA_PAGES_DIR}${path.sep}`) || pagePath === DATA_PAGES_DIR;
+                  if (!isInsidePagesDir) { sendJson(res, 400, { error: 'Invalid page slug path' }); return; }
+                  writeJsonWithoutWatcher(server, pagePath, projectState.page);
+                  touchedFiles.push(pagePath);
                 }
                 sendJson(res, 200, { ok: true });
               } catch (e) { sendJson(res, 500, { error: e?.message || 'Save to file failed' }); }
@@ -9735,7 +13487,22 @@ export default defineConfig({
       },
     },
   ],
-  resolve: { alias: { '@': path.resolve(__dirname, './src') } },
+  server: {
+    fs: {
+      allow: [MONOREPO_ROOT_DIR],
+    },
+  },
+  optimizeDeps: {
+    exclude: ['@olonjs/core', '@jsonpages/core'],
+  },
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@olonjs/core': CORE_SRC_INDEX,
+      '@jsonpages/core': CORE_SRC_INDEX,
+    },
+  },
 });
 
 
