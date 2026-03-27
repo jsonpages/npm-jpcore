@@ -55,6 +55,7 @@ function isTenantPageJsonRequest(req, pathname) {
   return !viteOrStaticPrefixes.some((prefix) => pathname.startsWith(prefix));
 }
 export default defineConfig({
+  base: '/core/',
   plugins: [
     react(),
     tailwindcss(),
