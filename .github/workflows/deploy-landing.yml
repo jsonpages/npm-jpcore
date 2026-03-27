@@ -41,10 +41,7 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Add CNAME for JS.ORG
-        run: |
-          # Fondamentale per l'approvazione di js.org
-          echo "olon.js.org" > apps/olonjs.io/dist/CNAME
+      
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
