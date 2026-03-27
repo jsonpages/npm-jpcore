@@ -101,12 +101,6 @@ if (!hasCommentMarker && !hasRootDivMarker) {
 const inlinedCss = getCss();
 const styleTag = `<style data-bake="inline">${inlinedCss}</style>`;
 
-function stripClientRuntime(html) {
-  return html
-    .replace(/<script\b[^>]*type=["']module["'][^>]*>\s*<\/script>\s*/gi, '')
-    .replace(/<link\b[^>]*rel=["']modulepreload["'][^>]*>\s*/gi, '');
-}
-
 for (const { slug, out, depth } of targets) {
   console.log(`\n[bake] Rendering /${slug === 'home' ? '' : slug}...`);
 
@@ -123,7 +117,7 @@ for (const { slug, out, depth } of targets) {
   const prefix = depth > 0 ? '../'.repeat(depth) : './';
   const fixedTemplate = depth > 0 ? template.replace(/(['"])\.\//g, `$1${prefix}`) : template;
 
-  let bakedHtml = stripClientRuntime(fixedTemplate)
+  let bakedHtml = fixedTemplate
     .replace('</head>', `  ${styleTag}\n</head>`)
     .replace(/<title>.*?<\/title>/, `<title>${safeTitle}</title>\n    ${metaTags}`);
 
