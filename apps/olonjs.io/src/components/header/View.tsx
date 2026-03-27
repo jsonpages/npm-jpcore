@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { OlonMark } from '@/components/ui/OlonMark';
 import { Badge } from '@/components/ui/badge';
@@ -12,13 +12,6 @@ export const Header: React.FC<{
   menu: MenuItem[];
 }> = ({ data, menu }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   return (
     <>
@@ -27,9 +20,7 @@ export const Header: React.FC<{
         className={cn(
           'fixed top-0 left-0 right-0 w-full h-14 z-50 transition-all duration-300',
           'flex items-center',
-          scrolled
-            ? 'bg-background/88 backdrop-blur-[16px] border-b border-border/60'
-            : 'bg-transparent border-b border-transparent'
+          'bg-background/88 backdrop-blur-[16px] border-b border-border/60'
         )}
       >
         <div className="max-w-[1040px] w-full mx-auto px-8 flex items-center gap-3">
