@@ -6,23 +6,7 @@
     "description": "OlonJS standardizes machine-readable web content across tenants. Predictable page endpoints for agents, typed schema contracts, repeatable governance."
   },
   "sections": [
-    {
-      "id": "global-header",
-      "type": "header",
-      "data": {
-        "logoText": "Olon",
-        "badge": "",
-        "links": {
-          "$ref": "../config/menu.json#/main"
-        },
-        "ctaLabel": "Get started →",
-        "ctaHref": "#contact",
-        "signinHref": "#login"
-      },
-      "settings": {
-        "sticky": true
-      }
-    },
+   
     {
       "id": "hero-main",
       "type": "hero",
@@ -193,6 +177,6 @@
         "showOauth": true
       }
     }
-  ],
-  "global-header": false
+  ]
+  
 }

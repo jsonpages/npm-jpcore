@@ -2,7 +2,7 @@
  * Sovereign Shell: routing, state, and Admin layout live in the Engine.
  * Enterprise: error boundary, defensive config, and safe init to avoid black screen.
  */
-import React, { useEffect, useState, useCallback, useRef, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo, Component, ErrorInfo, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { PageRenderer } from './PageRenderer';
 import { StudioProvider } from './StudioContext';
@@ -18,6 +18,7 @@ import { STUDIO_EVENTS } from './events';
 import { exportProjectJSON, exportBakedHTML } from './persistence';
 import type { JsonPagesConfig, SelectionPath } from './types-engine';
 import type { PageConfig, SiteConfig, Section, MenuItem, ProjectState } from './kernel';
+import { resolveHeaderMenuItems, resolveRuntimeConfig } from './config-resolver';
 
 import defaultAdminCss from '../admin/admin-skin.css?inline';
 
@@ -124,26 +125,19 @@ function resolvePageFromRegistry(
   return pageRegistry[normalized];
 }
 
-function isMenuItemShape(value: unknown): value is MenuItem {
-  if (!value || typeof value !== 'object') return false;
-  const rec = value as Record<string, unknown>;
-  return typeof rec.label === 'string' && typeof rec.href === 'string';
-}
-
 function resolveMenuMainFromHeaderData(
-  headerData: { links?: unknown } | undefined,
+  headerData: unknown,
   fallbackMain: MenuItem[]
 ): MenuItem[] {
-  if (Array.isArray(headerData?.links) && headerData.links.every(isMenuItemShape)) {
-    return headerData.links as MenuItem[];
-  }
-  return Array.isArray(fallbackMain) ? fallbackMain : [];
+  return resolveHeaderMenuItems(headerData, fallbackMain);
 }
 
 interface VisitorRouteProps {
   pageRegistry: Record<string, PageConfig>;
   siteConfig: SiteConfig;
   menuConfig: { main: MenuItem[] };
+  themeConfig: JsonPagesConfig['themeConfig'];
+  refDocuments?: JsonPagesConfig['refDocuments'];
   tenantCss: string;
   adminCss: string;
   NotFoundComponent: React.ComponentType;
@@ -153,6 +147,8 @@ const VisitorRoute: React.FC<VisitorRouteProps> = ({
   pageRegistry,
   siteConfig,
   menuConfig,
+  themeConfig,
+  refDocuments,
   tenantCss,
   adminCss,
   NotFoundComponent,
@@ -174,9 +170,36 @@ const VisitorRoute: React.FC<VisitorRouteProps> = ({
     }
   }, []);
 
-  const pageConfig = bakedState ? bakedState.page : resolvePageFromRegistry(pageRegistry, slug);
+  const activePages = bakedState
+    ? { [bakedState.page.slug || slug]: bakedState.page }
+    : pageRegistry;
   const activeSiteConfig = bakedState ? bakedState.site : siteConfig;
   const activeMenuConfig = bakedState ? bakedState.menu : menuConfig;
+  const activeThemeConfig = bakedState ? bakedState.theme : themeConfig;
+  const resolvedRuntime = useMemo(
+    () =>
+      resolveRuntimeConfig({
+        pages: activePages,
+        siteConfig: activeSiteConfig,
+        themeConfig: activeThemeConfig,
+        menuConfig: activeMenuConfig,
+        refDocuments,
+      }),
+    [activePages, activeSiteConfig, activeThemeConfig, activeMenuConfig, refDocuments]
+  );
+  const pageConfig = bakedState
+    ? resolvedRuntime.pages[bakedState.page.slug || slug]
+    : resolvePageFromRegistry(resolvedRuntime.pages, slug);
+
+  useEffect(() => {
+    try {
+      if (resolvedRuntime.themeConfig?.tokens) {
+        themeManager.setTheme(resolvedRuntime.themeConfig);
+      }
+    } catch (e) {
+      console.warn('[JsonPages] visitor theme resolution failed', e);
+    }
+  }, [resolvedRuntime.themeConfig]);
 
   if (!pageConfig) return <NotFoundComponent />;
 
@@ -185,8 +208,8 @@ const VisitorRoute: React.FC<VisitorRouteProps> = ({
       <StudioProvider mode="visitor">
         <PageRenderer
           pageConfig={pageConfig}
-          siteConfig={activeSiteConfig}
-          menuConfig={activeMenuConfig}
+          siteConfig={resolvedRuntime.siteConfig}
+          menuConfig={resolvedRuntime.menuConfig}
         />
       </StudioProvider>
     </ThemeLoader>
@@ -198,6 +221,7 @@ interface StudioRouteProps {
   siteConfig: SiteConfig;
   menuConfig: { main: MenuItem[] };
   themeConfig: JsonPagesConfig['themeConfig'];
+  refDocuments?: JsonPagesConfig['refDocuments'];
   tenantCss: string;
   adminCss: string;
   addSectionConfig: JsonPagesConfig['addSection'];
@@ -214,6 +238,7 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
   siteConfig,
   menuConfig,
   themeConfig,
+  refDocuments,
   tenantCss,
   adminCss,
   addSectionConfig,
@@ -240,10 +265,6 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
       const base = JSON.parse(JSON.stringify(siteConfig ?? {})) as SiteConfig;
       if (!base.identity) base.identity = { title: 'Site' };
       if (!base.pages) base.pages = [];
-      const headerData = base.header?.data as { links?: unknown } | undefined;
-      if (headerData && menuConfig?.main && Array.isArray(headerData.links)) {
-        headerData.links = JSON.parse(JSON.stringify(menuConfig.main)) as MenuItem[];
-      }
       return base;
     } catch {
       return {
@@ -258,6 +279,18 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
   const [scrollToSectionId, setScrollToSectionId] = useState<string | null>(null);
   const [addSectionLibraryOpen, setAddSectionLibraryOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(400);
+  const resolvedRuntime = useMemo(
+    () =>
+      resolveRuntimeConfig({
+        pages: draft ? { [slug]: draft } : {},
+        siteConfig: globalDraft,
+        themeConfig,
+        menuConfig,
+        refDocuments,
+      }),
+    [draft, globalDraft, themeConfig, menuConfig, refDocuments, slug]
+  );
+  const resolvedDraft = draft ? resolvedRuntime.pages[slug] ?? draft : null;
   const draftRef = useRef<PageConfig | null>(draft);
   const globalDraftRef = useRef<SiteConfig>(globalDraft);
   const sidebarMin = 360;
@@ -392,18 +425,18 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
       }
       if (event.data.type === STUDIO_EVENTS.SEND_CLEAN_HTML) {
         if (!draftRef.current) return;
-        const headerData = globalDraftRef.current.header?.data as { links?: unknown } | undefined;
+        const headerData = resolvedRuntime.siteConfig.header?.data;
         const projectState: ProjectState = {
           page: draftRef.current,
           site: globalDraftRef.current,
           menu: { main: resolveMenuMainFromHeaderData(headerData, menuConfig.main) },
-          theme: themeConfig,
+          theme: resolvedRuntime.themeConfig,
         };
         exportHTML(projectState, slug, event.data.html);
         setHasChanges(false);
       }
     },
-    [slug, themeConfig, handleReorderSection, exportHTML]
+    [slug, handleReorderSection, exportHTML, resolvedRuntime.siteConfig, resolvedRuntime.themeConfig, menuConfig.main]
   );
 
   useEffect(() => {
@@ -505,12 +538,19 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
     const currentDraft = draftRef.current;
     const currentGlobalDraft = globalDraftRef.current;
     if (!currentDraft) return;
-    const headerData = currentGlobalDraft.header?.data as { links?: unknown } | undefined;
+    const resolvedSaveRuntime = resolveRuntimeConfig({
+      pages: { [slug]: currentDraft },
+      siteConfig: currentGlobalDraft,
+      themeConfig,
+      menuConfig,
+      refDocuments,
+    });
+    const headerData = resolvedSaveRuntime.siteConfig.header?.data;
     const projectState: ProjectState = {
       page: currentDraft,
       site: currentGlobalDraft,
       menu: { main: resolveMenuMainFromHeaderData(headerData, menuConfig.main) },
-      theme: themeConfig,
+      theme: resolvedSaveRuntime.themeConfig,
     };
     saveToFile(projectState, slug).then(() => {
       setHasChanges(false);
@@ -531,12 +571,19 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
     const currentDraft = draftRef.current;
     const currentGlobalDraft = globalDraftRef.current;
     if (!currentDraft) return;
-    const headerData = currentGlobalDraft.header?.data as { links?: unknown } | undefined;
+    const resolvedHotSaveRuntime = resolveRuntimeConfig({
+      pages: { [slug]: currentDraft },
+      siteConfig: currentGlobalDraft,
+      themeConfig,
+      menuConfig,
+      refDocuments,
+    });
+    const headerData = resolvedHotSaveRuntime.siteConfig.header?.data;
     const projectState: ProjectState = {
       page: currentDraft,
       site: currentGlobalDraft,
       menu: { main: resolveMenuMainFromHeaderData(headerData, menuConfig.main) },
-      theme: themeConfig,
+      theme: resolvedHotSaveRuntime.themeConfig,
     };
 
     setHotSaveInProgress(true);
@@ -593,10 +640,10 @@ const StudioRoute: React.FC<StudioRouteProps> = ({
           <div className="flex flex-1 min-h-0 overflow-hidden">
             <main className="flex-1 min-w-0 relative bg-zinc-900/50 overflow-hidden">
               <StudioStage
-                draft={draft}
-                globalDraft={globalDraft}
-                menuConfig={menuConfig}
-                themeConfig={themeConfig}
+                draft={resolvedDraft ?? draft}
+                globalDraft={resolvedRuntime.siteConfig}
+                menuConfig={resolvedRuntime.menuConfig}
+                themeConfig={resolvedRuntime.themeConfig}
                 slug={slug}
                 selectedId={selected?.id}
                 scrollToSectionId={scrollToSectionId}
@@ -691,6 +738,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
     siteConfig,
     themeConfig,
     menuConfig,
+    refDocuments,
     themeCss,
     addSection: addSectionConfig,
     NotFoundComponent = DefaultNotFound,
@@ -717,16 +765,29 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
       : typeof defaultAdminCss === 'string'
         ? defaultAdminCss
         : FALLBACK_ADMIN_CSS;
+  const baseResolvedRuntime = useMemo(
+    () =>
+      resolveRuntimeConfig({
+        pages: pageRegistry,
+        siteConfig,
+        themeConfig,
+        menuConfig,
+        refDocuments,
+      }),
+    [pageRegistry, siteConfig, themeConfig, menuConfig, refDocuments]
+  );
 
   const [isReady, setIsReady] = useState(false);
   useEffect(() => {
     try {
-      if (themeConfig?.tokens) themeManager.setTheme(themeConfig);
+      if (baseResolvedRuntime.themeConfig?.tokens) {
+        themeManager.setTheme(baseResolvedRuntime.themeConfig);
+      }
     } catch (e) {
       console.warn('[JsonPages] setTheme failed', e);
     }
     setIsReady(true);
-  }, [themeConfig]);
+  }, [baseResolvedRuntime.themeConfig]);
 
   if (!isReady) {
     return (
@@ -767,6 +828,8 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   pageRegistry={pageRegistry}
                   siteConfig={siteConfig}
                   menuConfig={menuConfig}
+                  themeConfig={baseResolvedRuntime.themeConfig}
+                  refDocuments={refDocuments}
                   tenantCss={tenantCss}
                   adminCss={adminCss}
                   NotFoundComponent={NotFoundComponent}
@@ -780,6 +843,8 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   pageRegistry={pageRegistry}
                   siteConfig={siteConfig}
                   menuConfig={menuConfig}
+                  themeConfig={baseResolvedRuntime.themeConfig}
+                  refDocuments={refDocuments}
                   tenantCss={tenantCss}
                   adminCss={adminCss}
                   NotFoundComponent={NotFoundComponent}
@@ -793,7 +858,8 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   pageRegistry={pageRegistry}
                   siteConfig={siteConfig}
                   menuConfig={menuConfig}
-                  themeConfig={themeConfig}
+                  themeConfig={baseResolvedRuntime.themeConfig}
+                  refDocuments={refDocuments}
                   tenantCss={tenantCss}
                   adminCss={adminCss}
                   addSectionConfig={addSectionConfig}
@@ -813,7 +879,8 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
                   pageRegistry={pageRegistry}
                   siteConfig={siteConfig}
                   menuConfig={menuConfig}
-                  themeConfig={themeConfig}
+                  themeConfig={baseResolvedRuntime.themeConfig}
+                  refDocuments={refDocuments}
                   tenantCss={tenantCss}
                   adminCss={adminCss}
                   addSectionConfig={addSectionConfig}

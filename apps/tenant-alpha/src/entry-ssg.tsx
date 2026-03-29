@@ -1,6 +1,6 @@
 import { renderToString } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server';
-import { ConfigProvider, PageRenderer, StudioProvider } from '@olonjs/core';
+import { ConfigProvider, PageRenderer, StudioProvider, resolveRuntimeConfig } from '@olonjs/core';
 import type { JsonPagesConfig, MenuConfig, PageConfig, SiteConfig, ThemeConfig } from '@/types';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { ComponentRegistry } from '@/lib/ComponentRegistry';
@@ -12,9 +12,14 @@ import themeData from '@/data/config/theme.json';
 import tenantCss from '@/index.css?inline';
 
 const siteConfig = siteData as unknown as SiteConfig;
-const menuConfig = menuData as unknown as MenuConfig;
+const menuConfig: MenuConfig = { main: [] };
 const themeConfig = themeData as unknown as ThemeConfig;
 const pages = getFilePages();
+const refDocuments = {
+  'menu.json': menuData,
+  'config/menu.json': menuData,
+  'src/data/config/menu.json': menuData,
+} satisfies NonNullable<JsonPagesConfig['refDocuments']>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -96,6 +101,14 @@ function resolveTenantId(): string {
 export function render(slug: string): string {
   const resolved = resolvePage(slug);
   const location = resolved.slug === 'home' ? '/' : `/${resolved.slug}`;
+  const resolvedRuntime = resolveRuntimeConfig({
+    pages,
+    siteConfig,
+    themeConfig,
+    menuConfig,
+    refDocuments,
+  });
+  const resolvedPage = resolvedRuntime.pages[resolved.slug] ?? resolved.page;
 
   return renderToString(
     <StaticRouter location={location}>
@@ -108,7 +121,11 @@ export function render(slug: string): string {
       >
         <StudioProvider mode="visitor">
           <ThemeProvider>
-            <PageRenderer pageConfig={resolved.page} siteConfig={siteConfig} menuConfig={menuConfig} />
+            <PageRenderer
+              pageConfig={resolvedPage}
+              siteConfig={resolvedRuntime.siteConfig}
+              menuConfig={resolvedRuntime.menuConfig}
+            />
           </ThemeProvider>
         </StudioProvider>
       </ConfigProvider>

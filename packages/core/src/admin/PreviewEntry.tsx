@@ -5,6 +5,7 @@ import { themeManager } from '../utils/theme-manager';
 import { STUDIO_EVENTS } from '../lib/events';
 import type { PageConfig, SiteConfig, MenuConfig, MenuItem } from '../lib/kernel';
 import type { SelectionPath } from '../lib/types-engine';
+import { resolveHeaderMenuItems } from '../lib/config-resolver';
 import { buildSelectionPath } from './selection-path';
 
 const INTERACTIVE_SELECTION_GUARD =
@@ -183,10 +184,9 @@ export const PreviewEntry: React.FC = () => {
     );
   }
 
-  const headerData = globalDraft.header?.data as { links?: MenuItem[] } | undefined;
-  const currentMenuConfig: MenuConfig = Array.isArray(headerData?.links)
-    ? { main: headerData.links }
-    : menuConfig;
+  const currentMenuConfig: MenuConfig = {
+    main: resolveHeaderMenuItems(globalDraft.header?.data, menuConfig.main),
+  };
 
   const handleActiveSectionChange = (sectionId: string | null) => {
     window.parent.postMessage({

@@ -88,6 +88,8 @@ export interface JsonPagesConfig {
   siteConfig: SiteConfig;
   themeConfig: ThemeConfig;
   menuConfig: MenuConfig;
+  /** Optional extra JSON documents available to the runtime $ref resolver. */
+  refDocuments?: Record<string, unknown>;
   /** Optional persistence; Core provides defaults if omitted. */
   persistence?: Partial<PersistenceConfig>;
   /** CSS strings for ThemeLoader. */

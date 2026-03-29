@@ -50,16 +50,16 @@ Compliance priority:
 Use these local references when available:
 
 - Base tenant DNA: `\\wsl.localhost\Ubuntu\home\dev\temp\alpha`
-- Custom tenant reference: `\\wsl.localhost\Ubuntu\home\dev\temp\gptgiorgio`
+
 - Core engine: `\\wsl.localhost\Ubuntu\home\dev\npm-jpcore\packages\core`
-- Generator example: `\\wsl.localhost\Ubuntu\home\dev\temp\clonark\generate_olon.sh`
+
 
 If these paths are missing, infer the same roles from the current workspace:
 
 - base CLI-generated tenant
-- branded tenant
+
 - core package
-- generator script
+
 
 ## Tenant Anatomy
 
@@ -78,7 +78,7 @@ Expect these files to move together:
 - `src/data/config/theme.json`
 - `src/data/config/menu.json`
 
-Useful rule: if a section type changes, check all of the files above before concluding the task is done.
+MANDATORY: if a section type changes, check all of the files above before concluding the task is done.
 
 ## What Good Work Looks Like
 
@@ -89,6 +89,7 @@ A good tenant change:
 - preserves editability for strings, lists, nested objects, CTAs, and image fields
 - uses `ImageSelectionSchema`-style image fields when the content is image-driven
 - keeps page content JSON-first
+- keeps all stylying values in theme.json. index.css reads vars injected by @olonjs/core from theme.json. Theme SOT lives in src/data/config/theme.json
 
 A suspicious tenant change:
 
@@ -170,24 +171,6 @@ Nested routes:
 
 - Files under `src/data/pages/**/*.json` may represent nested slugs.
 - Preserve slug/path consistency and do not replace file-based routing with manual lists.
-
-## Decision Rules
-
-Use `alpha` patterns when the task is about:
-
-- tenant DNA
-- capability reference
-- baseline protocol shape
-- proving what the base system already supports
-
-Use `gptgiorgio` patterns when the task is about:
-
-- stronger branded frontend customization
-- richer domain-specific sections
-- image-heavy schema design
-- proving how far customization can go without changing the bootstrap
-
-Do not treat `gptgiorgio` as canonical for legacy admin context awareness.
 
 ## Default Operating Procedure
 

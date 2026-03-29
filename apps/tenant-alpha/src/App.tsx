@@ -31,7 +31,12 @@ const CLOUD_API_KEY =
   import.meta.env.VITE_OLONJS_API_KEY ?? import.meta.env.VITE_JSONPAGES_API_KEY;
 
 const themeConfig = themeData as unknown as ThemeConfig;
-const menuConfig = menuData as unknown as MenuConfig;
+const menuConfig: MenuConfig = { main: [] };
+const refDocuments = {
+  'menu.json': menuData,
+  'config/menu.json': menuData,
+  'src/data/config/menu.json': menuData,
+} satisfies NonNullable<JsonPagesConfig['refDocuments']>;
 const TENANT_ID = 'alpha';
 
 const filePages = getFilePages();
@@ -694,6 +699,7 @@ function App() {
     siteConfig,
     themeConfig,
     menuConfig,
+    refDocuments,
     themeCss: { tenant: `${buildThemeFontVarsCss(themeConfig)}\n${tenantCss}` },
     addSection: addSectionConfig,
     persistence: {

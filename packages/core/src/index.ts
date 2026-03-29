@@ -16,6 +16,11 @@ export { StudioProvider, useStudio } from './lib/StudioContext';
 export { ConfigProvider, useConfig, type ConfigContextValue } from './lib/ConfigContext';
 export { ThemeLoader } from './lib/ThemeLoader';
 export { DefaultNotFound } from './lib/DefaultNotFound';
+export {
+  resolveHeaderMenuItems,
+  resolveRuntimeConfig,
+  resolveSectionMenuItems,
+} from './lib/config-resolver';
 
 // Utils
 export { themeManager } from './utils/theme-manager';

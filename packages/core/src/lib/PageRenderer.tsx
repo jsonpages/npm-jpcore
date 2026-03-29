@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SectionRenderer } from './SectionRenderer';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { shouldRenderSiteGlobalHeader, type PageRendererProps } from './kernel';
+import { resolveSectionMenuItems } from './config-resolver';
 
 const REORDER_DATA_KEY = 'application/json';
 
@@ -111,7 +112,11 @@ export const PageRenderer: React.FC<Props> = ({
             data-section-id={section.id}
             onMouseEnter={() => handleSectionHover(section.id)}
           >
-            <SectionRenderer section={section} menu={menuConfig.main} selectedId={selectedId} />
+            <SectionRenderer
+              section={section}
+              menu={resolveSectionMenuItems(section, menuConfig.main)}
+              selectedId={selectedId}
+            />
           </div>
         );
       }
@@ -143,7 +148,7 @@ export const PageRenderer: React.FC<Props> = ({
           />
           <SectionRenderer
             section={section}
-            menu={menuConfig.main}
+            menu={resolveSectionMenuItems(section, menuConfig.main)}
             selectedId={selectedId}
             reorderable
             sectionIndex={index}
@@ -192,7 +197,7 @@ export const PageRenderer: React.FC<Props> = ({
         >
           <SectionRenderer
             section={siteConfig.header}
-            menu={menuConfig.main}
+            menu={resolveSectionMenuItems(siteConfig.header, menuConfig.main)}
             selectedId={selectedId}
           />
         </div>
