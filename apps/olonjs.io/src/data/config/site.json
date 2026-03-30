@@ -27,24 +27,9 @@
     "data": {
       "logoText": "olon",
       "logoHighlight": "JS",
-      "links": [
-        {
-          "label": "The Problem",
-          "href": "#problem"
-        },
-        {
-          "label": "Architecture",
-          "href": "#architecture"
-        },
-        {
-          "label": "Why",
-          "href": "#why"
-        },
-        {
-          "label": "DX",
-          "href": "#devex"
-        }
-      ]
+      "links": {
+        "$ref": "../config/menu.json#/main"
+      }
     },
     "settings": {
       "sticky": true
