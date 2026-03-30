@@ -22,11 +22,13 @@ type WebMcpToolInfo = Omit<WebMcpTool, 'execute'>;
 type ModelContextLike = {
   registerTool?: (tool: WebMcpTool) => void;
   unregisterTool?: (name: string) => void;
+  readResource?: (uri: string) => Promise<unknown>;
 };
 
 type ModelContextTestingLike = {
   listTools?: () => WebMcpToolInfo[];
   executeTool?: (toolName: string, inputArgsJson: string) => Promise<string>;
+  readResource?: (uri: string) => Promise<string>;
 };
 
 type WebMcpWindow = Window & {
@@ -38,7 +40,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function cloneJson<T>(value: T): T {
-  return value == null ? value : JSON.parse(JSON.stringify(value)) as T;
+  return value == null ? value : (JSON.parse(JSON.stringify(value)) as T);
 }
 
 function getToolRegistry(): Map<string, WebMcpTool> | null {
@@ -169,6 +171,25 @@ export function resolveWebMcpMutationData(
   throw new Error('WebMCP mutation requires either "data", "itemPath", or "fieldKey".');
 }
 
+/**
+ * 🛡️ RESOURCE RESOLVER
+ * Maps logical olon:// URIs to physical JSON endpoints, respecting subfolder hosting.
+ */
+async function resolveResource(uri: string): Promise<unknown> {
+  if (uri.startsWith('olon://pages/')) {
+    const slug = uri.replace('olon://pages/', '');
+    // Calcola la base path dinamica (es. /core) rimuovendo /admin e slug finali
+    const baseUrl = window.location.pathname
+      .replace(/\/admin(\/.*)?$/, '')
+      .replace(/\/$/, '');
+    
+    const response = await fetch(`${baseUrl}/pages/${slug}.json`);
+    if (!response.ok) throw new Error(`Resource not found: ${uri} (at ${baseUrl}/pages/${slug}.json)`);
+    return await response.json();
+  }
+  throw new Error(`Unsupported URI scheme: ${uri}`);
+}
+
 export function ensureWebMcpRuntime(): void {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
 
@@ -188,6 +209,7 @@ export function ensureWebMcpRuntime(): void {
       unregisterTool(name: string) {
         registry.delete(name);
       },
+      readResource: resolveResource,
     };
   }
 
@@ -201,10 +223,14 @@ export function ensureWebMcpRuntime(): void {
         if (!tool) {
           throw new Error(`Unknown WebMCP tool: ${toolName}`);
         }
-        const parsedArgs = inputArgsJson ? JSON.parse(inputArgsJson) : {};
+        const parsedArgs = inputArgsJson ? (JSON.parse(inputArgsJson) as unknown) : {};
         const result = await tool.execute(parsedArgs);
         return JSON.stringify(result);
       },
+      async readResource(uri: string) {
+        const data = await resolveResource(uri);
+        return JSON.stringify(data);
+      }
     };
   }
 }
