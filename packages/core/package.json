@@ -1,6 +1,6 @@
 {
   "name": "@olonjs/core",
-  "version": "1.0.92",
+  "version": "1.0.90",
   "private": false,
   "type": "module",
   "main": "./dist/olonjs-core.umd.cjs",
@@ -11,10 +11,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/olonjs-core.js",
       "require": "./dist/olonjs-core.umd.cjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "src/lib/webmcp-contracts.mjs"
   ],
   "description": "The Sovereign Core Engine for OlonJS.",
   "author": "JsonPages Team",
