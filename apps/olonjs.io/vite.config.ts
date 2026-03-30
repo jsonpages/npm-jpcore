@@ -69,7 +69,7 @@ async function loadWebMcpBuilders() {
   return import(moduleUrl);
 }
 export default defineConfig({
-  base: '/core/',
+  base: '',
   plugins: [
     react(),
     tailwindcss(),
