@@ -26,7 +26,7 @@ export const Header: React.FC<{
         <div className="max-w-[1040px] w-full mx-auto px-8 flex items-center gap-3">
 
           <a
-            href="/"
+            href="#"
             className="flex items-center gap-2 no-underline shrink-0"
             aria-label="OlonJS home"
           >
