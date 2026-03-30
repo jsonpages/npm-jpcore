@@ -192,6 +192,10 @@ function App() {
     menuConfig,
     themeCss: { tenant: fontsCss + '\n' + tenantCss },
     addSection: addSectionConfig,
+    webmcp: {
+      enabled: true,
+      namespace: typeof window !== 'undefined' ? window.location.href : '',
+    },
     persistence: {
       async saveToFile(state: ProjectState, slug: string): Promise<void> {
         if (isCloudMode) { await runCloudSave({ state, slug }, true); return; }

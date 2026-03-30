@@ -2,7 +2,6 @@ import { renderToString } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server';
 import { ConfigProvider, PageRenderer, StudioProvider, resolveRuntimeConfig } from '@olonjs/core';
 import type { JsonPagesConfig, MenuConfig, PageConfig, SiteConfig, ThemeConfig } from '@/types';
-import { ThemeProvider } from '@/components/ThemeProvider';
 import { ComponentRegistry } from '@/lib/ComponentRegistry';
 import { SECTION_SCHEMAS } from '@/lib/schemas';
 import { getFilePages } from '@/lib/getFilePages';
@@ -120,13 +119,11 @@ export function render(slug: string): string {
         }}
       >
         <StudioProvider mode="visitor">
-          <ThemeProvider>
-            <PageRenderer
-              pageConfig={resolvedPage}
-              siteConfig={resolvedRuntime.siteConfig}
-              menuConfig={resolvedRuntime.menuConfig}
-            />
-          </ThemeProvider>
+          <PageRenderer
+            pageConfig={resolvedPage}
+            siteConfig={resolvedRuntime.siteConfig}
+            menuConfig={resolvedRuntime.menuConfig}
+          />
         </StudioProvider>
       </ConfigProvider>
     </StaticRouter>

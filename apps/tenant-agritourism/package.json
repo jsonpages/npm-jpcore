@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:clean": "vite --force",
+    "verify:webmcp": "node scripts/webmcp-feature-check.mjs",
     "prebuild": "node scripts/sync-pages-to-public.mjs",
     "build": "tsc && vite build",
     "dist": "bash ./src2Code.sh --template agritourism src vercel.json index.html vite.config.ts scripts docs package.json",

@@ -20,6 +20,7 @@ import menuData from '@/data/config/menu.json';
 import { getFilePages } from '@/lib/getFilePages';
 import { DopaDrawer } from '@/components/save-drawer/DopaDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 import tenantCss from './index.css?inline';
 
@@ -39,6 +40,11 @@ const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 const ASSET_UPLOAD_MAX_RETRIES = 2;
 const ASSET_UPLOAD_TIMEOUT_MS = 20_000;
 const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
+const APP_BASE_URL = import.meta.env.BASE_URL || '/';
+
+function withAppBase(pathname: string): string {
+  return `${APP_BASE_URL}${pathname.replace(/^\/+/, '')}`;
+}
 
 interface CloudSaveUiState {
   isOpen: boolean;
@@ -114,6 +120,13 @@ function asString(value: unknown, fallback: string): string {
   return typeof value === 'string' && value.trim() ? value : fallback;
 }
 
+function normalizeRouteSlug(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9/_-]/g, '-')
+    .replace(/^\/+|\/+$/g, '') || 'home';
+}
+
 function coercePageConfig(slug: string, value: unknown): PageConfig | null {
   let input = value;
   if (typeof input === 'string') {
@@ -159,11 +172,8 @@ function coerceSiteConfig(value: unknown): SiteConfig | null {
 function toPagesRecord(value: unknown): Record<string, PageConfig> | null {
   const directPage = coercePageConfig('home', value);
   if (directPage) {
-    const directSlug = asString(directPage.slug, 'home')
-      .toLowerCase()
-      .replace(/[^a-z0-9/_-]/g, '-')
-      .replace(/^\/+|\/+$/g, '') || 'home';
-    return { [directSlug]: directPage };
+    const directSlug = normalizeRouteSlug(asString(directPage.slug, 'home'));
+    return { [directSlug]: { ...directPage, slug: directSlug } };
   }
 
   if (!isObjectRecord(value)) return null;
@@ -171,14 +181,10 @@ function toPagesRecord(value: unknown): Record<string, PageConfig> | null {
   for (const [rawKey, payload] of Object.entries(value)) {
     const rawKeyTrimmed = rawKey.trim();
     const slugFromNamespacedKey = rawKeyTrimmed.match(/^t_[a-z0-9-]+_page_(.+)$/i)?.[1];
-    const normalizedSlug = (slugFromNamespacedKey ?? rawKeyTrimmed)
-      .toLowerCase()
-      .replace(/[^a-z0-9/_-]/g, '-')
-      .replace(/^\/+|\/+$/g, '');
-    const slug = normalizedSlug || 'home';
+    const slug = normalizeRouteSlug(slugFromNamespacedKey ?? rawKeyTrimmed);
     const page = coercePageConfig(slug, payload);
     if (!page) continue;
-    next[slug] = page;
+    next[slug] = { ...page, slug };
   }
   return next;
 }
@@ -188,9 +194,11 @@ function normalizePageRegistry(value: unknown): Record<string, PageConfig> {
   const normalized: Record<string, PageConfig> = {};
 
   for (const [registrySlug, rawPageValue] of Object.entries(value)) {
-    const direct = coercePageConfig(registrySlug, rawPageValue);
+    const canonicalSlug = normalizeRouteSlug(registrySlug);
+    const direct = coercePageConfig(canonicalSlug, rawPageValue);
     if (direct) {
-      normalized[direct.slug || registrySlug] = direct;
+      // Canonical key comes from registry/path, not from page JSON internal slug.
+      normalized[canonicalSlug] = { ...direct, slug: canonicalSlug };
       continue;
     }
 
@@ -319,6 +327,15 @@ function buildThemeFontVarsCss(input: unknown): string {
   return `:root{--theme-font-primary:${primary};--theme-font-serif:${serif};--theme-font-mono:${mono};}`;
 }
 
+function setTenantPreviewReady(ready: boolean): void {
+  if (typeof window !== 'undefined') {
+    (window as Window & { __TENANT_PREVIEW_READY__?: boolean }).__TENANT_PREVIEW_READY__ = ready;
+  }
+  if (typeof document !== 'undefined' && document.body) {
+    document.body.dataset.previewReady = ready ? '1' : '0';
+  }
+}
+
 function App() {
   const isCloudMode = Boolean(CLOUD_API_URL && CLOUD_API_KEY);
   const localInitialData = useMemo(() => (isCloudMode ? null : getInitialData()), [isCloudMode]);
@@ -370,7 +387,7 @@ function App() {
       return;
     }
 
-    fetch('/api/list-assets')
+    fetch(withAppBase('/api/list-assets'))
       .then((r) => (r.ok ? r.json() : []))
       .then((list: LibraryImageEntry[]) => setAssetsManifest(Array.isArray(list) ? list : []))
       .catch(() => setAssetsManifest([]));
@@ -383,6 +400,13 @@ function App() {
   useEffect(() => {
     return () => {
       activeCloudSaveController.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    setTenantPreviewReady(false);
+    return () => {
+      setTenantPreviewReady(false);
     };
   }, []);
 
@@ -805,8 +829,30 @@ function App() {
 
   const shouldRenderEngine = !isCloudMode || hasInitialCloudResolved;
 
+  useEffect(() => {
+    if (!shouldRenderEngine) {
+      setTenantPreviewReady(false);
+      return;
+    }
+    let cancelled = false;
+    let raf1 = 0;
+    let raf2 = 0;
+    raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => {
+        if (!cancelled) setTenantPreviewReady(true);
+      });
+    });
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+      setTenantPreviewReady(false);
+    };
+  }, [shouldRenderEngine, pages, siteConfig]);
+
   return (
-    <>
+    <ThemeProvider>
+      <>
       {isCloudMode && showTopProgress ? (
         <>
           <style>
@@ -926,7 +972,8 @@ function App() {
         onClose={closeCloudDrawer}
         onRetry={retryCloudSave}
       />
-    </>
+      </>
+    </ThemeProvider>
   );
 }
 

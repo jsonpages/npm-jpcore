@@ -31,7 +31,12 @@ const CLOUD_API_KEY =
   import.meta.env.VITE_OLONJS_API_KEY ?? import.meta.env.VITE_JSONPAGES_API_KEY;
 
 const themeConfig = themeData as unknown as ThemeConfig;
-const menuConfig = menuData as unknown as MenuConfig;
+const menuConfig: MenuConfig = { main: [] };
+const refDocuments = {
+  'menu.json': menuData,
+  'config/menu.json': menuData,
+  'src/data/config/menu.json': menuData,
+} satisfies NonNullable<JsonPagesConfig['refDocuments']>;
 const TENANT_ID = 'alpha';
 
 const filePages = getFilePages();
@@ -40,11 +45,6 @@ const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 const ASSET_UPLOAD_MAX_RETRIES = 2;
 const ASSET_UPLOAD_TIMEOUT_MS = 20_000;
 const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
-const APP_BASE_URL = import.meta.env.BASE_URL || '/';
-
-function withAppBase(pathname: string): string {
-  return `${APP_BASE_URL}${pathname.replace(/^\/+/, '')}`;
-}
 
 interface CloudSaveUiState {
   isOpen: boolean;
@@ -387,7 +387,7 @@ function App() {
       return;
     }
 
-    fetch(withAppBase('/api/list-assets'))
+    fetch('/api/list-assets')
       .then((r) => (r.ok ? r.json() : []))
       .then((list: LibraryImageEntry[]) => setAssetsManifest(Array.isArray(list) ? list : []))
       .catch(() => setAssetsManifest([]));
@@ -699,11 +699,16 @@ function App() {
     siteConfig,
     themeConfig,
     menuConfig,
+    refDocuments,
     themeCss: { tenant: `${buildThemeFontVarsCss(themeConfig)}\n${tenantCss}` },
     addSection: addSectionConfig,
+    webmcp: {
+      enabled: true,
+      namespace: typeof window !== 'undefined' ? window.location.href : '',
+    },
     persistence: {
       async saveToFile(state: ProjectState, slug: string): Promise<void> {
-        // 💻 LOCAL FILESYSTEM (Development / legacy fallback)
+        // 💻 LOCAL FILESYSTEM (development path)
         console.log(`💻 Saving ${slug} to Local Filesystem...`);
         const res = await fetch('/api/save-to-file', {
           method: 'POST',
