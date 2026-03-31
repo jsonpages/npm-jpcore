@@ -11,7 +11,7 @@
       "type": "olon-hero",
       "data": {
         "id": "hero-main",
-        "eyebrow": "CONTRACT LAYER · V1.5 · OPEN CORE",
+        "eyebrow": "CONTRACT LAYER · OPEN SOURCE",
         "headline": "Contract Layer",
         "subline": "for the agentic web.",
         "body": "AI agents are becoming operational actors in commerce, marketing, and support. They need more than content — they need a contract. OlonJS is the deterministic machine contract for websites: every site typed, structured, and addressable by design. No custom glue. No fragile integrations. Just a contract any agent can read and operate.",
@@ -59,7 +59,8 @@
             "title": "Built to be generated",
             "body": "Every constraint is also an instruction. The spec is precise enough for AI agents to scaffold a fully compliant tenant from scratch."
           }
-        ]
+        ],
+        "anchorId": "Why"
       }
     },
     {
@@ -126,7 +127,8 @@
             "desc": "Every node has an address. Content selection uses strict root-to-leaf path semantics — unambiguous, stable, operable by any consumer that knows the contract.",
             "specHref": "https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md"
           }
-        ]
+        ],
+        "anchorId": "Architecture"
       }
     },
     {
@@ -152,7 +154,8 @@
             "meta": "Any consumer",
             "code": "// Read any page via the contract\n// Works from browser, script, or AI agent\n\nconst page = await\n  navigator.modelContextProtocol\n    .readResource(\n      'olon://pages/home'\n    );\n\n// Returns the full typed contract\n// { slug, meta, sections: Section[] }\n// No DOM scraping. No layout knowledge.\n// Just the contract.\n\n// {\n//   \"slug\": \"home\",\n//   \"sections\": [\n//     { \"type\": \"hero\", \"data\": {...} },\n//     { \"type\": \"features\", \"data\": {...} }\n//   ]\n// }"
           }
-        ]
+        ],
+        "anchorId": "Example"
       }
     },
     {
@@ -195,7 +198,8 @@
             "linkLabel": "View on GitHub",
             "linkHref": "#"
           }
-        ]
+        ],
+        "anchorId": "Getstarted"
       }
     }
   ]

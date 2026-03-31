@@ -1,20 +1,25 @@
 {
   "main": [
-    {
-      "label": "The Problem",
-      "href": "#problem"
+    { 
+      "label": "Why",
+      "href": "#Why"
+      
     },
     {
       "label": "Architecture",
-      "href": "#architecture"
+      "href": "#Architecture"
     },
     {
-      "label": "Why",
-      "href": "#why"
+      "label": "Example",
+      "href": "#Example"
     },
     {
-      "label": "DX",
-      "href": "#devex"
+      "label": "Get started",
+      "href": "#Getstarted"
+    },
+	{
+      "label": "GitHub",
+      "href": "https://github.com/olonjs/core"
     }
   ]
 }

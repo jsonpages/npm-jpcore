@@ -32,6 +32,12 @@ export function OlonHeroView({ data }: Props) {
             data-jp-field="eyebrow"
           >
             {data.eyebrow}
+            <a href="https://www.npmjs.com/package/@olonjs/core">
+    <img src="https://img.shields.io/npm/v/@olonjs/core?color=blue&style=flat-square" alt="npm version"/>
+  </a>
+  <a href="https://github.com/olonjs/npm-jpcore/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"/>
+  </a>
           </p>
 
           <div>
