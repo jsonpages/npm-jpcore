@@ -27,18 +27,22 @@ export function OlonHeroView({ data }: Props) {
       <div className="relative z-10 max-w-6xl mx-auto px-8 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
         {/* Left: copy */}
         <div className="flex flex-col gap-6">
-          <p
-            className="text-xs font-semibold tracking-[0.12em] uppercase text-[var(--local-muted)]"
-            data-jp-field="eyebrow"
-          >
-            {data.eyebrow}
-            <a href="https://www.npmjs.com/package/@olonjs/core">
-    <img src="https://img.shields.io/npm/v/@olonjs/core?color=blue&style=flat-square" alt="npm version"/>
-  </a>
-  <a href="https://github.com/olonjs/npm-jpcore/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"/>
-  </a>
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p
+              className="text-xs font-semibold tracking-[0.12em] uppercase text-[var(--local-muted)]"
+              data-jp-field="eyebrow"
+            >
+              {data.eyebrow}
+            </p>
+            <div className="flex items-center gap-2">
+              <a href="https://www.npmjs.com/package/@olonjs/core">
+                <img src="https://img.shields.io/npm/v/@olonjs/core?color=blue&style=flat-square" alt="npm version"/>
+              </a>
+              <a href="https://github.com/olonjs/npm-jpcore/blob/main/LICENSE">
+                <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"/>
+              </a>
+            </div>
+          </div>
 
           <div>
             <h1
