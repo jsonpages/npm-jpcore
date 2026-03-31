@@ -84,8 +84,8 @@ export function Header({ data, settings, menu }: HeaderViewProps) {
         {/* Logo */}
         <a href="/" className="flex items-center gap-2 shrink-0" aria-label="OlonJS home">
           <OlonMark size={26} className="mb-0.5" />
-          <span
-            className="text-2xl text-accent leading-none"
+          <div className="flex items-center gap-1"><span
+            className="text-2xl text-foreground leading-none"
             style={{
               fontFamily:           'var(--wordmark-font)',
               letterSpacing:        'var(--wordmark-tracking)',
@@ -94,12 +94,9 @@ export function Header({ data, settings, menu }: HeaderViewProps) {
             }}
           >
             {data.logoText}
-          </span>
-          {data.badge && (
-            <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium font-mono-olon bg-primary-900 text-primary-light border border-primary-800 rounded-sm">
-              {data.badge}
-            </span>
-          )}
+            </span> 
+            <span className="text-primary-light font-mono">{data.badge}</span>
+            </div>
         </a>
 
         {/* Desktop nav */}

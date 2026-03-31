@@ -38,11 +38,11 @@ export function Hero({ data, settings }: HeroViewProps) {
           )}
 
           {/* Headline */}
-          <h1 className="font-display font-normal text-7xl  text-foreground leading-tight tracking-display mb-1" data-jp-field="title">
+          <h1 className="font-display font-bold text-7xl  text-foreground leading-tight tracking-tight mb-1" data-jp-field="title">
             {data.title}
           </h1>
           {data.titleHighlight && (
-            <h2 className="font-display font-normal italic text-5xl md:text-6xl text-primary-light leading-tight tracking-display mb-7" data-jp-field="titleHighlight">
+            <h2 className="font-display font-normal italic text-5xl md:text-6xl text-primary-light leading-tight tracking-tight mb-7" data-jp-field="titleHighlight">
               {data.titleHighlight}
             </h2>
           )}

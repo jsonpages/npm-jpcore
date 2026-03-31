@@ -1646,7 +1646,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "@tiptap/extension-link": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.95",
+    "@olonjs/core": "^1.0.96",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
@@ -2079,6 +2079,10 @@ const webMcpBuildState = getWebMcpBuildState();
 for (const { slug } of targets) {
   const pageConfig = webMcpBuildState.pages[slug];
   if (!pageConfig) continue;
+  
+  // Export the raw JSON data for the agentic web (so readResource works on SSG)
+  await writeJsonTargets(`pages/${slug}.json`, pageConfig);
+
   const contract = buildPageContract({
     slug,
     pageConfig,
@@ -2094,6 +2098,9 @@ for (const { slug } of targets) {
   });
   await writeJsonTargets(buildPageManifestHref(slug).replace(/^\//, ''), pageManifest);
 }
+
+// Export the site config for the agentic web
+await writeJsonTargets('config/site.json', webMcpBuildState.siteConfig);
 
 const mcpManifest = buildSiteManifest({
   pages: webMcpBuildState.pages,
@@ -12918,7 +12925,12 @@ export default defineConfig({
 
           if (isPageJsonRequest) {
             const normalizedPath = decodeURIComponent(pathname).replace(/\\/g, '/');
-            const slug = normalizedPath.replace(/^\/+/, '').replace(/\.json$/i, '').replace(/^\/+|\/+$/g, '');
+            // Rimuoviamo la root folder opzionale "/pages/" introdotta per matchare la prod e il file extension
+            const slug = normalizedPath
+              .replace(/^\/+/, '')
+              .replace(/^pages\//i, '')
+              .replace(/\.json$/i, '')
+              .replace(/^\/+|\/+$/g, '');
             const candidate = path.resolve(DATA_PAGES_DIR, `${slug}.json`);
             const isInsidePagesDir = candidate.startsWith(`${DATA_PAGES_DIR}${path.sep}`) || candidate === DATA_PAGES_DIR;
             if (!slug || !isInsidePagesDir || !fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) {

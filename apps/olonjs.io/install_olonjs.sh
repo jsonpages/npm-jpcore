@@ -1,3098 +1,8 @@
 #!/bin/bash
-set -e
+set -e # Termina se c'è un errore
 
-echo "Starting project reconstruction..."
+echo "Inizio ricostruzione progetto..."
 
-mkdir -p ".cursor"
-mkdir -p ".cursor/skills-cursor"
-mkdir -p ".cursor/skills-cursor/create-rule"
-echo "Creating .cursor/skills-cursor/create-rule/SKILL.md..."
-cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/create-rule/SKILL.md"
----
-name: create-rule
-description: >-
-  Create Cursor rules for persistent AI guidance. Use when you want to create a
-  rule, add coding standards, set up project conventions, configure
-  file-specific patterns, create RULE.md files, or asks about .cursor/rules/ or
-  AGENTS.md.
----
-# Creating Cursor Rules
-
-Create project rules in `.cursor/rules/` to provide persistent context for the AI agent.
-
-## Gather Requirements
-
-Before creating a rule, determine:
-
-1. **Purpose**: What should this rule enforce or teach?
-2. **Scope**: Should it always apply, or only for specific files?
-3. **File patterns**: If file-specific, which glob patterns?
-
-### Inferring from Context
-
-If you have previous conversation context, infer rules from what was discussed. You can create multiple rules if the conversation covers distinct topics or patterns. Don't ask redundant questions if the context already provides the answers.
-
-### Required Questions
-
-If the user hasn't specified scope, ask:
-- "Should this rule always apply, or only when working with specific files?"
-
-If they mentioned specific files and haven't provided concrete patterns, ask:
-- "Which file patterns should this rule apply to?" (e.g., `**/*.ts`, `backend/**/*.py`)
-
-It's very important that we get clarity on the file patterns.
-
-Use the AskQuestion tool when available to gather this efficiently.
-
----
-
-## Rule File Format
-
-Rules are `.mdc` files in `.cursor/rules/` with YAML frontmatter:
-
-```
-.cursor/rules/
-  typescript-standards.mdc
-  react-patterns.mdc
-  api-conventions.mdc
-```
-
-### File Structure
-
-```markdown
----
-description: Brief description of what this rule does
-globs: **/*.ts  # File pattern for file-specific rules
-alwaysApply: false  # Set to true if rule should always apply
----
-
-# Rule Title
-
-Your rule content here...
-```
-
-### Frontmatter Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `description` | string | What the rule does (shown in rule picker) |
-| `globs` | string | File pattern - rule applies when matching files are open |
-| `alwaysApply` | boolean | If true, applies to every session |
-
----
-
-## Rule Configurations
-
-### Always Apply
-
-For universal standards that should apply to every conversation:
-
-```yaml
----
-description: Core coding standards for the project
-alwaysApply: true
----
-```
-
-### Apply to Specific Files
-
-For rules that apply when working with certain file types:
-
-```yaml
----
-description: TypeScript conventions for this project
-globs: **/*.ts
-alwaysApply: false
----
-```
-
----
-
-## Best Practices
-
-### Keep Rules Concise
-
-- **Under 50 lines**: Rules should be concise and to the point
-- **One concern per rule**: Split large rules into focused pieces
-- **Actionable**: Write like clear internal docs
-- **Concrete examples**: Ideally provide concrete examples of how to fix issues
-
----
-
-## Example Rules
-
-### TypeScript Standards
-
-```markdown
----
-description: TypeScript coding standards
-globs: **/*.ts
-alwaysApply: false
----
-
-# Error Handling
-
-\`\`\`typescript
-// ❌ BAD
-try {
-  await fetchData();
-} catch (e) {}
-
-// ✅ GOOD
-try {
-  await fetchData();
-} catch (e) {
-  logger.error('Failed to fetch', { error: e });
-  throw new DataFetchError('Unable to retrieve data', { cause: e });
-}
-\`\`\`
-```
-
-### React Patterns
-
-```markdown
----
-description: React component patterns
-globs: **/*.tsx
-alwaysApply: false
----
-
-# React Patterns
-
-- Use functional components
-- Extract custom hooks for reusable logic
-- Colocate styles with components
-```
-
----
-
-## Checklist
-
-- [ ] File is `.mdc` format in `.cursor/rules/`
-- [ ] Frontmatter configured correctly
-- [ ] Content under 500 lines
-- [ ] Includes concrete examples
-
-END_OF_FILE_CONTENT
-mkdir -p ".cursor/skills-cursor/create-skill"
-echo "Creating .cursor/skills-cursor/create-skill/SKILL.md..."
-cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/create-skill/SKILL.md"
----
-name: create-skill
-description: >-
-  Guides users through creating effective Agent Skills for Cursor. Use when you
-  want to create, write, or author a new skill, or asks about skill structure,
-  best practices, or SKILL.md format.
----
-# Creating Skills in Cursor
-
-This skill guides you through creating effective Agent Skills for Cursor. Skills are markdown files that teach the agent how to perform specific tasks: reviewing PRs using team standards, generating commit messages in a preferred format, querying database schemas, or any specialized workflow.
-
-## Before You Begin: Gather Requirements
-
-Before creating a skill, gather essential information from the user about:
-
-1. **Purpose and scope**: What specific task or workflow should this skill help with?
-2. **Target location**: Should this be a personal skill (~/.cursor/skills/) or project skill (.cursor/skills/)?
-3. **Trigger scenarios**: When should the agent automatically apply this skill?
-4. **Key domain knowledge**: What specialized information does the agent need that it wouldn't already know?
-5. **Output format preferences**: Are there specific templates, formats, or styles required?
-6. **Existing patterns**: Are there existing examples or conventions to follow?
-
-### Inferring from Context
-
-If you have previous conversation context, infer the skill from what was discussed. You can create skills based on workflows, patterns, or domain knowledge that emerged in the conversation.
-
-### Gathering Additional Information
-
-If you need clarification, use the AskQuestion tool when available:
-
-```
-Example AskQuestion usage:
-- "Where should this skill be stored?" with options like ["Personal (~/.cursor/skills/)", "Project (.cursor/skills/)"]
-- "Should this skill include executable scripts?" with options like ["Yes", "No"]
-```
-
-If the AskQuestion tool is not available, ask these questions conversationally.
-
----
-
-## Skill File Structure
-
-### Directory Layout
-
-Skills are stored as directories containing a `SKILL.md` file:
-
-```
-skill-name/
-├── SKILL.md              # Required - main instructions
-├── reference.md          # Optional - detailed documentation
-├── examples.md           # Optional - usage examples
-└── scripts/              # Optional - utility scripts
-    ├── validate.py
-    └── helper.sh
-```
-
-### Storage Locations
-
-| Type | Path | Scope |
-|------|------|-------|
-| Personal | ~/.cursor/skills/skill-name/ | Available across all your projects |
-| Project | .cursor/skills/skill-name/ | Shared with anyone using the repository |
-
-**IMPORTANT**: Never create skills in `~/.cursor/skills-cursor/`. This directory is reserved for Cursor's internal built-in skills and is managed automatically by the system.
-
-### SKILL.md Structure
-
-Every skill requires a `SKILL.md` file with YAML frontmatter and markdown body:
-
-```markdown
----
-name: your-skill-name
-description: Brief description of what this skill does and when to use it
----
-
-# Your Skill Name
-
-## Instructions
-Clear, step-by-step guidance for the agent.
-
-## Examples
-Concrete examples of using this skill.
-```
-
-### Required Metadata Fields
-
-| Field | Requirements | Purpose |
-|-------|--------------|---------|
-| `name` | Max 64 chars, lowercase letters/numbers/hyphens only | Unique identifier for the skill |
-| `description` | Max 1024 chars, non-empty | Helps agent decide when to apply the skill |
-
----
-
-## Writing Effective Descriptions
-
-The description is **critical** for skill discovery. The agent uses it to decide when to apply your skill.
-
-### Description Best Practices
-
-1. **Write in third person** (the description is injected into the system prompt):
-   - ✅ Good: "Processes Excel files and generates reports"
-   - ❌ Avoid: "I can help you process Excel files"
-   - ❌ Avoid: "You can use this to process Excel files"
-
-2. **Be specific and include trigger terms**:
-   - ✅ Good: "Extract text and tables from PDF files, fill forms, merge documents. Use when working with PDF files or when the user mentions PDFs, forms, or document extraction."
-   - ❌ Vague: "Helps with documents"
-
-3. **Include both WHAT and WHEN**:
-   - WHAT: What the skill does (specific capabilities)
-   - WHEN: When the agent should use it (trigger scenarios)
-
-### Description Examples
-
-```yaml
-# PDF Processing
-description: Extract text and tables from PDF files, fill forms, merge documents. Use when working with PDF files or when the user mentions PDFs, forms, or document extraction.
-
-# Excel Analysis
-description: Analyze Excel spreadsheets, create pivot tables, generate charts. Use when analyzing Excel files, spreadsheets, tabular data, or .xlsx files.
-
-# Git Commit Helper
-description: Generate descriptive commit messages by analyzing git diffs. Use when the user asks for help writing commit messages or reviewing staged changes.
-
-# Code Review
-description: Review code for quality, security, and best practices following team standards. Use when reviewing pull requests, code changes, or when the user asks for a code review.
-```
-
----
-
-## Core Authoring Principles
-
-### 1. Concise is Key
-
-The context window is shared with conversation history, other skills, and requests. Every token competes for space.
-
-**Default assumption**: The agent is already very smart. Only add context it doesn't already have.
-
-Challenge each piece of information:
-- "Does the agent really need this explanation?"
-- "Can I assume the agent knows this?"
-- "Does this paragraph justify its token cost?"
-
-**Good (concise)**:
-```markdown
-## Extract PDF text
-
-Use pdfplumber for text extraction:
-
-\`\`\`python
-import pdfplumber
-
-with pdfplumber.open("file.pdf") as pdf:
-    text = pdf.pages[0].extract_text()
-\`\`\`
-```
-
-**Bad (verbose)**:
-```markdown
-## Extract PDF text
-
-PDF (Portable Document Format) files are a common file format that contains
-text, images, and other content. To extract text from a PDF, you'll need to
-use a library. There are many libraries available for PDF processing, but we
-recommend pdfplumber because it's easy to use and handles most cases well...
-```
-
-### 2. Keep SKILL.md Under 500 Lines
-
-For optimal performance, the main SKILL.md file should be concise. Use progressive disclosure for detailed content.
-
-### 3. Progressive Disclosure
-
-Put essential information in SKILL.md; detailed reference material in separate files that the agent reads only when needed.
-
-```markdown
-# PDF Processing
-
-## Quick start
-[Essential instructions here]
-
-## Additional resources
-- For complete API details, see [reference.md](reference.md)
-- For usage examples, see [examples.md](examples.md)
-```
-
-**Keep references one level deep** - link directly from SKILL.md to reference files. Deeply nested references may result in partial reads.
-
-### 4. Set Appropriate Degrees of Freedom
-
-Match specificity to the task's fragility:
-
-| Freedom Level | When to Use | Example |
-|---------------|-------------|---------|
-| **High** (text instructions) | Multiple valid approaches, context-dependent | Code review guidelines |
-| **Medium** (pseudocode/templates) | Preferred pattern with acceptable variation | Report generation |
-| **Low** (specific scripts) | Fragile operations, consistency critical | Database migrations |
-
----
-
-## Common Patterns
-
-### Template Pattern
-
-Provide output format templates:
-
-```markdown
-## Report structure
-
-Use this template:
-
-\`\`\`markdown
-# [Analysis Title]
-
-## Executive summary
-[One-paragraph overview of key findings]
-
-## Key findings
-- Finding 1 with supporting data
-- Finding 2 with supporting data
-
-## Recommendations
-1. Specific actionable recommendation
-2. Specific actionable recommendation
-\`\`\`
-```
-
-### Examples Pattern
-
-For skills where output quality depends on seeing examples:
-
-```markdown
-## Commit message format
-
-**Example 1:**
-Input: Added user authentication with JWT tokens
-Output:
-\`\`\`
-feat(auth): implement JWT-based authentication
-
-Add login endpoint and token validation middleware
-\`\`\`
-
-**Example 2:**
-Input: Fixed bug where dates displayed incorrectly
-Output:
-\`\`\`
-fix(reports): correct date formatting in timezone conversion
-
-Use UTC timestamps consistently across report generation
-\`\`\`
-```
-
-### Workflow Pattern
-
-Break complex operations into clear steps with checklists:
-
-```markdown
-## Form filling workflow
-
-Copy this checklist and track progress:
-
-\`\`\`
-Task Progress:
-- [ ] Step 1: Analyze the form
-- [ ] Step 2: Create field mapping
-- [ ] Step 3: Validate mapping
-- [ ] Step 4: Fill the form
-- [ ] Step 5: Verify output
-\`\`\`
-
-**Step 1: Analyze the form**
-Run: \`python scripts/analyze_form.py input.pdf\`
-...
-```
-
-### Conditional Workflow Pattern
-
-Guide through decision points:
-
-```markdown
-## Document modification workflow
-
-1. Determine the modification type:
-
-   **Creating new content?** → Follow "Creation workflow" below
-   **Editing existing content?** → Follow "Editing workflow" below
-
-2. Creation workflow:
-   - Use docx-js library
-   - Build document from scratch
-   ...
-```
-
-### Feedback Loop Pattern
-
-For quality-critical tasks, implement validation loops:
-
-```markdown
-## Document editing process
-
-1. Make your edits
-2. **Validate immediately**: \`python scripts/validate.py output/\`
-3. If validation fails:
-   - Review the error message
-   - Fix the issues
-   - Run validation again
-4. **Only proceed when validation passes**
-```
-
----
-
-## Utility Scripts
-
-Pre-made scripts offer advantages over generated code:
-- More reliable than generated code
-- Save tokens (no code in context)
-- Save time (no code generation)
-- Ensure consistency across uses
-
-```markdown
-## Utility scripts
-
-**analyze_form.py**: Extract all form fields from PDF
-\`\`\`bash
-python scripts/analyze_form.py input.pdf > fields.json
-\`\`\`
-
-**validate.py**: Check for errors
-\`\`\`bash
-python scripts/validate.py fields.json
-# Returns: "OK" or lists conflicts
-\`\`\`
-```
-
-Make clear whether the agent should **execute** the script (most common) or **read** it as reference.
-
----
-
-## Anti-Patterns to Avoid
-
-### 1. Windows-Style Paths
-- ✅ Use: `scripts/helper.py`
-- ❌ Avoid: `scripts\helper.py`
-
-### 2. Too Many Options
-```markdown
-# Bad - confusing
-"You can use pypdf, or pdfplumber, or PyMuPDF, or..."
-
-# Good - provide a default with escape hatch
-"Use pdfplumber for text extraction.
-For scanned PDFs requiring OCR, use pdf2image with pytesseract instead."
-```
-
-### 3. Time-Sensitive Information
-```markdown
-# Bad - will become outdated
-"If you're doing this before August 2025, use the old API."
-
-# Good - use an "old patterns" section
-## Current method
-Use the v2 API endpoint.
-
-## Old patterns (deprecated)
-<details>
-<summary>Legacy v1 API</summary>
-...
-</details>
-```
-
-### 4. Inconsistent Terminology
-Choose one term and use it throughout:
-- ✅ Always "API endpoint" (not mixing "URL", "route", "path")
-- ✅ Always "field" (not mixing "box", "element", "control")
-
-### 5. Vague Skill Names
-- ✅ Good: `processing-pdfs`, `analyzing-spreadsheets`
-- ❌ Avoid: `helper`, `utils`, `tools`
-
----
-
-## Skill Creation Workflow
-
-When helping a user create a skill, follow this process:
-
-### Phase 1: Discovery
-
-Gather information about:
-1. The skill's purpose and primary use case
-2. Storage location (personal vs project)
-3. Trigger scenarios
-4. Any specific requirements or constraints
-5. Existing examples or patterns to follow
-
-If you have access to the AskQuestion tool, use it for efficient structured gathering. Otherwise, ask conversationally.
-
-### Phase 2: Design
-
-1. Draft the skill name (lowercase, hyphens, max 64 chars)
-2. Write a specific, third-person description
-3. Outline the main sections needed
-4. Identify if supporting files or scripts are needed
-
-### Phase 3: Implementation
-
-1. Create the directory structure
-2. Write the SKILL.md file with frontmatter
-3. Create any supporting reference files
-4. Create any utility scripts if needed
-
-### Phase 4: Verification
-
-1. Verify the SKILL.md is under 500 lines
-2. Check that the description is specific and includes trigger terms
-3. Ensure consistent terminology throughout
-4. Verify all file references are one level deep
-5. Test that the skill can be discovered and applied
-
----
-
-## Complete Example
-
-Here's a complete example of a well-structured skill:
-
-**Directory structure:**
-```
-code-review/
-├── SKILL.md
-├── STANDARDS.md
-└── examples.md
-```
-
-**SKILL.md:**
-```markdown
----
-name: code-review
-description: Review code for quality, security, and maintainability following team standards. Use when reviewing pull requests, examining code changes, or when the user asks for a code review.
----
-
-# Code Review
-
-## Quick Start
-
-When reviewing code:
-
-1. Check for correctness and potential bugs
-2. Verify security best practices
-3. Assess code readability and maintainability
-4. Ensure tests are adequate
-
-## Review Checklist
-
-- [ ] Logic is correct and handles edge cases
-- [ ] No security vulnerabilities (SQL injection, XSS, etc.)
-- [ ] Code follows project style conventions
-- [ ] Functions are appropriately sized and focused
-- [ ] Error handling is comprehensive
-- [ ] Tests cover the changes
-
-## Providing Feedback
-
-Format feedback as:
-- 🔴 **Critical**: Must fix before merge
-- 🟡 **Suggestion**: Consider improving
-- 🟢 **Nice to have**: Optional enhancement
-
-## Additional Resources
-
-- For detailed coding standards, see [STANDARDS.md](STANDARDS.md)
-- For example reviews, see [examples.md](examples.md)
-```
-
----
-
-## Summary Checklist
-
-Before finalizing a skill, verify:
-
-### Core Quality
-- [ ] Description is specific and includes key terms
-- [ ] Description includes both WHAT and WHEN
-- [ ] Written in third person
-- [ ] SKILL.md body is under 500 lines
-- [ ] Consistent terminology throughout
-- [ ] Examples are concrete, not abstract
-
-### Structure
-- [ ] File references are one level deep
-- [ ] Progressive disclosure used appropriately
-- [ ] Workflows have clear steps
-- [ ] No time-sensitive information
-
-### If Including Scripts
-- [ ] Scripts solve problems rather than punt
-- [ ] Required packages are documented
-- [ ] Error handling is explicit and helpful
-- [ ] No Windows-style paths
-
-END_OF_FILE_CONTENT
-mkdir -p ".cursor/skills-cursor/create-subagent"
-echo "Creating .cursor/skills-cursor/create-subagent/SKILL.md..."
-cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/create-subagent/SKILL.md"
----
-name: create-subagent
-description: >-
-  Create custom subagents for specialized AI tasks. Use when you want to create
-  a new type of subagent, set up task-specific agents, configure code reviewers,
-  debuggers, or domain-specific assistants with custom prompts.
-disable-model-invocation: true
----
-# Creating Custom Subagents
-
-This skill guides you through creating custom subagents for Cursor. Subagents are specialized AI assistants that run in isolated contexts with custom system prompts.
-
-## When to Use Subagents
-
-Subagents help you:
-- **Preserve context** by isolating exploration from your main conversation
-- **Specialize behavior** with focused system prompts for specific domains
-- **Reuse configurations** across projects with user-level subagents
-
-### Inferring from Context
-
-If you have previous conversation context, infer the subagent's purpose and behavior from what was discussed. Create the subagent based on specialized tasks or workflows that emerged in the conversation.
-
-## Subagent Locations
-
-| Location | Scope | Priority |
-|----------|-------|----------|
-| `.cursor/agents/` | Current project | Higher |
-| `~/.cursor/agents/` | All your projects | Lower |
-
-When multiple subagents share the same name, the higher-priority location wins.
-
-**Project subagents** (`.cursor/agents/`): Ideal for codebase-specific agents. Check into version control to share with your team.
-
-**User subagents** (`~/.cursor/agents/`): Personal agents available across all your projects.
-
-## Subagent File Format
-
-Create a `.md` file with YAML frontmatter and a markdown body (the system prompt):
-
-```markdown
----
-name: code-reviewer
-description: Reviews code for quality and best practices
----
-
-You are a code reviewer. When invoked, analyze the code and provide
-specific, actionable feedback on quality, security, and best practices.
-```
-
-### Required Fields
-
-| Field | Description |
-|-------|-------------|
-| `name` | Unique identifier (lowercase letters and hyphens only) |
-| `description` | When to delegate to this subagent (be specific!) |
-
-## Writing Effective Descriptions
-
-The description is **critical** - the AI uses it to decide when to delegate.
-
-```yaml
-# ❌ Too vague
-description: Helps with code
-
-# ✅ Specific and actionable
-description: Expert code review specialist. Proactively reviews code for quality, security, and maintainability. Use immediately after writing or modifying code.
-```
-
-Include "use proactively" to encourage automatic delegation.
-
-## Example Subagents
-
-### Code Reviewer
-
-```markdown
----
-name: code-reviewer
-description: Expert code review specialist. Proactively reviews code for quality, security, and maintainability. Use immediately after writing or modifying code.
----
-
-You are a senior code reviewer ensuring high standards of code quality and security.
-
-When invoked:
-1. Run git diff to see recent changes
-2. Focus on modified files
-3. Begin review immediately
-
-Review checklist:
-- Code is clear and readable
-- Functions and variables are well-named
-- No duplicated code
-- Proper error handling
-- No exposed secrets or API keys
-- Input validation implemented
-- Good test coverage
-- Performance considerations addressed
-
-Provide feedback organized by priority:
-- Critical issues (must fix)
-- Warnings (should fix)
-- Suggestions (consider improving)
-
-Include specific examples of how to fix issues.
-```
-
-### Debugger
-
-```markdown
----
-name: debugger
-description: Debugging specialist for errors, test failures, and unexpected behavior. Use proactively when encountering any issues.
----
-
-You are an expert debugger specializing in root cause analysis.
-
-When invoked:
-1. Capture error message and stack trace
-2. Identify reproduction steps
-3. Isolate the failure location
-4. Implement minimal fix
-5. Verify solution works
-
-Debugging process:
-- Analyze error messages and logs
-- Check recent code changes
-- Form and test hypotheses
-- Add strategic debug logging
-- Inspect variable states
-
-For each issue, provide:
-- Root cause explanation
-- Evidence supporting the diagnosis
-- Specific code fix
-- Testing approach
-- Prevention recommendations
-
-Focus on fixing the underlying issue, not the symptoms.
-```
-
-### Data Scientist
-
-```markdown
----
-name: data-scientist
-description: Data analysis expert for SQL queries, BigQuery operations, and data insights. Use proactively for data analysis tasks and queries.
----
-
-You are a data scientist specializing in SQL and BigQuery analysis.
-
-When invoked:
-1. Understand the data analysis requirement
-2. Write efficient SQL queries
-3. Use BigQuery command line tools (bq) when appropriate
-4. Analyze and summarize results
-5. Present findings clearly
-
-Key practices:
-- Write optimized SQL queries with proper filters
-- Use appropriate aggregations and joins
-- Include comments explaining complex logic
-- Format results for readability
-- Provide data-driven recommendations
-
-For each analysis:
-- Explain the query approach
-- Document any assumptions
-- Highlight key findings
-- Suggest next steps based on data
-
-Always ensure queries are efficient and cost-effective.
-```
-
-## Subagent Creation Workflow
-
-### Step 1: Decide the Scope
-
-- **Project-level** (`.cursor/agents/`): For codebase-specific agents shared with team
-- **User-level** (`~/.cursor/agents/`): For personal agents across all projects
-
-### Step 2: Create the File
-
-```bash
-# For project-level
-mkdir -p .cursor/agents
-touch .cursor/agents/my-agent.md
-
-# For user-level
-mkdir -p ~/.cursor/agents
-touch ~/.cursor/agents/my-agent.md
-```
-
-### Step 3: Define Configuration
-
-Write the frontmatter with the required fields (`name` and `description`).
-
-### Step 4: Write the System Prompt
-
-The body becomes the system prompt. Be specific about:
-- What the agent should do when invoked
-- The workflow or process to follow
-- Output format and structure
-- Any constraints or guidelines
-
-### Step 5: Test the Agent
-
-Ask the AI to use your new agent:
-
-```
-Use the my-agent subagent to [task description]
-```
-
-## Best Practices
-
-1. **Design focused subagents**: Each should excel at one specific task
-2. **Write detailed descriptions**: Include trigger terms so the AI knows when to delegate
-3. **Check into version control**: Share project subagents with your team
-4. **Use proactive language**: Include "use proactively" in descriptions
-
-## Troubleshooting
-
-### Subagent Not Found
-- Ensure file is in `.cursor/agents/` or `~/.cursor/agents/`
-- Check file has `.md` extension
-- Verify YAML frontmatter syntax is valid
-
-END_OF_FILE_CONTENT
-mkdir -p ".cursor/skills-cursor/jsonpages-tenant"
-echo "Creating .cursor/skills-cursor/jsonpages-tenant/SKILL.md..."
-cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/jsonpages-tenant/SKILL.md"
----
-name: jsonpages-tenant
-description: Use when working on a JsonPages tenant, transforming the base tenant DNA into a branded tenant, adding or modifying tenant sections, maintaining schema-driven editability, or reasoning about what belongs to @jsonpages/core versus the tenant.
----
-
-# JsonPages Tenant
-
-Use this skill for work on the JsonPages ecosystem when the task involves:
-
-- a tenant generated from the JsonPages CLI
-- `@jsonpages/core`
-- tenant sections/capsules
-- `src/data/pages/**/*.json` or `src/data/config/*.json`
-- schema-driven editing and inspector compatibility
-- generator scripts that turn a base tenant into a branded tenant
-
-Read code first. Treat documents as secondary unless they help interpret code that is otherwise ambiguous.
-
-## Core Model
-
-JsonPages has a hard split between `core` and `tenant`.
-
-- `@jsonpages/core` owns routing, `/admin`, `/admin/preview`, preview stage, studio state, inspector/form factory, and shared engine behavior.
-- The tenant owns sections, schemas, type augmentation, page/config JSON, theme/design layer, and local workflow scripts.
-- The tenant does not implement the CMS. It implements the tenant protocol consumed by the engine.
-
-In this ecosystem, code is the source of truth.
-
-Compliance priority:
-
-1. Data is bound correctly.
-2. Schemas describe fields correctly.
-3. Content is editable without breaking the inspector.
-4. Tenant structure stays standardized.
-5. Context-aware focus/highlight in the legacy admin is desirable but secondary.
-
-## Canonical References
-
-Use these local references when available:
-
-- Base tenant DNA: `\\wsl.localhost\Ubuntu\home\dev\temp\alpha`
-- Custom tenant reference: `\\wsl.localhost\Ubuntu\home\dev\temp\gptgiorgio`
-- Core engine: `\\wsl.localhost\Ubuntu\home\dev\npm-jpcore\packages\core`
-- Generator example: `\\wsl.localhost\Ubuntu\home\dev\temp\clonark\generate_olon.sh`
-
-If these paths are missing, infer the same roles from the current workspace:
-
-- base CLI-generated tenant
-- branded tenant
-- core package
-- generator script
-
-## Tenant Anatomy
-
-Expect these files to move together:
-
-- `src/components/<section>/View.tsx`
-- `src/components/<section>/schema.ts`
-- `src/components/<section>/types.ts`
-- `src/components/<section>/index.ts`
-- `src/lib/ComponentRegistry.tsx`
-- `src/lib/schemas.ts`
-- `src/lib/addSectionConfig.ts`
-- `src/types.ts`
-- `src/data/pages/**/*.json`
-- `src/data/config/site.json`
-- `src/data/config/theme.json`
-- `src/data/config/menu.json`
-
-Useful rule: if a section type changes, check all of the files above before concluding the task is done.
-
-## What Good Work Looks Like
-
-A good tenant change:
-
-- stays inside tenant boundaries unless the issue is truly in `@jsonpages/core`
-- keeps schema, defaults, registry, and type augmentation aligned
-- preserves editability for strings, lists, nested objects, CTAs, and image fields
-- uses `ImageSelectionSchema`-style image fields when the content is image-driven
-- keeps page content JSON-first
-
-A suspicious tenant change:
-
-- patches the core to fix a tenant modeling problem
-- adds visual complexity without data bindings
-- introduces fields into JSON that are not represented in schema
-- changes a section view without updating defaults or types
-- optimizes legacy context awareness at the expense of simpler, reliable editability
-
-## Workflow 1: Base Tenant -> Branded Tenant
-
-This is the primary workflow.
-
-Goal:
-
-- transform a CLI-generated base tenant into a branded tenant through a single generator script
-
-Treat the generator script as procedural source of truth for the green build workflow.
-
-When maintaining or authoring a generator:
-
-1. Separate non-deterministic bootstrap from deterministic sync.
-2. Make explicit which files are managed output.
-3. Keep the script aligned with the current tenant code, not with stale docs.
-4. Preserve tenant protocol files: sections, schemas, registries, type augmentation, config JSON, assets, shims.
-5. Prefer deterministic local writes after any remote/bootstrap step.
-
-Typical structure of a good generator:
-
-- preflight checks
-- remote/bootstrap steps such as `shadcn` or external registries
-- deterministic creation/sync of tenant files
-- compatibility patches for known unstable upstream payloads
-- final validation commands
-
-When asked to update a branded tenant generator:
-
-1. Diff base tenant against branded tenant.
-2. Classify differences into:
-   - intended branded output
-   - reusable generator logic
-   - accidental drift
-3. Encode only the reusable intended differences into the script.
-4. Keep the output reproducible from a fresh base tenant.
-
-## Workflow 2: Add Or Change A Section
-
-When adding a new section type:
-
-1. Create `View.tsx`, `schema.ts`, `types.ts`, `index.ts`.
-2. Register the section in `src/lib/ComponentRegistry.tsx`.
-3. Register the schema in `src/lib/schemas.ts`.
-4. Add defaults and label in `src/lib/addSectionConfig.ts`.
-5. Extend `SectionComponentPropsMap` and module augmentation in `src/types.ts`.
-6. Add or update page JSON using the new section type.
-
-When changing an existing section:
-
-1. Read the section schema first.
-2. Read the page JSON using it.
-3. Check the view for `data-jp-field` usage and binding shape.
-4. Update defaults if the data shape changed.
-5. Verify the inspector still has a path to edit the content.
-
-## Workflow 3: Images, Rich Content, Nested Routes
-
-Images:
-
-- Prefer structured image objects compatible with tenant base schemas.
-- Assume the core supports image picking and upload flows.
-- The tenant is responsible for declaring image fields in schema and rendering them coherently.
-
-Rich editorial content:
-
-- Tiptap-style sections are tenant-level integrations.
-- Treat page JSON using `type: "tiptap"` as runtime usage examples, and section code as the real source of truth.
-
-Nested routes:
-
-- Files under `src/data/pages/**/*.json` may represent nested slugs.
-- Preserve slug/path consistency and do not replace file-based routing with manual lists.
-
-## Decision Rules
-
-Use `alpha` patterns when the task is about:
-
-- tenant DNA
-- capability reference
-- baseline protocol shape
-- proving what the base system already supports
-
-Use `gptgiorgio` patterns when the task is about:
-
-- stronger branded frontend customization
-- richer domain-specific sections
-- image-heavy schema design
-- proving how far customization can go without changing the bootstrap
-
-Do not treat `gptgiorgio` as canonical for legacy admin context awareness.
-
-## Default Operating Procedure
-
-When you receive a JsonPages tenant task:
-
-1. Identify whether the problem belongs to `core`, tenant, or generator.
-2. Read the smallest code surface that proves it.
-3. Prefer fixing the tenant contract before touching visual polish.
-4. Keep generated and deterministic workflows reproducible.
-5. State assumptions when inferring intended branded output from examples.
-
-END_OF_FILE_CONTENT
-mkdir -p ".cursor/skills-cursor/migrate-to-skills"
-echo "Creating .cursor/skills-cursor/migrate-to-skills/SKILL.md..."
-cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/migrate-to-skills/SKILL.md"
----
-name: migrate-to-skills
-description: >-
-  Convert 'Applied intelligently' Cursor rules (.cursor/rules/*.mdc) and slash
-  commands (.cursor/commands/*.md) to Agent Skills format (.cursor/skills/). Use
-  when you want to migrate rules or commands to skills, convert .mdc rules to
-  SKILL.md format, or consolidate commands into the skills directory.
-disable-model-invocation: true
----
-# Migrate Rules and Slash Commands to Skills
-
-Convert Cursor rules ("Applied intelligently") and slash commands to Agent Skills format.
-
-**CRITICAL: Preserve the exact body content. Do not modify, reformat, or "improve" it - copy verbatim.**
-
-## Locations
-
-| Level | Source | Destination |
-|-------|--------|-------------|
-| Project | `{workspaceFolder}/**/.cursor/rules/*.mdc`, `{workspaceFolder}/.cursor/commands/*.md` |
-| User | `~/.cursor/commands/*.md` |
-
-Notes:
-- Cursor rules inside the project can live in nested directories. Be thorough in your search and use glob patterns to find them.
-- Ignore anything in ~/.cursor/worktrees
-- Ignore anything in ~/.cursor/skills-cursor. This is reserved for Cursor's internal built-in skills and is managed automatically by the system.
-
-## Finding Files to Migrate
-
-**Rules**: Migrate if rule has a `description` but NO `globs` and NO `alwaysApply: true`.
-
-**Commands**: Migrate all - they're plain markdown without frontmatter.
-
-## Conversion Format
-
-### Rules: .mdc → SKILL.md
-
-```markdown
-# Before: .cursor/rules/my-rule.mdc
----
-description: What this rule does
-globs:
-alwaysApply: false
----
-# Title
-Body content...
-```
-
-```markdown
-# After: .cursor/skills/my-rule/SKILL.md
----
-name: my-rule
-description: What this rule does
----
-# Title
-Body content...
-```
-
-Changes: Add `name` field, remove `globs`/`alwaysApply`, keep body exactly.
-
-### Commands: .md → SKILL.md
-
-```markdown
-# Before: .cursor/commands/commit.md
-# Commit current work
-Instructions here...
-```
-
-```markdown
-# After: .cursor/skills/commit/SKILL.md
----
-name: commit
-description: Commit current work with standardized message format
-disable-model-invocation: true
----
-# Commit current work
-Instructions here...
-```
-
-Changes: Add frontmatter with `name` (from filename), `description` (infer from content), and `disable-model-invocation: true`, keep body exactly.
-
-**Note:** The `disable-model-invocation: true` field prevents the model from automatically invoking this skill. Slash commands are designed to be explicitly triggered by the user via the `/` menu, not automatically suggested by the model.
-
-## Notes
-
-- `name` must be lowercase with hyphens only
-- `description` is critical for skill discovery
-- Optionally delete originals after verifying migration works
-
-### Migrate a Rule (.mdc → SKILL.md)
-
-1. Read the rule file
-2. Extract the `description` from the frontmatter
-3. Extract the body content (everything after the closing `---` of the frontmatter)
-4. Create the skill directory: `.cursor/skills/{skill-name}/` (skill name = filename without .mdc)
-5. Write `SKILL.md` with new frontmatter (`name` and `description`) + the EXACT original body content (preserve all whitespace, formatting, code blocks verbatim)
-6. Delete the original rule file
-
-### Migrate a Command (.md → SKILL.md)
-
-1. Read the command file
-2. Extract description from the first heading (remove `#` prefix)
-3. Create the skill directory: `.cursor/skills/{skill-name}/` (skill name = filename without .md)
-4. Write `SKILL.md` with new frontmatter (`name`, `description`, and `disable-model-invocation: true`) + blank line + the EXACT original file content (preserve all whitespace, formatting, code blocks verbatim)
-5. Delete the original command file
-
-**CRITICAL: Copy the body content character-for-character. Do not reformat, fix typos, or "improve" anything.**
-
-## Workflow
-
-If you have the Task tool available:
-DO NOT start to read all of the files yourself. That function should be delegated to the subagents. Your job is to dispatch the subagents for each category of files and wait for the results.
-
-1. [ ] Create the skills directories if they don't exist (`.cursor/skills/` for project, `~/.cursor/skills/` for user)
-2. Dispatch three fast general purpose subagents (NOT explore) in parallel to do the following steps for project rules (pattern: `{workspaceFolder}/**/.cursor/rules/*.mdc`), user commands (pattern: `~/.cursor/commands/*.md`), and project commands (pattern: `{workspaceFolder}/**/.cursor/commands/*.md`):
-  I. [ ] Find files to migrate in the given pattern
-  II. [ ] For rules, check if it's an "applied intelligently" rule (has `description`, no `globs`, no `alwaysApply: true`). Commands are always migrated. DO NOT use the terminal to read files. Use the read tool.
-  III. [ ] Make a list of files to migrate. If empty, done.
-  IV. [ ] For each file, read it, then write the new skill file preserving the body content EXACTLY. DO NOT use the terminal to write these files. Use the edit tool.
-  V. [ ] Delete the original file. DO NOT use the terminal to delete these files. Use the delete tool.
-  VI. [ ] Return a list of all the skill files that were migrated along with the original file paths.
-3. [ ] Wait for all subagents to complete and summarize the results to the user. IMPORTANT: Make sure to let them know if they want to undo the migration, to ask you to.
-4. [ ] If the user asks you to undo the migration, do the opposite of the above steps to restore the original files.
-
-
-If you don't have the Task tool available:
-1. [ ] Create the skills directories if they don't exist (`.cursor/skills/` for project, `~/.cursor/skills/` for user)
-2. [ ] Find files to migrate in both project (`.cursor/`) and user (`~/.cursor/`) directories
-3. [ ] For rules, check if it's an "applied intelligently" rule (has `description`, no `globs`, no `alwaysApply: true`). Commands are always migrated. DO NOT use the terminal to read files. Use the read tool.
-4. [ ] Make a list of files to migrate. If empty, done.
-5. [ ] For each file, read it, then write the new skill file preserving the body content EXACTLY. DO NOT use the terminal to write these files. Use the edit tool.
-6. [ ] Delete the original file. DO NOT use the terminal to delete these files. Use the delete tool.
-7. [ ] Summarize the results to the user. IMPORTANT: Make sure to let them know if they want to undo the migration, to ask you to.
-8. [ ] If the user asks you to undo the migration, do the opposite of the above steps to restore the original files.
-
-END_OF_FILE_CONTENT
-mkdir -p ".cursor/skills-cursor/olonjs"
-echo "Creating .cursor/skills-cursor/olonjs/SKILL.md..."
-cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/olonjs/SKILL.md"
----
-name: olonjs-tenant
-description: Use when working on a OlonJS tenant, transforming the base tenant DNA into a branded tenant, adding or modifying tenant sections, maintaining schema-driven editability, or reasoning about what belongs to @olonjs/core versus the tenant.
----
-
-# OlonJS Tenant
-
-Use this skill for work on the OlonJS ecosystem when the task involves:
-
-- a tenant generated from the OlonJS CLI
-- `@olonjs/core`
-- tenant sections/capsules
-- `src/data/pages/**/*.json` or `src/data/config/*.json`
-- schema-driven editing and inspector compatibility
-- generator scripts that turn a base tenant into a branded tenant
-
-Read code first. Treat documents as secondary unless they help interpret code that is otherwise ambiguous.
-
-## Architecture Specifications 
-
-**Normative:** OlonJS Architecture Specifications **v1.5** (`olonjsSpecs_V_1_5.md`): three-layer CSS theme bridge (engine → `:root` → `@theme`), `ThemeConfig` / appendix A.2.6, path-based Studio selection (`itemPath`), local tokens (`--local-*`), IDAC, TOCC, JSP, TBP, CIP, ECIP, JEB, JAP.
-
-Use this document as the architectural law for each tenant; compliance is judged against it:
-
-- `\\wsl.localhost\Ubuntu\home\dev\npm-jpcore\specs\olonjsSpecs_V_1_5.md`
-
-
-
-
-## Core Model
-
-OlonJS has a hard split between `core` and `tenant`.
-
-- `@olonjs/core` owns routing, `/admin`, `/admin/preview`, preview stage, studio state, inspector/form factory, and shared engine behavior.
-- The tenant owns sections, schemas, type augmentation, page/config JSON, theme/design layer, and local workflow scripts.
-- The tenant does not implement the CMS. It implements the tenant protocol consumed by the engine.
-
-In this ecosystem, code is the source of truth.
-
-Compliance priority:
-
-1. Data is bound correctly.
-2. Schemas describe fields correctly.
-3. Content is editable without breaking the inspector.
-4. Tenant structure stays standardized.
-5. Context-aware focus/highlight in the legacy admin is desirable but secondary.
-
-## Canonical References
-
-Use these local references when available:
-
-- Base tenant DNA: `\\wsl.localhost\Ubuntu\home\dev\temp\alpha`
-- Custom tenant reference: `\\wsl.localhost\Ubuntu\home\dev\temp\gptgiorgio`
-- Core engine: `\\wsl.localhost\Ubuntu\home\dev\npm-jpcore\packages\core`
-- Generator example: `\\wsl.localhost\Ubuntu\home\dev\temp\clonark\generate_olon.sh`
-
-If these paths are missing, infer the same roles from the current workspace:
-
-- base CLI-generated tenant
-- branded tenant
-- core package
-- generator script
-
-## Tenant Anatomy
-
-Expect these files to move together:
-
-- `src/components/<section>/View.tsx`
-- `src/components/<section>/schema.ts`
-- `src/components/<section>/types.ts`
-- `src/components/<section>/index.ts`
-- `src/lib/ComponentRegistry.tsx`
-- `src/lib/schemas.ts`
-- `src/lib/addSectionConfig.ts`
-- `src/types.ts`
-- `src/data/pages/**/*.json`
-- `src/data/config/site.json`
-- `src/data/config/theme.json`
-- `src/data/config/menu.json`
-
-Useful rule: if a section type changes, check all of the files above before concluding the task is done.
-
-## What Good Work Looks Like
-
-A good tenant change:
-
-- stays inside tenant boundaries unless the issue is truly in `@olonjs/core`
-- keeps schema, defaults, registry, and type augmentation aligned
-- preserves editability for strings, lists, nested objects, CTAs, and image fields
-- uses `ImageSelectionSchema`-style image fields when the content is image-driven
-- keeps page content JSON-first
-
-A suspicious tenant change:
-
-- patches the core to fix a tenant modeling problem
-- adds visual complexity without data bindings
-- introduces fields into JSON that are not represented in schema
-- changes a section view without updating defaults or types
-- optimizes legacy context awareness at the expense of simpler, reliable editability
-
-## Workflow 1: Base Tenant -> Branded Tenant
-
-This is the primary workflow.
-
-Goal:
-
-- transform a CLI-generated base tenant into a branded tenant through a single generator script
-
-Treat the generator script as procedural source of truth for the green build workflow.
-
-When maintaining or authoring a generator:
-
-1. Separate non-deterministic bootstrap from deterministic sync.
-2. Make explicit which files are managed output.
-3. Keep the script aligned with the current tenant code, not with stale docs.
-4. Preserve tenant protocol files: sections, schemas, registries, type augmentation, config JSON, assets, shims.
-5. Prefer deterministic local writes after any remote/bootstrap step.
-
-Typical structure of a good generator:
-
-- preflight checks
-- remote/bootstrap steps such as `shadcn` or external registries
-- deterministic creation/sync of tenant files
-- compatibility patches for known unstable upstream payloads
-- final validation commands
-
-When asked to update a branded tenant generator:
-
-1. Diff base tenant against branded tenant.
-2. Classify differences into:
-   - intended branded output
-   - reusable generator logic
-   - accidental drift
-3. Encode only the reusable intended differences into the script.
-4. Keep the output reproducible from a fresh base tenant.
-
-## Workflow 2: Add Or Change A Section
-
-When adding a new section type:
-
-1. Create `View.tsx`, `schema.ts`, `types.ts`, `index.ts`.
-2. Register the section in `src/lib/ComponentRegistry.tsx`.
-3. Register the schema in `src/lib/schemas.ts`.
-4. Add defaults and label in `src/lib/addSectionConfig.ts`.
-5. Extend `SectionComponentPropsMap` and module augmentation in `src/types.ts`.
-6. Add or update page JSON using the new section type.
-
-When changing an existing section:
-
-1. Read the section schema first.
-2. Read the page JSON using it.
-3. Check the view for `data-jp-field` usage and binding shape.
-4. Update defaults if the data shape changed.
-5. Verify the inspector still has a path to edit the content.
-
-## Workflow 3: Images, Rich Content, Nested Routes
-
-Images:
-
-- Prefer structured image objects compatible with tenant base schemas.
-- Assume the core supports image picking and upload flows.
-- The tenant is responsible for declaring image fields in schema and rendering them coherently.
-
-Rich editorial content:
-
-- Tiptap-style sections are tenant-level integrations.
-- Treat page JSON using `type: "tiptap"` as runtime usage examples, and section code as the real source of truth.
-
-Nested routes:
-
-- Files under `src/data/pages/**/*.json` may represent nested slugs.
-- Preserve slug/path consistency and do not replace file-based routing with manual lists.
-
-## Decision Rules
-
-Use `alpha` patterns when the task is about:
-
-- tenant DNA
-- capability reference
-- baseline protocol shape
-- proving what the base system already supports
-
-Use `gptgiorgio` patterns when the task is about:
-
-- stronger branded frontend customization
-- richer domain-specific sections
-- image-heavy schema design
-- proving how far customization can go without changing the bootstrap
-
-Do not treat `gptgiorgio` as canonical for legacy admin context awareness.
-
-## Default Operating Procedure
-
-When you receive a OlonJS tenant task:
-
-1. Identify whether the problem belongs to `core`, tenant, or generator.
-2. Read the smallest code surface that proves it.
-3. Prefer fixing the tenant contract before touching visual polish.
-4. Keep generated and deterministic workflows reproducible.
-5. State assumptions when inferring intended branded output from examples.
-
-END_OF_FILE_CONTENT
-# SKIP: .cursor/skills-cursor/olonjs/SKILL.md:Zone.Identifier is binary and cannot be embedded as text.
-mkdir -p ".cursor/skills-cursor/shell"
-echo "Creating .cursor/skills-cursor/shell/SKILL.md..."
-cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/shell/SKILL.md"
----
-name: shell
-description: >-
-  Runs the rest of a /shell request as a literal shell command. Use only when
-  the user explicitly invokes /shell and wants the following text executed
-  directly in the terminal.
-disable-model-invocation: true
----
-# Run Shell Commands
-
-Use this skill only when the user explicitly invokes `/shell`.
-
-## Behavior
-
-1. Treat all user text after the `/shell` invocation as the literal shell command to run.
-2. Execute that command immediately with the terminal tool.
-3. Do not rewrite, explain, or "improve" the command before running it.
-4. Do not inspect the repository first unless the command itself requires repository context.
-5. If the user invokes `/shell` without any following text, ask them which command to run.
-
-## Response
-
-- Run the command first.
-- Then briefly report the exit status and any important stdout or stderr.
-
-END_OF_FILE_CONTENT
-mkdir -p ".cursor/skills-cursor/update-cursor-settings"
-echo "Creating .cursor/skills-cursor/update-cursor-settings/SKILL.md..."
-cat << 'END_OF_FILE_CONTENT' > ".cursor/skills-cursor/update-cursor-settings/SKILL.md"
----
-name: update-cursor-settings
-description: >-
-  Modify Cursor/VSCode user settings in settings.json. Use when you want to
-  change editor settings, preferences, configuration, themes, font size, tab
-  size, format on save, auto save, keybindings, or any settings.json values.
----
-# Updating Cursor Settings
-
-This skill guides you through modifying Cursor/VSCode user settings. Use this when you want to change editor settings, preferences, configuration, themes, keybindings, or any `settings.json` values.
-
-## Settings File Location
-
-| OS | Path |
-|----|------|
-| macOS | ~/Library/Application Support/Cursor/User/settings.json |
-| Linux | ~/.config/Cursor/User/settings.json |
-| Windows | %APPDATA%\Cursor\User\settings.json |
-
-## Before Modifying Settings
-
-1. **Read the existing settings file** to understand current configuration
-2. **Preserve existing settings** - only add/modify what the user requested
-3. **Validate JSON syntax** before writing to avoid breaking the editor
-
-## Modifying Settings
-
-### Step 1: Read Current Settings
-
-```typescript
-// Read the settings file first
-const settingsPath = "~/Library/Application Support/Cursor/User/settings.json";
-// Use the Read tool to get current contents
-```
-
-### Step 2: Identify the Setting to Change
-
-Common setting categories:
-- **Editor**: `editor.fontSize`, `editor.tabSize`, `editor.wordWrap`, `editor.formatOnSave`
-- **Workbench**: `workbench.colorTheme`, `workbench.iconTheme`, `workbench.sideBar.location`
-- **Files**: `files.autoSave`, `files.exclude`, `files.associations`
-- **Terminal**: `terminal.integrated.fontSize`, `terminal.integrated.shell.*`
-- **Cursor-specific**: Settings prefixed with `cursor.` or `aipopup.`
-
-### Step 3: Update the Setting
-
-When modifying settings.json:
-1. Parse the existing JSON (handle comments - VSCode settings support JSON with comments)
-2. Add or update the requested setting
-3. Preserve all other existing settings
-4. Write back with proper formatting (2-space indentation)
-
-### Example: Changing Font Size
-
-If user says "make the font bigger":
-
-```json
-{
-  "editor.fontSize": 16
-}
-```
-
-### Example: Enabling Format on Save
-
-If user says "format my code when I save":
-
-```json
-{
-  "editor.formatOnSave": true
-}
-```
-
-### Example: Changing Theme
-
-If user says "use dark theme" or "change my theme":
-
-```json
-{
-  "workbench.colorTheme": "Default Dark Modern"
-}
-```
-
-## Important Notes
-
-1. **JSON with Comments**: VSCode/Cursor settings.json supports comments (`//` and `/* */`). When reading, be aware comments may exist. When writing, preserve comments if possible.
-
-2. **Restart May Be Required**: Some settings take effect immediately, others require reloading the window or restarting Cursor. Inform the user if a restart is needed.
-
-3. **Backup**: For significant changes, consider mentioning the user can undo via Ctrl/Cmd+Z in the settings file or by reverting git changes if tracked.
-
-4. **Workspace vs User Settings**:
-   - User settings (what this skill covers): Apply globally to all projects
-   - Workspace settings (`.vscode/settings.json`): Apply only to the current project
-
-5. **Commit Attribution**: When the user asks about commit attribution, clarify whether they want to edit the **CLI agent** or the **IDE agent**. For the CLI agent, modify `~/.cursor/cli-config.json`. For the IDE agent, it is controlled from the UI at **Cursor Settings > Agent > Attribution** (not settings.json).
-
-## Common User Requests → Settings
-
-| User Request | Setting |
-|--------------|---------|
-| "bigger/smaller font" | `editor.fontSize` |
-| "change tab size" | `editor.tabSize` |
-| "format on save" | `editor.formatOnSave` |
-| "word wrap" | `editor.wordWrap` |
-| "change theme" | `workbench.colorTheme` |
-| "hide minimap" | `editor.minimap.enabled` |
-| "auto save" | `files.autoSave` |
-| "line numbers" | `editor.lineNumbers` |
-| "bracket matching" | `editor.bracketPairColorization.enabled` |
-| "cursor style" | `editor.cursorStyle` |
-| "smooth scrolling" | `editor.smoothScrolling` |
-
-## Workflow
-
-1. Read ~/Library/Application Support/Cursor/User/settings.json
-2. Parse the JSON content
-3. Add/modify the requested setting(s)
-4. Write the updated JSON back to the file
-5. Inform the user the setting has been changed and whether a reload is needed
-
-END_OF_FILE_CONTENT
-echo "Creating index.html..."
-cat << 'END_OF_FILE_CONTENT' > "index.html"
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Olon — Agentic Content Infrastructure" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-mono/style.css" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,700;1,300;1,500;1,700&display=swap" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/merriweather@5.2.6/wdth.css" rel="stylesheet" />
-    <title>Olon</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
-
-
-END_OF_FILE_CONTENT
-echo "Creating package.json..."
-cat << 'END_OF_FILE_CONTENT' > "package.json"
-{
-  "name": "tenant-alpha",
-  "version": "1.0.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "dev:clean": "vite --force",
-    "verify:webmcp": "node scripts/webmcp-feature-check.mjs",
-    "prebuild": "node scripts/sync-pages-to-public.mjs",
-    "build": "tsc && vite build",
-    "dist": "bash ./src2Code.sh --template alpha src .cursor vercel.json index.html tsconfig.json tsconfig.node.json vite.config.ts scripts specs package.json",
-    "preview": "vite preview",
-    "bake:email": "tsx scripts/bake-email.tsx",
-    "bakemail": "npm run bake:email --",
-    "dist:dna": "npm run dist"
-  },
-  "dependencies": {
-    "@tiptap/extension-image": "^2.11.5",
-    "@tiptap/extension-link": "^2.11.5",
-    "@tiptap/react": "^2.11.5",
-    "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.96",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.474.0",
-    "motion": "^12.23.24",
-    "react": "^19.0.0",
-    "react-markdown": "^9.0.1",
-    "react-dom": "^19.0.0",
-    "react-router-dom": "^6.30.3",
-    "rehype-sanitize": "^6.0.0",
-    "remark-gfm": "^4.0.1",
-    "tailwind-merge": "^3.0.1",
-    "tiptap-markdown": "^0.8.10",
-    "zod": "^3.24.1"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/react": "^19.0.8",
-    "@types/react-dom": "^19.0.3",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.7.3",
-    "vite": "^6.0.11",
-    "@react-email/components": "^0.0.41",
-    "@react-email/render": "^1.0.5",
-    "tsx": "^4.20.5"
-  }
-}
-
-END_OF_FILE_CONTENT
-mkdir -p "scripts"
-echo "Creating scripts/bake-email.tsx..."
-cat << 'END_OF_FILE_CONTENT' > "scripts/bake-email.tsx"
-import fs from "node:fs/promises";
-import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { render } from "@react-email/render";
-import React from "react";
-
-type Args = {
-  entry?: string;
-  out?: string;
-  outDir?: string;
-  exportName?: string;
-  propsFile?: string;
-  siteConfig?: string;
-  themeConfig?: string;
-};
-
-type BakeTarget = {
-  entryAbs: string;
-  outAbs: string;
-};
-
-type SiteConfig = {
-  identity?: {
-    title?: string;
-    logoUrl?: string;
-  };
-  header?: {
-    data?: {
-      logoImageUrl?: {
-        url?: string;
-        alt?: string;
-      };
-    };
-  };
-  footer?: {
-    data?: {
-      brandText?: string;
-      brandHighlight?: string;
-      tagline?: string;
-      logoImageUrl?: {
-        url?: string;
-        alt?: string;
-      };
-    };
-  };
-};
-
-type ThemeConfig = {
-  tokens?: {
-    colors?: Record<string, string>;
-    typography?: {
-      fontFamily?: Record<string, string>;
-    };
-    borderRadius?: Record<string, string>;
-  };
-};
-
-const DEFAULT_EMAIL_DIR = "src/emails";
-const DEFAULT_OUT_DIR = "email-templates";
-const DEFAULT_SITE_CONFIG = "src/data/config/site.json";
-const DEFAULT_THEME_CONFIG = "src/data/config/theme.json";
-
-function parseArgs(argv: string[]): Args {
-  const args: Args = {};
-  for (let i = 0; i < argv.length; i += 1) {
-    const key = argv[i];
-    const next = argv[i + 1];
-    if (!next) continue;
-    if (key === "--entry") {
-      args.entry = next;
-      i += 1;
-      continue;
-    }
-    if (key === "--out") {
-      args.out = next;
-      i += 1;
-      continue;
-    }
-    if (key === "--out-dir") {
-      args.outDir = next;
-      i += 1;
-      continue;
-    }
-    if (key === "--export") {
-      args.exportName = next;
-      i += 1;
-      continue;
-    }
-    if (key === "--props") {
-      args.propsFile = next;
-      i += 1;
-      continue;
-    }
-    if (key === "--site-config") {
-      args.siteConfig = next;
-      i += 1;
-      continue;
-    }
-    if (key === "--theme-config") {
-      args.themeConfig = next;
-      i += 1;
-    }
-  }
-  return args;
-}
-
-function isComponentExport(value: unknown): value is React.ComponentType<any> {
-  return typeof value === "function";
-}
-
-function toKebabCase(value: string): string {
-  return value
-    .replace(/Email$/i, "")
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .replace(/[_\s]+/g, "-")
-    .toLowerCase();
-}
-
-function deriveOutAbs(entryAbs: string, outDirAbs: string): string {
-  const base = path.basename(entryAbs).replace(/\.[^.]+$/, "");
-  const fileName = `${toKebabCase(base)}.html`;
-  return path.join(outDirAbs, fileName);
-}
-
-async function discoverEmailEntries(rootDir: string): Promise<string[]> {
-  const abs = path.resolve(process.cwd(), rootDir);
-  const dirEntries = await fs.readdir(abs, { withFileTypes: true }).catch(() => []);
-  return dirEntries
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name)
-    .filter((name) => /\.(tsx|jsx)$/i.test(name))
-    .map((name) => path.join(abs, name));
-}
-
-function normalizeUrl(value: string | undefined): string | undefined {
-  if (!value) return undefined;
-  const trimmed = value.trim();
-  return trimmed || undefined;
-}
-
-async function readJsonObject<T>(filePath: string): Promise<T | null> {
-  const abs = path.resolve(process.cwd(), filePath);
-  const raw = await fs.readFile(abs, "utf8").catch(() => null);
-  if (!raw) return null;
-  const parsed = JSON.parse(raw);
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-  return parsed as T;
-}
-
-function buildDefaultProps(site: SiteConfig | null, theme: ThemeConfig | null): Record<string, unknown> {
-  const footerBrandText = site?.footer?.data?.brandText?.trim() ?? "";
-  const footerBrandHighlight = site?.footer?.data?.brandHighlight?.trim() ?? "";
-  const brandName = `${footerBrandText}${footerBrandHighlight}`.trim() || "{{tenantName}}";
-
-  const tenantName = site?.identity?.title?.trim() || brandName;
-  const logoUrl =
-    normalizeUrl(site?.header?.data?.logoImageUrl?.url) ||
-    normalizeUrl(site?.footer?.data?.logoImageUrl?.url) ||
-    normalizeUrl(site?.identity?.logoUrl) ||
-    "";
-  const logoAlt =
-    site?.header?.data?.logoImageUrl?.alt?.trim() ||
-    site?.footer?.data?.logoImageUrl?.alt?.trim() ||
-    brandName;
-  const tagline = site?.footer?.data?.tagline?.trim() || "";
-
-  return {
-    tenantName,
-    brandName,
-    logoUrl,
-    logoAlt,
-    tagline,
-    theme: theme?.tokens ?? {},
-    correlationId: "{{correlationId}}",
-    replyTo: "{{replyTo}}",
-    leadData: {
-      name: "{{lead.name}}",
-      email: "{{lead.email}}",
-      phone: "{{lead.phone}}",
-      checkin: "{{lead.checkin}}",
-      checkout: "{{lead.checkout}}",
-      guests: "{{lead.guests}}",
-      notes: "{{lead.notes}}",
-    },
-  };
-}
-
-async function readProps(
-  propsFile: string | undefined,
-  siteConfigPath: string,
-  themeConfigPath: string
-): Promise<Record<string, unknown>> {
-  if (propsFile) {
-    const raw = await fs.readFile(path.resolve(process.cwd(), propsFile), "utf8");
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error("--props must point to a JSON object file");
-    }
-    return parsed as Record<string, unknown>;
-  }
-
-  const site = await readJsonObject<SiteConfig>(siteConfigPath);
-  const theme = await readJsonObject<ThemeConfig>(themeConfigPath);
-  return buildDefaultProps(site, theme);
-}
-
-async function buildTargets(args: Args): Promise<BakeTarget[]> {
-  const outDirAbs = path.resolve(process.cwd(), args.outDir ?? DEFAULT_OUT_DIR);
-
-  if (args.entry) {
-    const entryAbs = path.resolve(process.cwd(), args.entry);
-    const outAbs = args.out ? path.resolve(process.cwd(), args.out) : deriveOutAbs(entryAbs, outDirAbs);
-    return [{ entryAbs, outAbs }];
-  }
-
-  const discovered = await discoverEmailEntries(DEFAULT_EMAIL_DIR);
-  if (discovered.length === 0) {
-    throw new Error(`No templates found in ${DEFAULT_EMAIL_DIR}`);
-  }
-
-  return discovered.map((entryAbs) => ({
-    entryAbs,
-    outAbs: deriveOutAbs(entryAbs, outDirAbs),
-  }));
-}
-
-async function bakeTemplate(target: BakeTarget, args: Args, props: Record<string, unknown>) {
-  const moduleUrl = pathToFileURL(target.entryAbs).href;
-  const mod = (await import(moduleUrl)) as Record<string, unknown>;
-  const picked = args.exportName ? mod[args.exportName] : mod.default;
-
-  if (!isComponentExport(picked)) {
-    const available = Object.keys(mod).join(", ") || "(none)";
-    throw new Error(
-      `Template export not found or not a component. Requested: ${args.exportName ?? "default"}. Available exports: ${available}. Entry: ${target.entryAbs}`
-    );
-  }
-
-  const element = React.createElement(picked, props);
-  const html = await render(element, { pretty: true });
-
-  await fs.mkdir(path.dirname(target.outAbs), { recursive: true });
-  await fs.writeFile(target.outAbs, html, "utf8");
-
-  console.log(`Baked email template: ${path.relative(process.cwd(), target.outAbs)}`);
-}
-
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  const targets = await buildTargets(args);
-  const props = await readProps(
-    args.propsFile,
-    args.siteConfig ?? DEFAULT_SITE_CONFIG,
-    args.themeConfig ?? DEFAULT_THEME_CONFIG
-  );
-
-  for (const target of targets) {
-    await bakeTemplate(target, args, props);
-  }
-}
-
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
-
-END_OF_FILE_CONTENT
-echo "Creating scripts/bake.mjs..."
-cat << 'END_OF_FILE_CONTENT' > "scripts/bake.mjs"
-/**
- * olon bake - production SSG
- *
- * 1) Build client bundle (dist/)
- * 2) Build SSR entry bundle (dist-ssr/)
- * 3) Discover all page slugs from JSON files under src/data/pages
- * 4) Render each slug via SSR and write dist/<slug>/index.html
- */
-
-import { build } from 'vite';
-import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
-import fs from 'fs/promises';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-const corePkgPath = require.resolve('@olonjs/core/package.json');
-const contractsUrl = pathToFileURL(corePkgPath.replace('package.json', 'src/lib/webmcp-contracts.mjs')).href;
-
-const {
-  buildPageContract,
-  buildPageManifest,
-  buildPageManifestHref,
-  buildSiteManifest,
-} = await import(contractsUrl);
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(__dirname, '..');
-const pagesDir = path.resolve(root, 'src/data/pages');
-const publicDir = path.resolve(root, 'public');
-const distDir = path.resolve(root, 'dist');
-
-async function writeJsonTargets(relativePath, value) {
-  const targets = [
-    path.resolve(publicDir, relativePath),
-    path.resolve(distDir, relativePath),
-  ];
-
-  for (const targetPath of targets) {
-    await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    await fs.writeFile(targetPath, `${JSON.stringify(value, null, 2)}\n`, 'utf-8');
-  }
-}
-
-function escapeHtmlAttribute(value) {
-  return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-}
-
-function toCanonicalSlug(relativeJsonPath) {
-  const normalized = relativeJsonPath.replace(/\\/g, '/');
-  const slug = normalized.replace(/\.json$/i, '').replace(/^\/+|\/+$/g, '');
-  if (!slug) throw new Error('[bake] Invalid page slug: empty path segment');
-  return slug;
-}
-
-async function listJsonFilesRecursive(dir) {
-  const items = await fs.readdir(dir, { withFileTypes: true });
-  const files = [];
-  for (const item of items) {
-    const fullPath = path.join(dir, item.name);
-    if (item.isDirectory()) {
-      files.push(...(await listJsonFilesRecursive(fullPath)));
-      continue;
-    }
-    if (item.isFile() && item.name.toLowerCase().endsWith('.json')) files.push(fullPath);
-  }
-  return files;
-}
-
-async function discoverTargets() {
-  let files = [];
-  try {
-    files = await listJsonFilesRecursive(pagesDir);
-  } catch {
-    files = [];
-  }
-
-  const rawSlugs = files.map((fullPath) => toCanonicalSlug(path.relative(pagesDir, fullPath)));
-  const slugs = Array.from(new Set(rawSlugs)).sort((a, b) => a.localeCompare(b));
-
-  return slugs.map((slug) => {
-    const depth = slug === 'home' ? 0 : slug.split('/').length;
-    const out = slug === 'home' ? 'dist/index.html' : `dist/${slug}/index.html`;
-    return { slug, out, depth };
-  });
-}
-
-console.log('\n[bake] Building client...');
-await build({ root, mode: 'production', logLevel: 'warn' });
-console.log('[bake] Client build done.');
-
-console.log('\n[bake] Building SSR bundle...');
-await build({
-  root,
-  mode: 'production',
-  logLevel: 'warn',
-  build: {
-    ssr: 'src/entry-ssg.tsx',
-    outDir: 'dist-ssr',
-    rollupOptions: {
-      output: { format: 'esm' },
-    },
-  },
-  ssr: {
-    noExternal: ['@olonjs/core'],
-  },
-});
-console.log('[bake] SSR build done.');
-
-const targets = await discoverTargets();
-if (targets.length === 0) {
-  throw new Error('[bake] No pages discovered under src/data/pages');
-}
-console.log(`[bake] Targets: ${targets.map((t) => t.slug).join(', ')}`);
-
-const ssrEntryUrl = pathToFileURL(path.resolve(root, 'dist-ssr/entry-ssg.js')).href;
-const { render, getCss, getPageMeta, getWebMcpBuildState } = await import(ssrEntryUrl);
-
-const template = await fs.readFile(path.resolve(root, 'dist/index.html'), 'utf-8');
-const hasCommentMarker = template.includes('<!--app-html-->');
-const hasRootDivMarker = template.includes('<div id="root"></div>');
-if (!hasCommentMarker && !hasRootDivMarker) {
-  throw new Error('[bake] Missing template marker. Expected <!--app-html--> or <div id="root"></div>.');
-}
-
-const inlinedCss = getCss();
-const styleTag = `<style data-bake="inline">${inlinedCss}</style>`;
-const webMcpBuildState = getWebMcpBuildState();
-
-for (const { slug } of targets) {
-  const pageConfig = webMcpBuildState.pages[slug];
-  if (!pageConfig) continue;
-  
-  // Export the raw JSON data for the agentic web (so readResource works on SSG)
-  await writeJsonTargets(`pages/${slug}.json`, pageConfig);
-
-  const contract = buildPageContract({
-    slug,
-    pageConfig,
-    schemas: webMcpBuildState.schemas,
-    siteConfig: webMcpBuildState.siteConfig,
-  });
-  await writeJsonTargets(`schemas/${slug}.schema.json`, contract);
-  const pageManifest = buildPageManifest({
-    slug,
-    pageConfig,
-    schemas: webMcpBuildState.schemas,
-    siteConfig: webMcpBuildState.siteConfig,
-  });
-  await writeJsonTargets(buildPageManifestHref(slug).replace(/^\//, ''), pageManifest);
-}
-
-// Export the site config for the agentic web
-await writeJsonTargets('config/site.json', webMcpBuildState.siteConfig);
-
-const mcpManifest = buildSiteManifest({
-  pages: webMcpBuildState.pages,
-  schemas: webMcpBuildState.schemas,
-  siteConfig: webMcpBuildState.siteConfig,
-});
-await writeJsonTargets('mcp-manifest.json', mcpManifest);
-
-for (const { slug, out, depth } of targets) {
-  console.log(`\n[bake] Rendering /${slug === 'home' ? '' : slug}...`);
-
-  const appHtml = render(slug);
-  const { title, description } = getPageMeta(slug);
-  const safeTitle = String(title).replace(/"/g, '&quot;');
-  const safeDescription = String(description).replace(/"/g, '&quot;');
-  const metaTags = [
-    `<meta name="description" content="${safeDescription}">`,
-    `<meta property="og:title" content="${safeTitle}">`,
-    `<meta property="og:description" content="${safeDescription}">`,
-  ].join('\n    ');
-  const jsonLd = JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'WebPage',
-    name: title,
-    description,
-    url: slug === 'home' ? '/' : `/${slug}`,
-  });
-
-  const prefix = depth > 0 ? '../'.repeat(depth) : './';
-  const fixedTemplate = depth > 0 ? template.replace(/(['"])\.\//g, `$1${prefix}`) : template;
-  const mcpManifestHref = `${prefix}${buildPageManifestHref(slug).replace(/^\//, '')}`;
-  const contractHref = `${prefix}schemas/${slug}.schema.json`;
-  const contractLinks = [
-    `<link rel="mcp-manifest" href="${escapeHtmlAttribute(mcpManifestHref)}">`,
-    `<link rel="olon-contract" href="${escapeHtmlAttribute(contractHref)}">`,
-    `<script type="application/ld+json">${jsonLd}</script>`,
-  ].join('\n  ');
-
-  let bakedHtml = fixedTemplate
-    .replace('</head>', `  ${styleTag}\n  ${contractLinks}\n</head>`)
-    .replace(/<title>.*?<\/title>/, `<title>${safeTitle}</title>\n    ${metaTags}`);
-
-  if (hasCommentMarker) {
-    bakedHtml = bakedHtml.replace('<!--app-html-->', appHtml);
-  } else {
-    bakedHtml = bakedHtml.replace('<div id="root"></div>', `<div id="root">${appHtml}</div>`);
-  }
-
-  const outPath = path.resolve(root, out);
-  await fs.mkdir(path.dirname(outPath), { recursive: true });
-  await fs.writeFile(outPath, bakedHtml, 'utf-8');
-  console.log(`[bake] Written -> ${out} [title: "${safeTitle}"]`);
-}
-
-console.log('\n[bake] All pages baked. OK\n');
-
-END_OF_FILE_CONTENT
-echo "Creating scripts/sync-pages-to-public.mjs..."
-cat << 'END_OF_FILE_CONTENT' > "scripts/sync-pages-to-public.mjs"
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, '..');
-const sourceDir = path.join(rootDir, 'src', 'data', 'pages');
-const targetDir = path.join(rootDir, 'public', 'pages');
-
-if (!fs.existsSync(sourceDir)) {
-  console.warn('[sync-pages-to-public] Source directory not found:', sourceDir);
-  process.exit(0);
-}
-
-fs.rmSync(targetDir, { recursive: true, force: true });
-fs.mkdirSync(targetDir, { recursive: true });
-fs.cpSync(sourceDir, targetDir, { recursive: true });
-
-console.log('[sync-pages-to-public] Synced pages to public/pages');
-
-END_OF_FILE_CONTENT
-echo "Creating scripts/webmcp-feature-check.mjs..."
-cat << 'END_OF_FILE_CONTENT' > "scripts/webmcp-feature-check.mjs"
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const rootDir = path.resolve(__dirname, '..');
-const baseUrl = process.env.WEBMCP_BASE_URL ?? 'http://127.0.0.1:4173';
-
-function pageFilePathFromSlug(slug) {
-  return path.resolve(rootDir, 'src', 'data', 'pages', `${slug}.json`);
-}
-
-function adminUrlFromSlug(slug) {
-  return `${baseUrl}/admin${slug === 'home' ? '' : `/${slug}`}`;
-}
-
-function isStringSchema(schema) {
-  if (!schema || typeof schema !== 'object') return false;
-  if (schema.type === 'string') return true;
-  if (Array.isArray(schema.anyOf)) {
-    return schema.anyOf.some((entry) => entry && typeof entry === 'object' && entry.type === 'string');
-  }
-  return false;
-}
-
-function findTopLevelStringField(sectionSchema) {
-  const properties = sectionSchema?.properties;
-  if (!properties || typeof properties !== 'object') return null;
-  const preferred = ['title', 'sectionTitle', 'label', 'headline', 'name'];
-  for (const key of preferred) {
-    if (isStringSchema(properties[key])) return key;
-  }
-  for (const [key, value] of Object.entries(properties)) {
-    if (isStringSchema(value)) return key;
-  }
-  return null;
-}
-
-async function loadPlaywright() {
-  const require = createRequire(import.meta.url);
-  try {
-    return require('playwright');
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Playwright is required for WebMCP verification. Install it before running this script. Original error: ${message}`
-    );
-  }
-}
-
-async function readPageJson(slug) {
-  const pageFilePath = pageFilePathFromSlug(slug);
-  const raw = await fs.readFile(pageFilePath, 'utf8');
-  return { raw, json: JSON.parse(raw), pageFilePath };
-}
-
-async function waitFor(predicate, timeoutMs, label) {
-  const startedAt = Date.now();
-  for (;;) {
-    const result = await predicate();
-    if (result) return result;
-    if (Date.now() - startedAt > timeoutMs) {
-      throw new Error(`Timed out while waiting for ${label}.`);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 150));
-  }
-}
-
-async function waitForFileFieldValue(slug, sectionId, fieldKey, expectedValue) {
-  await waitFor(async () => {
-    const { json } = await readPageJson(slug);
-    const section = Array.isArray(json.sections)
-      ? json.sections.find((item) => item?.id === sectionId)
-      : null;
-    return section?.data?.[fieldKey] === expectedValue;
-  }, 8_000, `file field "${fieldKey}" = "${expectedValue}"`);
-}
-
-async function ensureResponseOk(response, label) {
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`${label} failed with ${response.status}: ${text}`);
-  }
-  return response;
-}
-
-async function fetchJson(relativePath, label) {
-  const response = await ensureResponseOk(await fetch(`${baseUrl}${relativePath}`), label);
-  return response.json();
-}
-
-async function selectTarget() {
-  const siteIndex = await fetchJson('/mcp-manifest.json', 'Manifest index request');
-  const requestedSlug = typeof process.env.WEBMCP_TARGET_SLUG === 'string' && process.env.WEBMCP_TARGET_SLUG.trim()
-    ? process.env.WEBMCP_TARGET_SLUG.trim()
-    : null;
-
-  const candidatePages = requestedSlug
-    ? (siteIndex.pages ?? []).filter((page) => page?.slug === requestedSlug)
-    : (siteIndex.pages ?? []);
-
-  for (const pageEntry of candidatePages) {
-    if (!pageEntry?.slug || !pageEntry?.manifestHref || !pageEntry?.contractHref) continue;
-    const pageManifest = await fetchJson(pageEntry.manifestHref, `Page manifest request for ${pageEntry.slug}`);
-    const pageContract = await fetchJson(pageEntry.contractHref, `Page contract request for ${pageEntry.slug}`);
-    const localInstances = Array.isArray(pageContract.sectionInstances)
-      ? pageContract.sectionInstances.filter((section) => section?.scope === 'local')
-      : [];
-    const tools = Array.isArray(pageManifest.tools) ? pageManifest.tools : [];
-
-    for (const tool of tools) {
-      const sectionType = tool?.sectionType;
-      if (typeof tool?.name !== 'string' || typeof sectionType !== 'string') continue;
-      const targetInstance = localInstances.find((section) => section?.type === sectionType);
-      if (!targetInstance?.id) continue;
-      const targetFieldKey = findTopLevelStringField(pageContract.sectionSchemas?.[sectionType]);
-      if (!targetFieldKey) continue;
-      const pageState = await readPageJson(pageEntry.slug);
-      const section = Array.isArray(pageState.json.sections)
-        ? pageState.json.sections.find((item) => item?.id === targetInstance.id)
-        : null;
-      const originalValue = section?.data?.[targetFieldKey];
-      if (typeof originalValue !== 'string') continue;
-
-      return {
-        slug: pageEntry.slug,
-        manifestHref: pageEntry.manifestHref,
-        contractHref: pageEntry.contractHref,
-        toolName: tool.name,
-        sectionId: targetInstance.id,
-        fieldKey: targetFieldKey,
-        originalValue,
-        originalState: pageState,
-      };
-    }
-  }
-
-  throw new Error(
-    requestedSlug
-      ? `No valid WebMCP verification target found for page "${requestedSlug}".`
-      : 'No valid WebMCP verification target found in manifest index.'
-  );
-}
-
-async function main() {
-  const { chromium } = await loadPlaywright();
-  const target = await selectTarget();
-  const nextValue = `${target.originalValue} WebMCP ${Date.now()}`;
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-  const consoleEvents = [];
-  let mutationApplied = false;
-
-  page.on('console', (message) => {
-    if (message.type() === 'error' || message.type() === 'warning') {
-      consoleEvents.push(`[console:${message.type()}] ${message.text()}`);
-    }
-  });
-  page.on('pageerror', (error) => {
-    consoleEvents.push(`[pageerror] ${error.message}`);
-  });
-
-  const restoreOriginal = async () => {
-    try {
-      await page.evaluate(
-        async ({ toolName, slug, sectionId, fieldKey, value }) => {
-          const runtime = navigator.modelContextTesting;
-          if (!runtime?.executeTool) return;
-          await runtime.executeTool(
-            toolName,
-            JSON.stringify({
-              slug,
-              sectionId,
-              fieldKey,
-              value,
-            })
-          );
-        },
-        {
-          toolName: target.toolName,
-          slug: target.slug,
-          sectionId: target.sectionId,
-          fieldKey: target.fieldKey,
-          value: target.originalValue,
-        }
-      );
-      await waitForFileFieldValue(target.slug, target.sectionId, target.fieldKey, target.originalValue);
-    } catch {
-      await fs.writeFile(target.originalState.pageFilePath, target.originalState.raw, 'utf8');
-    }
-  };
-
-  try {
-    const pageManifest = await fetchJson(target.manifestHref, `Manifest request for ${target.slug}`);
-    if (!Array.isArray(pageManifest.tools) || !pageManifest.tools.some((tool) => tool?.name === target.toolName)) {
-      throw new Error(`Manifest does not expose ${target.toolName}.`);
-    }
-
-    const pageContract = await fetchJson(target.contractHref, `Contract request for ${target.slug}`);
-    if (!Array.isArray(pageContract.tools) || !pageContract.tools.some((tool) => tool?.name === target.toolName)) {
-      throw new Error(`Page contract does not expose ${target.toolName}.`);
-    }
-
-    await page.goto(adminUrlFromSlug(target.slug), { waitUntil: 'networkidle' });
-
-    try {
-      await page.waitForFunction(
-        ({ manifestHref, contractHref }) => {
-          const manifestLink = document.head.querySelector('link[rel="mcp-manifest"]');
-          const contractLink = document.head.querySelector('link[rel="olon-contract"]');
-          return manifestLink?.getAttribute('href') === manifestHref
-            && contractLink?.getAttribute('href') === contractHref;
-        },
-        { manifestHref: target.manifestHref, contractHref: target.contractHref },
-        { timeout: 10_000 }
-      );
-    } catch (error) {
-      const diagnostics = await page.evaluate(() => ({
-        head: document.head.innerHTML,
-        bodyText: document.body.innerText,
-      }));
-      throw new Error(
-        [
-          error instanceof Error ? error.message : String(error),
-          `head=${diagnostics.head}`,
-          `body=${diagnostics.bodyText}`,
-          ...consoleEvents,
-        ].join('\n')
-      );
-    }
-
-    const toolNames = await page.evaluate(() => {
-      const runtime = navigator.modelContextTesting;
-      return runtime?.listTools?.().map((tool) => tool.name) ?? [];
-    });
-    if (!toolNames.includes(target.toolName)) {
-      throw new Error(`Runtime did not register ${target.toolName}. Found: ${toolNames.join(', ')}`);
-    }
-
-    const rawResult = await page.evaluate(
-      async ({ toolName, slug, sectionId, fieldKey, value }) => {
-        const runtime = navigator.modelContextTesting;
-        if (!runtime?.executeTool) {
-          throw new Error('navigator.modelContextTesting.executeTool is unavailable.');
-        }
-        return runtime.executeTool(
-          toolName,
-          JSON.stringify({
-            slug,
-            sectionId,
-            fieldKey,
-            value,
-          })
-        );
-      },
-      {
-        toolName: target.toolName,
-        slug: target.slug,
-        sectionId: target.sectionId,
-        fieldKey: target.fieldKey,
-        value: nextValue,
-      }
-    );
-
-    const parsedResult = JSON.parse(rawResult);
-    if (parsedResult?.isError) {
-      throw new Error(`WebMCP tool returned an error: ${rawResult}`);
-    }
-
-    mutationApplied = true;
-    await waitForFileFieldValue(target.slug, target.sectionId, target.fieldKey, nextValue);
-    await page.frameLocator('iframe').getByText(nextValue, { exact: true }).waitFor({ state: 'attached' });
-
-    console.log(
-      JSON.stringify({
-        ok: true,
-        slug: target.slug,
-        manifestHref: target.manifestHref,
-        contractHref: target.contractHref,
-        toolName: target.toolName,
-        sectionId: target.sectionId,
-        fieldKey: target.fieldKey,
-        toolNames,
-      })
-    );
-  } finally {
-    if (mutationApplied) {
-      await restoreOriginal();
-    }
-    await browser.close();
-  }
-}
-
-main().catch((error) => {
-  console.error(error instanceof Error ? error.stack ?? error.message : String(error));
-  process.exit(1);
-});
-
-END_OF_FILE_CONTENT
-mkdir -p "specs"
-echo "Creating specs/olonjsSpecs_V.1.3.md..."
-cat << 'END_OF_FILE_CONTENT' > "specs/olonjsSpecs_V.1.3.md"
-# 📐 OlonJS Architecture Specifications v1.3
-
-**Status:** Mandatory Standard  
-**Version:** 1.3.0 (Sovereign Core Edition — Architecture + Studio/ICE UX, Path-Deterministic Nested Editing)  
-**Target:** Senior Architects / AI Agents / Enterprise Governance  
-
-**Scope v1.3:** This edition preserves the complete v1.2 architecture (MTRP, JSP, TBP, CIP, ECIP, JAP + Studio/ICE UX contract: IDAC, TOCC, BSDS, ASC, JEB + Tenant Type & Code-Generation Annex) as a **faithful superset**, and adds strict path-based/nested-array behavior for Studio selection and Inspector expansion.  
-**Scope note (breaking):** In strict v1.3 Studio semantics, the legacy flat protocol (`itemField` / `itemId`) is removed in favor of `itemPath` (root-to-leaf path segments).
-
----
-
-## 1. 📐 Modular Type Registry Pattern (MTRP) v1.2
-
-**Objective:** Establish a strictly typed, open-ended protocol for extending content data structures where the **Core Engine** is the orchestrator and the **Tenant** is the provider.
-
-### 1.1 The Sovereign Dependency Inversion
-The **Core** defines the empty `SectionDataRegistry`. The **Tenant** "injects" its specific definitions using **Module Augmentation**. This allows the Core to be distributed as a compiled NPM package while remaining aware of Tenant-specific types at compile-time.
-
-### 1.2 Technical Implementation (`@olonjs/core/kernel`)
-```typescript
-export interface SectionDataRegistry {} // Augmented by Tenant
-export interface SectionSettingsRegistry {} // Augmented by Tenant
-
-export interface BaseSection<K extends keyof SectionDataRegistry> {
-  id: string;
-  type: K;
-  data: SectionDataRegistry[K];
-  settings?: K extends keyof SectionSettingsRegistry
-    ? SectionSettingsRegistry[K]
-    : BaseSectionSettings;
-}
-
-export type Section = {
-  [K in keyof SectionDataRegistry]: BaseSection<K>
-}[keyof SectionDataRegistry];
-```
-
-**SectionType:** Core exports (or Tenant infers) **`SectionType`** as **`keyof SectionDataRegistry`**. After Tenant module augmentation, this is the union of all section type keys (e.g. `'header' | 'footer' | 'hero' | ...`). The Tenant uses this type for the ComponentRegistry and SECTION_SCHEMAS keys.
-
-**Perché servono:** Il Core deve poter renderizzare section senza conoscere i tipi concreti a compile-time; il Tenant deve poter aggiungere nuovi tipi senza modificare il Core. I registry vuoti + module augmentation permettono di distribuire Core come pacchetto NPM e mantenere type-safety end-to-end (Section, registry, config). Senza MTRP, ogni nuovo tipo richiederebbe cambi nel Core o tipi deboli (`any`).
-
----
-
-## 2. 📐 JsonPages Site Protocol (JSP) v1.8
-
-**Objective:** Define the deterministic file system and the **Sovereign Projection Engine** (CLI).
-
-### 2.1 The File System Ontology (The Silo Contract)
-Every site must reside in an isolated directory. Global Governance is physically separated from Local Content.
-*   **`/config/site.json`** — Global Identity & Reserved System Blocks (Header/Footer). See Appendix A for typed shape.
-*   **`/config/menu.json`** — Navigation Tree (SSOT for System Header). See Appendix A.
-*   **`/config/theme.json`** — Theme tokens (optional but recommended). See Appendix A.
-*   **`/pages/[slug].json`** — Local Body Content per page. See Appendix A (PageConfig).
-
-**Application path convention:** The runtime app typically imports these via an alias (e.g. **`@/data/config/`** and **`@/data/pages/`**). The physical silo may be `src/data/config/` and `src/data/pages/` so that `site.json`, `menu.json`, `theme.json` live under `src/data/config/`, and page JSONs under `src/data/pages/`. The CLI or projection script may use `/config/` and `/pages/` at repo root; the **contract** is that the app receives **siteConfig**, **menuConfig**, **themeConfig**, and **pages** as defined in JEB (§10) and Appendix A.
-
-### 2.2 Deterministic Projection (CLI Workflow)
-The CLI (`@olonjs/cli`) creates new tenants by:
-1.  **Infra Projection:** Generating `package.json`, `tsconfig.json`, and `vite.config.ts` (The Shell).
-2.  **Source Projection:** Executing a deterministic script (`src_tenant_alpha.sh`) to reconstruct the `src` folder (The DNA).
-3.  **Dependency Resolution:** Enforcing specific versions of React, Radix, and Tailwind v4.
-
-**Perché servono:** Una struttura file deterministica (config vs pages) separa governance globale (site, menu, theme) dal contenuto per pagina; il CLI può rigenerare tenant e tooling può trovare dati e schemi sempre negli stessi path. Senza JSP, ogni tenant sarebbe una struttura ad hoc e ingestione/export/Bake sarebbero fragili.
-
----
-
-## 3. 🧱 Tenant Block Protocol (TBP) v1.0
-
-**Objective:** Standardize the "Capsule" structure for components to enable automated ingestion (Pull) by the SaaS.
-
-### 3.1 The Atomic Capsule Structure
-Components are self-contained directories under **`src/components/<sectionType>/`**:
-*   **`View.tsx`** — The pure React component (Dumb View). Props: see Appendix A (SectionComponentPropsMap).
-*   **`schema.ts`** — Zod schema(s) for the **data** contract (and optionally **settings**). Exports at least one schema (e.g. `HeroSchema`) used as the **data** schema for that type. Must extend BaseSectionData (§8) for data; array items must extend BaseArrayItem (§8).
-*   **`types.ts`** — TypeScript interfaces inferred from the schema (e.g. `HeroData`, `HeroSettings`). Export types with names **`<SectionType>Data`** and **`<SectionType>Settings`** (or equivalent) so the Tenant can aggregate them in a single types module.
-*   **`index.ts`** — Public API: re-exports View, schema(s), and types.
-
-### 3.2 Reserved System Types
-*   **`type: 'header'`** — Reserved for `site.json`. Receives **`menu: MenuItem[]`** in addition to `data` and `settings`. Menu is sourced from `menu.json` (see Appendix A). The Tenant **must** type `SectionComponentPropsMap['header']` as `{ data: HeaderData; settings?: HeaderSettings; menu: MenuItem[] }`.
-*   **`type: 'footer'`** — Reserved for `site.json`. Props: `{ data: FooterData; settings?: FooterSettings }` only (no `menu`).
-*   **`type: 'sectionHeader'`** — A standard local block. Must define its own `links` array in its local schema if used.
-
-**Perché servono:** La capsula (View + schema + types + index) è l’unità di estensione: il Core e il Form Factory possono scoprire tipi e contratti per tipo senza convenzioni ad hoc. Header/footer riservati evitano conflitti tra globale e locale. Senza TBP, aggregazione di SECTION_SCHEMAS e registry sarebbe incoerente e l’ingestion da SaaS non sarebbe automatizzabile.
-
----
-
-## 4. 🧱 Component Implementation Protocol (CIP) v1.5
-
-**Objective:** Ensure system-wide stability and Admin UI integrity.
-
-1.  **The "Sovereign View" Law:** Components receive `data` and `settings` (and `menu` for header only) and return JSX. They are metadata-blind (never import Zod schemas).
-2.  **Z-Index Neutrality:** Components must not use `z-index > 1`. Layout delegation (sticky/fixed) is managed by the `SectionRenderer`.
-3.  **Agnostic Asset Protocol:** Use `resolveAssetUrl(path, tenantId)` for all media. Resolved URLs are under **`/assets/...`** with no tenantId segment in the path (e.g. relative `img/hero.jpg` → `/assets/img/hero.jpg`).
-
-### 4.4 Local Design Tokens (v1.2)
-Section Views that control their own background, text, borders, or radii **shall** define a **local scope** via an inline `style` object on the section root: e.g. `--local-bg`, `--local-text`, `--local-text-muted`, `--local-surface`, `--local-border`, `--local-radius-lg`, `--local-accent`, mapped to theme variables. All Tailwind classes that affect color or radius in that section **must** use these variables (e.g. `bg-[var(--local-bg)]`, `text-[var(--local-text)]`). No naked utilities (e.g. `bg-blue-500`). An optional **`label`** in section data may be rendered with class **`jp-section-label`** for overlay type labels.
-
-### 4.5 Z-Index & Overlay Governance (v1.2)
-Section content root **must** stay at **`z-index` ≤ 1** (prefer `z-0`) so the Sovereign Overlay can sit above with high z-index in Tenant CSS (§7). Header/footer may use a higher z-index (e.g. 50) only as a documented exception for global chrome.
-
-**Perché servono (CIP):** View “dumb” (solo data/settings) e senza import di Zod evita accoppiamento e permette al Form Factory di essere l’unica fonte di verità sugli schemi. Z-index basso evita che il contenuto copra l’overlay di selezione in Studio. Asset via `resolveAssetUrl`: i path relativi vengono risolti in `/assets/...` (senza segmento tenantId nel path). Token locali (`--local-*`) rendono le section temabili e coerenti con overlay e tema; senza, stili “nudi” creano drift visivo e conflitti con l’UI di editing.
-
----
-
-## 5. 🛠️ Editor Component Implementation Protocol (ECIP) v1.5
-
-**Objective:** Standardize the Polymorphic ICE engine.
-
-1.  **Recursive Form Factory:** The Admin UI builds forms by traversing the Zod ontology.
-2.  **UI Metadata:** Use `.describe('ui:[widget]')` in schemas to pass instructions to the Form Factory.
-3.  **Deterministic IDs:** Every object in a `ZodArray` must extend `BaseArrayItem` (containing an `id`) to ensure React reconciliation stability during reordering.
-
-### 5.4 UI Metadata Vocabulary (v1.2)
-Standard keys for the Form Factory:
-
-| Key | Use case |
-|-----|----------|
-| `ui:text` | Single-line text input. |
-| `ui:textarea` | Multi-line text. |
-| `ui:select` | Enum / single choice. |
-| `ui:number` | Numeric input. |
-| `ui:list` | Array of items; list editor (add/remove/reorder). |
-| `ui:icon-picker` | Icon selection. |
-
-Unknown keys may be treated as `ui:text`. Array fields must use `BaseArrayItem` for items.
-
-### 5.5 Path-Only Nested Selection & Expansion (v1.3, breaking)
-In strict v1.3 Studio/Inspector behavior, nested editing targets are represented by **path segments from root to leaf**.
-
-```typescript
-export type SelectionPathSegment = { fieldKey: string; itemId?: string };
-export type SelectionPath = SelectionPathSegment[];
-```
-
-Rules:
-*   Expansion and focus for nested arrays **must** be computed from `SelectionPath` (root → leaf), not from a single flat pair.
-*   Matching by `fieldKey` alone is non-compliant for nested structures.
-*   Legacy flat payload fields **`itemField`** and **`itemId`** are removed from strict v1.3 selection protocol.
-
-**Perché servono (ECIP):** Il Form Factory deve sapere quale widget usare (text, textarea, select, list, …) senza hardcodare per tipo; `.describe('ui:...')` è il contratto. BaseArrayItem con `id` su ogni item di array garantisce chiavi stabili in React e reorder/delete corretti nell’Inspector. In v1.3 la selezione/espansione path-only elimina ambiguità su array annidati: senza path completo root→leaf, la sidebar può aprire il ramo sbagliato o non aprire il target.
-
----
-
-## 6. 🎯 ICE Data Attribute Contract (IDAC) v1.1
-
-**Objective:** Mandatory data attributes so the Stage (iframe) and Inspector can bind selection and field/item editing without coupling to Tenant DOM.
-
-### 6.1 Section-Level Markup (Core-Provided)
-**SectionRenderer** (Core) wraps each section root with:
-*   **`data-section-id`** — Section instance ID (e.g. UUID). On the wrapper that contains content + overlay.
-*   Sibling overlay element **`data-jp-section-overlay`** — Selection ring and type label. **Tenant does not add this;** Core injects it.
-
-Tenant Views render the **content** root only (e.g. `<section>` or `<div>`), placed **inside** the Core wrapper.
-
-### 6.2 Field-Level Binding (Tenant-Provided)
-For every **editable scalar field** the View **must** attach **`data-jp-field="<fieldKey>"`** (key matches schema path: e.g. `title`, `description`, `sectionTitle`, `label`).
-
-### 6.3 Array-Item Binding (Tenant-Provided)
-For every **editable array item** the View **must** attach:
-*   **`data-jp-item-id="<stableId>"`** — Prefer `item.id`; fallback e.g. `legacy-${index}` only outside strict mode.
-*   **`data-jp-item-field="<arrayKey>"`** — e.g. `cards`, `layers`, `products`, `paragraphs`.
-
-### 6.4 Compliance
-**Reserved types** (`header`, `footer`): ICE attributes optional unless Studio edits them. **All other section types** in the Stage and in `SECTION_SCHEMAS` **must** implement §6.2 and §6.3 for every editable field and array item.
-
-### 6.5 Strict Path Extraction for Nested Arrays (v1.3, breaking)
-For nested array targets, the Core/Inspector contract is path-based:
-*   The runtime selection target is expressed as `itemPath: SelectionPath` (root → leaf).
-*   Flat identity (`itemField` + `itemId`) is not sufficient for nested structures and is removed in strict v1.3 payloads.
-*   In strict mode, index-based identity fallback is non-compliant for editable object arrays.
-
-**Perché servono (IDAC):** Lo Stage è in un iframe e l’Inspector deve sapere **quale campo o item** corrisponde al click (o alla selezione) senza conoscere la struttura DOM del Tenant. **`data-jp-field`** associa un nodo DOM al path dello schema (es. `title`, `description`): così il Core può evidenziare la riga giusta nella sidebar, applicare opacità attivo/inattivo e aprire il form sul campo corretto. **`data-jp-item-id`** e **`data-jp-item-field`** fanno lo stesso per gli item di array (liste, reorder, delete). In v1.3, `itemPath` rende deterministico anche il caso nested (array dentro array), eliminando mismatch tra selezione canvas e ramo aperto in sidebar.
-
----
-
-## 7. 🎨 Tenant Overlay CSS Contract (TOCC) v1.0
-
-**Objective:** The Stage iframe loads only Tenant HTML/CSS. Core injects overlay **markup** but does **not** ship overlay styles. The Tenant **must** supply CSS so overlay is visible.
-
-### 7.1 Required Selectors (Tenant global CSS)
-1. **`[data-jp-section-overlay]`** — `position: absolute; inset: 0`; `pointer-events: none`; base state transparent.
-2. **`[data-section-id]:hover [data-jp-section-overlay]`** — Hover: e.g. dashed border, subtle tint.
-3. **`[data-section-id][data-jp-selected] [data-jp-section-overlay]`** — Selected: solid border, optional tint.
-4. **`[data-jp-section-overlay] > div`** (type label) — Position and visibility (e.g. visible on hover/selected).
-
-### 7.2 Z-Index
-Overlay **z-index** high (e.g. 9999). Section content at or below CIP limit (§4.5).
-
-### 7.3 Responsibility
-**Core:** Injects wrapper and overlay DOM; sets `data-jp-selected`. **Tenant:** All overlay **visual** rules.
-
-**Perché servono (TOCC):** L’iframe dello Stage carica solo HTML/CSS del Tenant; il Core inietta il markup dell’overlay ma non gli stili. Senza CSS Tenant per i selettori TOCC, bordo hover/selected e type label non sarebbero visibili: l’autore non vedrebbe quale section è selezionata né il label del tipo. TOCC chiarisce la responsabilità (Core = markup, Tenant = aspetto) e garantisce UX uniforme tra tenant.
-
----
-
-## 8. 📦 Base Section Data & Settings (BSDS) v1.0
-
-**Objective:** Standardize base schema fragments for anchors, array items, and section settings.
-
-### 8.1 BaseSectionData
-Every section data schema **must** extend a base with at least **`anchorId`** (optional string). Canonical Zod (Tenant `lib/base-schemas.ts` or equivalent):
-
-```typescript
-export const BaseSectionData = z.object({
-  anchorId: z.string().optional().describe('ui:text'),
-});
-```
-
-### 8.2 BaseArrayItem
-Every array item schema editable in the Inspector **must** include **`id`** (optional string minimum). Canonical Zod:
-
-```typescript
-export const BaseArrayItem = z.object({
-  id: z.string().optional(),
-});
-```
-
-Recommended: required UUID for new items. Used by `data-jp-item-id` and React reconciliation.
-
-### 8.3 BaseSectionSettings (Optional)
-Common section-level settings. Canonical Zod (name **BaseSectionSettingsSchema** or as exported by Core):
-
-```typescript
-export const BaseSectionSettingsSchema = z.object({
-  paddingTop: z.enum(['none', 'sm', 'md', 'lg', 'xl', '2xl']).default('md').describe('ui:select'),
-  paddingBottom: z.enum(['none', 'sm', 'md', 'lg', 'xl', '2xl']).default('md').describe('ui:select'),
-  theme: z.enum(['dark', 'light', 'accent']).default('dark').describe('ui:select'),
-  container: z.enum(['boxed', 'fluid']).default('boxed').describe('ui:select'),
-});
-```
-
-Capsules may extend this for type-specific settings. Core may export **BaseSectionSettings** as the TypeScript type inferred from this or a superset.
-
-**Perché servono (BSDS):** anchorId permette deep-link e navigazione in-page; id sugli array item è necessario per `data-jp-item-id`, reorder e React reconciliation. BaseSectionSettings comuni (padding, theme, container) evitano ripetizione e allineano il Form Factory tra capsule. Senza base condivisi, ogni capsule inventa convenzioni e validazione/add-section diventano fragili.
-
----
-
-## 9. 📌 AddSectionConfig (ASC) v1.0
-
-**Objective:** Formalize the "Add Section" contract used by the Studio.
-
-**Type (Core exports `AddSectionConfig`):**
-```typescript
-interface AddSectionConfig {
-  addableSectionTypes: readonly string[];
-  sectionTypeLabels: Record<string, string>;
-  getDefaultSectionData(sectionType: string): Record<string, unknown>;
-}
-```
-
-**Shape:** Tenant provides one object (e.g. `addSectionConfig`) with:
-*   **`addableSectionTypes`** — Readonly array of section type keys. Only these types appear in the Add Section Library. Must be a subset of (or equal to) the keys in SectionDataRegistry.
-*   **`sectionTypeLabels`** — Map type key → display string (e.g. `{ hero: 'Hero', 'cta-banner': 'CTA Banner' }`).
-*   **`getDefaultSectionData(sectionType: string): Record<string, unknown>`** — Returns default `data` for a new section. Must conform to the capsule’s data schema so the new section validates.
-
-Core creates a new section with deterministic UUID, `type`, and `data` from `getDefaultSectionData(type)`.
-
-**Perché servono (ASC):** Lo Studio deve mostrare una libreria “Aggiungi sezione” con nomi leggibili e, alla scelta, creare una section con dati iniziali validi. addableSectionTypes, sectionTypeLabels e getDefaultSectionData sono il contratto: il Tenant è l’unica fonte di verità su quali tipi sono addabili e con quali default. Senza ASC, il Core non saprebbe cosa mostrare in modal né come popolare i dati della nuova section.
-
----
-
-## 10. ⚙️ JsonPagesConfig & Engine Bootstrap (JEB) v1.1
-
-**Objective:** Bootstrap contract between Tenant app and `@olonjs/core`.
-
-### 10.1 JsonPagesConfig (required fields)
-The Tenant passes a single **config** object to **JsonPagesEngine**. Required fields:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| **tenantId** | string | Passed to `resolveAssetUrl(path, tenantId)`; resolved asset URLs are **`/assets/...`** with no tenantId segment in the path. |
-| **registry** | `{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }` | Component registry. Must match MTRP keys. See Appendix A. |
-| **schemas** | `Record<SectionType, ZodType>` or equivalent | SECTION_SCHEMAS: type → **data** Zod schema. Form Factory uses this. See Appendix A. |
-| **pages** | `Record<string, PageConfig>` | Slug → page config. See Appendix A. |
-| **siteConfig** | SiteConfig | Global site (identity, header/footer blocks). See Appendix A. |
-| **themeConfig** | ThemeConfig | Theme tokens. See Appendix A. |
-| **menuConfig** | MenuConfig | Navigation tree (SSOT for header menu). See Appendix A. |
-| **themeCss** | `{ tenant: string }` | At least **tenant**: string (inline CSS or URL) for Stage iframe injection. |
-| **addSection** | AddSectionConfig | Add-section config (§9). |
-
-Core may define optional fields. The Tenant must not omit required fields.
-
-### 10.2 JsonPagesEngine
-Root component: **`<JsonPagesEngine config={config} />`**. Responsibilities: route → page, SectionRenderer per section; in Studio mode Sovereign Shell (Inspector, Control Bar, postMessage); section wrappers and overlay per IDAC and JAP. Tenant does not implement the Shell.
-
-### 10.3 Studio Selection Event Contract (v1.3, breaking)
-In strict v1.3 Studio, section selection payload for nested targets is path-based:
-
-```typescript
-type SectionSelectMessage = {
-  type: 'SECTION_SELECT';
-  section: { id: string; type: string; scope: 'global' | 'local' };
-  itemPath?: SelectionPath; // root -> leaf
-};
-```
-
-Removed from strict protocol:
-*   `itemField`
-*   `itemId`
-
-**Perché servono (JEB):** Un unico punto di bootstrap (config + Engine) evita che il Tenant replichi logica di routing, Shell e overlay. I campi obbligatori in JsonPagesConfig (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss, addSection) sono il minimo per far funzionare rendering, Studio e Form Factory; omissioni causano errori a runtime. In v1.3, il payload `itemPath` sincronizza in modo non ambiguo Stage e Inspector su nested arrays.
-
----
-
-# 🏛️ OlonJS_ADMIN_PROTOCOL (JAP) v1.2
-
-**Status:** Mandatory Standard  
-**Version:** 1.2.0 (Sovereign Shell Edition — Path/Nested Strictness)  
-**Objective:** Deterministic orchestration of the "Studio" environment (ICE Level 1).
-
----
-
-## 1. The Sovereign Shell Topology
-The Admin interface is a **Sovereign Shell** from `@olonjs/core`.
-1.  **The Stage (Canvas):** Isolated Iframe; postMessage for data updates and selection mirroring. Section markup follows **IDAC** (§6); overlay styling follows **TOCC** (§7).
-2.  **The Inspector (Sidebar):** Consumes Tenant Zod schemas to generate editors; binding via `data-jp-field` and `data-jp-item-*`.
-3.  **The Studio Actions:** Save to file, Hot Save, Add Section.
-
-## 2. State Orchestration & Persistence
-*   **Working Draft:** Reactive local state for unsaved changes.
-*   **Sync Law:** Inspector changes → Working Draft → Stage via `STUDIO_EVENTS.UPDATE_DRAFTS`.
-*   **Persistence Protocol:** Studio invokes tenant-provided `saveToFile` and `hotSave` callbacks for editorial persistence.
-
-## 3. Context Switching (Global vs. Local)
-*   **Header/Footer** selection → Global Mode, `site.json`.
-*   Any other section → Page Mode, current `[slug].json`.
-
-## 4. Section Lifecycle Management
-1.  **Add Section:** Modal from Tenant `SECTION_SCHEMAS`; UUID + default data via **AddSectionConfig** (§9).
-2.  **Reorder:** Inspector or Stage Overlay; array mutation in Working Draft.
-3.  **Delete:** Confirmation; remove from array, clear selection.
-
-## 5. Stage Isolation & Overlay
-*   **CSS Shielding:** Stage in Iframe; Tenant CSS does not leak into Admin.
-*   **Sovereign Overlay:** Selection ring and type labels injected per **IDAC** (§6); Tenant styles them per **TOCC** (§7).
-
-## 6. "Green Build" Validation
-Studio enforces `tsc && vite build`. No Studio or SSG build should proceed with TypeScript errors.
-
-## 7. Path-Deterministic Selection & Sidebar Expansion (v1.3, breaking)
-*   Section/item focus synchronization uses `itemPath` (root → leaf), not flat `itemField/itemId`.
-*   Sidebar expansion state for nested arrays must be derived from all path segments.
-*   Flat-only matching may open/close wrong branches and is non-compliant in strict mode.
-
-**Perché servono (JAP):** Stage in iframe + Inspector + Studio actions separano il contesto di editing dal sito; postMessage e Working Draft permettono modifiche senza toccare subito i file. Save to file e Hot Save richiedono uno stato coerente. Global vs Page mode evita confusione su dove si sta editando (site.json vs [slug].json). Add/Reorder/Delete sono gestiti in un solo modo (Working Draft + ASC). Green Build garantisce che Studio e SSG compilino correttamente. In v1.3, il path completo elimina ambiguità nella sincronizzazione Stage↔Sidebar su strutture annidate.
-
----
-
-## Compliance: Legacy vs Full UX (v1.3)
-
-| Dimension | Legacy / Less UX | Full UX (Core-aligned) |
-|-----------|-------------------|-------------------------|
-| **ICE binding** | No `data-jp-*`; Inspector cannot bind. | IDAC (§6) on every editable section/field/item. |
-| **Section wrapper** | Plain `<section>`; no overlay contract. | Core wrapper + overlay; Tenant CSS per TOCC (§7). |
-| **Design tokens** | Raw BEM / fixed classes. | Local tokens (§4.4); `var(--local-*)` only. |
-| **Base schemas** | Ad hoc. | BSDS (§8): BaseSectionData, BaseArrayItem, BaseSectionSettings. |
-| **Add Section** | Ad hoc defaults. | ASC (§9): addableSectionTypes, labels, getDefaultSectionData. |
-| **Bootstrap** | Implicit. | JEB (§10): JsonPagesConfig + JsonPagesEngine. |
-| **Selection payload** | Flat `itemField/itemId`. | Path-only `itemPath: SelectionPath` (JEB §10.3). |
-| **Nested array expansion** | Single-segment or field-only heuristics. | Root-to-leaf path expansion (ECIP §5.5, JAP §7). |
-| **Array item identity (strict)** | Index fallback tolerated. | Stable `id` required for editable object arrays. |
-
-**Rule:** Every page section (non-header/footer) that appears in the Stage and in `SECTION_SCHEMAS` must comply with §6, §7, §4.4, §8, §9, §10 for full Studio UX.
-
----
-
-## Summary of v1.3 Additions
-
-| § | Title | Purpose |
-|---|--------|--------|
-| 5.5 | Path-Only Nested Selection & Expansion | ECIP: root→leaf `SelectionPath`; remove flat matching in strict mode. |
-| 6.5 | Strict Path Extraction for Nested Arrays | IDAC: path-based nested targeting; no strict flat fallback. |
-| 10.3 | Studio Selection Event Contract | JEB: `SECTION_SELECT` uses `itemPath`; remove `itemField/itemId`. |
-| JAP §7 | Path-Deterministic Selection & Sidebar Expansion | Studio state synchronization for nested arrays. |
-| Compliance | Legacy vs Full UX (v1.3) | Explicit breaking delta for flat protocol removal and strict IDs. |
-| **Appendix A.6** | **v1.3 Path/Nested Strictness Addendum** | Type/export and migration checklist for path-only protocol. |
-
----
-
-# Appendix A — Tenant Type & Code-Generation Annex
-
-**Objective:** Make the specification **sufficient** to generate or audit a full tenant (new site, new components, new data) without a reference codebase. Defines TypeScript types, JSON shapes, schema contract, file paths, and integration pattern.
-
-**Status:** Mandatory for code-generation and governance. Compliance ensures generated tenants are typed and wired like the reference implementation.
-
----
-
-## A.1 Core-Provided Types (from `@olonjs/core`)
-
-The following are assumed to be exported by Core. The Tenant augments **SectionDataRegistry** and **SectionSettingsRegistry**; all other types are consumed as-is.
-
-| Type | Description |
-|------|-------------|
-| **SectionType** | `keyof SectionDataRegistry` (after Tenant augmentation). Union of all section type keys. |
-| **Section** | Union of `BaseSection<K>` for all K in SectionDataRegistry. See MTRP §1.2. |
-| **BaseSectionSettings** | Optional base type for section settings (may align with BSDS §8.3). |
-| **MenuItem** | Navigation item. **Minimum shape:** `{ label: string; href: string }`. Core may extend (e.g. `children?: MenuItem[]`). |
-| **AddSectionConfig** | See §9. |
-| **JsonPagesConfig** | See §10.1. |
-
-**Perché servono (A.1):** Il Tenant deve conoscere i tipi esportati dal Core (SectionType, MenuItem, AddSectionConfig, JsonPagesConfig) per tipizzare registry, config e augmentation senza dipendere da implementazioni interne.
-
----
-
-## A.2 Tenant-Provided Types (single source: `src/types.ts` or equivalent)
-
-The Tenant **must** define the following in one module (e.g. **`src/types.ts`**). This module **must** perform the **module augmentation** of `@olonjs/core` for **SectionDataRegistry** and **SectionSettingsRegistry**, and **must** export **SectionComponentPropsMap** and re-export from `@olonjs/core` so that **SectionType** is available after augmentation.
-
-### A.2.1 SectionComponentPropsMap
-
-Maps each section type to the props of its React component. **Header** is the only type that receives **menu**.
-
-**Option A — Explicit (recommended for clarity and tooling):** For each section type K, add one entry. Header receives **menu**.
-
-```typescript
-import type { MenuItem } from '@olonjs/core';
-// Import Data/Settings from each capsule.
-
-export type SectionComponentPropsMap = {
-  'header': { data: HeaderData; settings?: HeaderSettings; menu: MenuItem[] };
-  'footer': { data: FooterData; settings?: FooterSettings };
-  'hero': { data: HeroData; settings?: HeroSettings };
-  // ... one entry per SectionType, e.g. 'feature-grid', 'cta-banner', etc.
-};
-```
-
-**Option B — Mapped type (DRY, requires SectionDataRegistry/SectionSettingsRegistry in scope):**
-
-```typescript
-import type { MenuItem } from '@olonjs/core';
-
-export type SectionComponentPropsMap = {
-  [K in SectionType]: K extends 'header'
-    ? { data: SectionDataRegistry[K]; settings?: SectionSettingsRegistry[K]; menu: MenuItem[] }
-    : { data: SectionDataRegistry[K]; settings?: K extends keyof SectionSettingsRegistry ? SectionSettingsRegistry[K] : BaseSectionSettings };
-};
-```
-
-SectionType is imported from Core (after Tenant augmentation). In practice Option A is the reference pattern; Option B is valid if the Tenant prefers a single derived definition.
-
-**Perché servono (A.2):** SectionComponentPropsMap e i tipi di config (PageConfig, SiteConfig, MenuConfig, ThemeConfig) definiscono il contratto tra dati (JSON, API) e componente; l’augmentation è l’unico modo per estendere i registry del Core senza fork. Senza questi tipi, generazione tenant e refactor sarebbero senza guida e il type-check fallirebbe.
-
-### A.2.2 ComponentRegistry type
-
-The registry object **must** be typed as:
-
-```typescript
-import type { SectionType } from '@olonjs/core';
-import type { SectionComponentPropsMap } from '@/types';
-
-export const ComponentRegistry: {
-  [K in SectionType]: React.FC<SectionComponentPropsMap[K]>;
-} = { /* ... */ };
-```
-
-File: **`src/lib/ComponentRegistry.tsx`** (or equivalent). Imports one View per section type and assigns it to the corresponding key.
-
-### A.2.3 PageConfig
-
-Minimum shape for a single page (used in **pages** and in each **`[slug].json`**):
-
-```typescript
-export interface PageConfig {
-  id?: string;
-  slug: string;
-  meta?: {
-    title?: string;
-    description?: string;
-  };
-  sections: Section[];
-}
-```
-
-**Section** is the union type from MTRP (§1.2). Each element of **sections** has **id**, **type**, **data**, **settings** and conforms to the capsule schemas.
-
-### A.2.4 SiteConfig
-
-Minimum shape for **site.json** (and for **siteConfig** in JsonPagesConfig):
-
-```typescript
-export interface SiteConfigIdentity {
-  title?: string;
-  logoUrl?: string;
-}
-
-export interface SiteConfig {
-  identity?: SiteConfigIdentity;
-  pages?: Array<{ slug: string; label: string }>;
-  header: {
-    id: string;
-    type: 'header';
-    data: HeaderData;
-    settings?: HeaderSettings;
-  };
-  footer: {
-    id: string;
-    type: 'footer';
-    data: FooterData;
-    settings?: FooterSettings;
-  };
-}
-```
-
-**HeaderData**, **FooterData**, **HeaderSettings**, **FooterSettings** are the types exported from the header and footer capsules.
-
-### A.2.5 MenuConfig
-
-Minimum shape for **menu.json** (and for **menuConfig** in JsonPagesConfig). Structure is tenant-defined; Core expects the header to receive **MenuItem[]**. Common pattern: an object with a key (e.g. **main**) whose value is **MenuItem[]**.
-
-```typescript
-export interface MenuConfig {
-  main?: MenuItem[];
-  [key: string]: MenuItem[] | undefined;
-}
-```
-
-Or simply **`MenuItem[]`** if the app uses a single flat list. The Tenant must ensure that the value passed to the header component as **menu** conforms to **MenuItem[]** (e.g. `menuConfig.main` or `menuConfig` if it is the array).
-
-### A.2.6 ThemeConfig
-
-Minimum shape for **theme.json** (and for **themeConfig** in JsonPagesConfig). Tenant-defined; typically tokens for colors, typography, radius.
-
-```typescript
-export interface ThemeConfig {
-  name?: string;
-  tokens?: {
-    colors?: Record<string, string>;
-    typography?: Record<string, string | Record<string, string>>;
-    borderRadius?: Record<string, string>;
-  };
-  [key: string]: unknown;
-}
-```
-
----
-
-## A.3 Schema Contract (SECTION_SCHEMAS)
-
-**Location:** **`src/lib/schemas.ts`** (or equivalent).
-
-**Contract:**
-*   **SECTION_SCHEMAS** is a **single object** whose keys are **SectionType** and whose values are **Zod schemas for the section data** (not settings, unless the Form Factory contract expects a combined or per-type settings schema; then each value may be the data schema only, and settings may be defined per capsule and aggregated elsewhere if needed).
-*   The Tenant **must** re-export **BaseSectionData**, **BaseArrayItem**, and optionally **BaseSectionSettingsSchema** from **`src/lib/base-schemas.ts`** (or equivalent). Each capsule’s data schema **must** extend BaseSectionData; each array item schema **must** extend or include BaseArrayItem.
-*   **SECTION_SCHEMAS** is typed as **`Record<SectionType, ZodType>`** or **`{ [K in SectionType]: ZodType }`** so that keys match the registry and SectionDataRegistry.
-
-**Export:** The app imports **SECTION_SCHEMAS** and passes it as **config.schemas** to JsonPagesEngine. The Form Factory traverses these schemas to build editors.
-
-**Perché servono (A.3):** Un unico oggetto SECTION_SCHEMAS con chiavi = SectionType e valori = schema data permette al Form Factory di costruire form per tipo senza convenzioni ad hoc; i base schema garantiscono anchorId e id su item. Senza questo contratto, l’Inspector non saprebbe quali campi mostrare né come validare.
-
----
-
-## A.4 File Paths & Data Layout
-
-| Purpose | Path (conventional) | Description |
-|---------|---------------------|-------------|
-| Site config | **`src/data/config/site.json`** | SiteConfig (identity, header, footer, pages list). |
-| Menu config | **`src/data/config/menu.json`** | MenuConfig (e.g. main nav). |
-| Theme config | **`src/data/config/theme.json`** | ThemeConfig (tokens). |
-| Page data | **`src/data/pages/<slug>.json`** | One file per page; content is PageConfig (slug, meta, sections). |
-| Base schemas | **`src/lib/base-schemas.ts`** | BaseSectionData, BaseArrayItem, BaseSectionSettingsSchema. |
-| Schema aggregate | **`src/lib/schemas.ts`** | SECTION_SCHEMAS; re-exports base schemas. |
-| Registry | **`src/lib/ComponentRegistry.tsx`** | ComponentRegistry object. |
-| Add-section config | **`src/lib/addSectionConfig.ts`** | addSectionConfig (AddSectionConfig). |
-| Tenant types & augmentation | **`src/types.ts`** | SectionComponentPropsMap, PageConfig, SiteConfig, MenuConfig, ThemeConfig; **declare module '@olonjs/core'** for SectionDataRegistry and SectionSettingsRegistry; re-export from Core. |
-| Bootstrap | **`src/App.tsx`** | Imports config (site, theme, menu, pages), registry, schemas, addSection, themeCss; builds JsonPagesConfig; renders **<JsonPagesEngine config={config} />**. |
-
-The app entry (e.g. **main.tsx**) renders **App**. No other bootstrap contract is specified; the Tenant may use Vite aliases (e.g. **@/**) for the paths above.
-
-**Perché servono (A.4):** Path fissi (data/config, data/pages, lib/schemas, types.ts, App.tsx) permettono a CLI, tooling e agenti di trovare sempre gli stessi file; l’onboarding e la generazione da spec sono deterministici. Senza convenzione, ogni tenant sarebbe una struttura diversa.
-
----
-
-## A.5 Integration Checklist (Code-Generation)
-
-When generating or auditing a tenant, ensure the following in order:
-
-1. **Capsules** — For each section type, create **`src/components/<type>/`** with View.tsx, schema.ts, types.ts, index.ts. Data schema extends BaseSectionData; array items extend BaseArrayItem; View complies with CIP and IDAC (§6.2–6.3 for non-reserved types).
-2. **Base schemas** — **src/lib/base-schemas.ts** exports BaseSectionData, BaseArrayItem, BaseSectionSettingsSchema (and optional CtaSchema or similar shared fragments).
-3. **types.ts** — Define SectionComponentPropsMap (header with **menu**), PageConfig, SiteConfig, MenuConfig, ThemeConfig; **declare module '@olonjs/core'** and augment SectionDataRegistry and SectionSettingsRegistry; re-export from `@olonjs/core`.
-4. **ComponentRegistry** — Import every View; build object **{ [K in SectionType]: ViewComponent }**; type as **{ [K in SectionType]: React.FC<SectionComponentPropsMap[K]> }**.
-5. **schemas.ts** — Import base schemas and each capsule’s data schema; export SECTION_SCHEMAS as **{ [K in SectionType]: SchemaK }**; export SectionType as **keyof typeof SECTION_SCHEMAS** if not using Core’s SectionType.
-6. **addSectionConfig** — addableSectionTypes, sectionTypeLabels, getDefaultSectionData; export as AddSectionConfig.
-7. **App.tsx** — Import site, theme, menu, pages from data paths; build config (tenantId, registry, schemas, pages, siteConfig, themeConfig, menuConfig, themeCss: { tenant }, addSection); render JsonPagesEngine.
-8. **Data files** — Create or update site.json, menu.json, theme.json, and one or more **<slug>.json** under the paths in A.4. Ensure JSON shapes match SiteConfig, MenuConfig, ThemeConfig, PageConfig.
-9. **Tenant CSS** — Include TOCC (§7) selectors in global CSS so the Stage overlay is visible.
-10. **Reserved types** — Header and footer capsules receive props per SectionComponentPropsMap; menu is populated from menuConfig (e.g. menuConfig.main) when building the config or inside Core when rendering the header.
-
-**Perché servono (A.5):** La checklist in ordine evita di dimenticare passi (es. augmentation prima del registry, TOCC dopo le View) e rende la spec sufficiente per generare o verificare un tenant senza codebase di riferimento.
-
----
-
-## A.6 v1.3 Path/Nested Strictness Addendum (breaking)
-
-This addendum extends Appendix A without removing prior v1.2 obligations:
-
-1. **Type exports** — Core and/or shared types module should expose `SelectionPathSegment` and `SelectionPath` for Studio messaging and Inspector expansion logic.
-2. **Protocol migration** — Replace flat payload fields `itemField` / `itemId` with `itemPath?: SelectionPath` in strict v1.3 channels.
-3. **Nested array compliance** — For editable object arrays, item identity must be stable (`id`) and propagated to DOM attributes (`data-jp-item-id`), schema items (BaseArrayItem), and selection path segments (`itemId` when segment targets array item).
-4. **Backward compatibility policy** — Legacy flat fields may exist only in transitional adapters outside strict mode; normative v1.3 contract is path-only.
-
----
-
-**Validation:** Align with current `@olonjs/core` exports (SectionType, MenuItem, AddSectionConfig, JsonPagesConfig, and in v1.3 path types for Studio selection).  
-**Distribution:** Core via `.yalc`; tenant projections via `@olonjs/cli`. This annex makes the spec **necessary and sufficient** for tenant code-generation and governance at enterprise grade.
-
-END_OF_FILE_CONTENT
 mkdir -p "src"
 echo "Creating src/App.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/App.tsx"
@@ -3443,6 +353,28 @@ function App() {
     return Object.keys(normalized).length > 0 ? normalized : localInitialData.pages;
   }, [localInitialData]);
   const [pages, setPages] = useState<Record<string, PageConfig>>(localInitialPages);
+
+  // GitHub Pages sub-directory routing fix.
+  // BrowserRouter (in @olonjs/core) has no basename and reads window.location.pathname
+  // raw, including the Vite base prefix. e.g. with base '/core/', visiting
+  // /core/index → resolveSlugFromPathname returns 'core/index' → no page found → 404.
+  // Adding base-prefixed aliases lets the registry match without changing the URL.
+  const pagesWithBaseAliases = useMemo<Record<string, PageConfig>>(() => {
+    const viteBase = import.meta.env.BASE_URL; // '/core/' in prod, '/' or './' in dev
+    if (!viteBase || viteBase === '/' || viteBase === './') return pages;
+    const base = viteBase.replace(/^\/|\/$/g, ''); // '/core/' → 'core'
+    if (!base) return pages;
+    const aliased: Record<string, PageConfig> = { ...pages };
+    for (const [slug, page] of Object.entries(pages)) {
+      aliased[`${base}/${slug}`] = page; // 'core/docs' → docs config
+      if (slug === 'home') {
+        aliased[base] = page;                // /core/  → home (slug 'core')
+        aliased[`${base}/index`] = page;     // /core/index → home (GH Pages index alias)
+      }
+    }
+    return aliased;
+  }, [pages]);
+
   const [siteConfig, setSiteConfig] = useState<SiteConfig>(
     localInitialData?.siteConfig ?? fileSiteConfig
   );
@@ -3793,7 +725,7 @@ function App() {
     tenantId: TENANT_ID,
     registry: ComponentRegistry as JsonPagesConfig['registry'],
     schemas: SECTION_SCHEMAS as unknown as JsonPagesConfig['schemas'],
-    pages,
+    pages: pagesWithBaseAliases,
     siteConfig,
     themeConfig,
     menuConfig,
@@ -4272,7 +1204,6 @@ export function useTheme() {
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/ThemeProvider.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/ThemeToggle.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/ThemeToggle.tsx"
 import { Sun, Moon } from 'lucide-react'
@@ -4303,7 +1234,6 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
 }
 
 END_OF_FILE_CONTENT
-# SKIP: src/components/ThemeToggle.tsx:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/cloud-ai-native-grid"
 echo "Creating src/components/cloud-ai-native-grid/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/cloud-ai-native-grid/View.tsx"
@@ -5590,127 +2520,79 @@ END_OF_FILE_CONTENT
 mkdir -p "src/components/feature-grid"
 echo "Creating src/components/feature-grid/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/feature-grid/View.tsx"
-import type { CSSProperties } from 'react';
+import React from 'react';
+import { cn } from '@/lib/utils';
 import type { FeatureGridData, FeatureGridSettings } from './types';
 
-interface FeatureGridViewProps {
+export const FeatureGrid: React.FC<{
   data: FeatureGridData;
   settings?: FeatureGridSettings;
-}
-
-export function FeatureGrid({ data, settings }: FeatureGridViewProps) {
-  const columns = settings?.columns ?? 3;
-  const cards = data.cards ?? [];
-  const tiers = data.tiers ?? [];
-
-  const colClass =
-    columns === 2 ? 'sm:grid-cols-2' :
-    columns === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' :
-    'sm:grid-cols-2 lg:grid-cols-3';
-
+}> = ({ data }) => {
   return (
-    <section
-      id="features"
-      className="py-24 px-6 border-t border-border section-anchor"
-      style={{
-        '--local-bg': 'var(--background)',
-        '--local-text': 'var(--foreground)',
-        '--local-text-muted': 'var(--muted-foreground)',
-        '--local-border': 'var(--border)',
-      } as CSSProperties}
-    >
-      <div className="max-w-4xl mx-auto">
+    <section id="architecture" className="jp-feature-grid py-24">
+      <div className="max-w-[1040px] mx-auto px-8">
 
         {/* Section header */}
-        <div className="max-w-xl mb-16">
+        <header className="text-center mb-14">
           {data.label && (
-            <p className="font-mono-olon text-xs font-medium tracking-label uppercase text-muted-foreground mb-5" data-jp-field="label">
+            <div className="inline-flex items-center gap-2 text-[10.5px] font-mono font-bold uppercase tracking-[.12em] text-muted-foreground/60 mb-5">
+              <span className="w-[18px] h-px bg-border" aria-hidden />
               {data.label}
-            </p>
+            </div>
           )}
-          <h2 className="font-display font-normal text-foreground leading-tight tracking-tight mb-5" data-jp-field="sectionTitle">
+          <h2
+            className="font-display font-bold tracking-[-0.03em] leading-[1.15] text-foreground mb-4"
+            style={{ fontSize: 'clamp(26px, 3.8vw, 40px)' }}
+            data-jp-field="sectionTitle"
+          >
             {data.sectionTitle}
-            {data.sectionTitleItalic && (
-              <>
-                <br />
-                <em className="not-italic text-primary-light" data-jp-field="sectionTitleItalic">{data.sectionTitleItalic}</em>
-              </>
-            )}
           </h2>
           {data.sectionLead && (
-            <p className="text-base text-muted-foreground leading-relaxed" data-jp-field="sectionLead">
+            <p
+              className="text-[15.5px] text-muted-foreground leading-[1.7] mx-auto"
+              style={{ maxWidth: '500px' }}
+              data-jp-field="sectionLead"
+            >
               {data.sectionLead}
             </p>
           )}
-        </div>
+        </header>
 
-        {/* Feature grid */}
-        <div className={`grid grid-cols-1 ${colClass} gap-px bg-border`}>
-          {cards.map((card) => {
-            return (
-              <div
-                key={card.id ?? card.title}
-                data-jp-item-id={card.id ?? card.title}
-                data-jp-item-field="cards"
-                className="bg-background p-7 flex flex-col gap-4 group hover:bg-card transition-colors duration-200"
-              >
-                {card.icon && (
-                  <img
-                    src={card.icon.url}
-                    alt={card.icon.alt ?? ''}
-                    aria-hidden={card.icon.alt ? undefined : true}
-                    data-jp-field="icon"
-                    className="w-10 h-10 shrink-0"
-                  />
-                )}
-                <div>
-                  <h3 className="text-sm font-medium text-foreground mb-2 leading-snug" data-jp-field="title">
-                    {card.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed" data-jp-field="description">
-                    {card.description}
-                  </p>
+        {/* 3-col feature grid */}
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 rounded-xl overflow-hidden border border-border"
+          style={{ gap: '1px', background: 'var(--border)' }}
+          data-jp-field="cards"
+        >
+          {data.cards.map((card, idx) => (
+            <div
+              key={card.id ?? idx}
+              className={cn(
+                'p-8 transition-colors hover:bg-muted/60',
+                idx % 2 === 0 ? 'bg-background' : 'bg-card'
+              )}
+              data-jp-item-id={card.id ?? `legacy-${idx}`}
+              data-jp-item-field="cards"
+            >
+              {card.emoji && (
+                <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/18 flex items-center justify-center text-[18px] mb-5">
+                  {card.emoji}
                 </div>
-              </div>
-            );
-          })}
+              )}
+              <h3 className="text-[14px] font-semibold text-foreground mb-2">
+                {card.title}
+              </h3>
+              <p className="text-[13px] text-muted-foreground leading-[1.7]">
+                {card.description}
+              </p>
+            </div>
+          ))}
         </div>
 
-        {/* Proof strip */}
-        {(data.proofStatement || tiers.length > 0) && (
-          <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-6 px-7 py-5 rounded-lg border border-border bg-card">
-            {data.proofStatement && (
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground mb-0.5">
-                  <span data-jp-field="proofStatement">{data.proofStatement}</span>
-                </p>
-                {data.proofSub && (
-                  <p className="text-[12px] text-muted-foreground" data-jp-field="proofSub">
-                    {data.proofSub}
-                  </p>
-                )}
-              </div>
-            )}
-            {tiers.length > 0 && (
-              <div className="flex items-center gap-4 shrink-0">
-                {tiers.map((tier) => (
-                  <div
-                    key={tier.id ?? tier.label}
-                    data-jp-item-id={tier.id ?? tier.label}
-                    data-jp-item-field="tiers"
-                    className="text-center"
-                  >
-                    <div className="text-xs font-medium text-foreground" data-jp-field="label">{tier.label}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </section>
   );
-}
+};
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/feature-grid/index.ts..."
@@ -5723,99 +2605,86 @@ END_OF_FILE_CONTENT
 echo "Creating src/components/feature-grid/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/feature-grid/schema.ts"
 import { z } from 'zod';
-import { BaseSectionData, BaseArrayItem, ImageSelectionSchema } from '@/lib/base-schemas';
+import { BaseSectionData, BaseArrayItem } from '@/lib/base-schemas';
 
 export const FeatureCardSchema = BaseArrayItem.extend({
-  icon:        ImageSelectionSchema.optional().describe('ui:image-picker'),
-  title:       z.string().describe('ui:text'),
+  icon: z.string().optional().describe('ui:icon-picker'),
+  emoji: z.string().optional().describe('ui:text'),
+  title: z.string().describe('ui:text'),
   description: z.string().describe('ui:textarea'),
 });
 
-export const ProofTierSchema = BaseArrayItem.extend({
-  label: z.string().describe('ui:text'),
-});
-
 export const FeatureGridSchema = BaseSectionData.extend({
-  label:              z.string().optional().describe('ui:text'),
-  sectionTitle:       z.string().describe('ui:text'),
-  sectionTitleItalic: z.string().optional().describe('ui:text'),
-  sectionLead:        z.string().optional().describe('ui:textarea'),
-  cards:              z.array(FeatureCardSchema).describe('ui:list'),
-  proofStatement:     z.string().optional().describe('ui:text'),
-  proofSub:           z.string().optional().describe('ui:text'),
-  tiers:              z.array(ProofTierSchema).optional().describe('ui:list'),
+  label: z.string().optional().describe('ui:text'),
+  sectionTitle: z.string().describe('ui:text'),
+  sectionLead: z.string().optional().describe('ui:textarea'),
+  cards: z.array(FeatureCardSchema).describe('ui:list'),
 });
 
 export const FeatureGridSettingsSchema = z.object({
-  columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).default(3).describe('ui:number'),
+  columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).optional().describe('ui:number'),
+  cardStyle: z.enum(['plain', 'bordered']).optional().describe('ui:select'),
 });
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/feature-grid/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/feature-grid/types.ts"
 import { z } from 'zod';
+import { BaseSectionSettingsSchema } from '@/lib/base-schemas';
 import { FeatureGridSchema, FeatureGridSettingsSchema } from './schema';
 
-export type FeatureGridData     = z.infer<typeof FeatureGridSchema>;
-export type FeatureGridSettings = z.infer<typeof FeatureGridSettingsSchema>;
+export type FeatureGridData = z.infer<typeof FeatureGridSchema>;
+export type FeatureGridSettings = z.infer<typeof BaseSectionSettingsSchema> & z.infer<typeof FeatureGridSettingsSchema>;
 
 END_OF_FILE_CONTENT
 mkdir -p "src/components/footer"
 echo "Creating src/components/footer/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/footer/View.tsx"
-import { OlonMark } from '@/components/OlonWordmark';
+import React from 'react';
+import { OlonMark } from '@/components/ui/OlonMark';
 import type { FooterData, FooterSettings } from './types';
 
-interface FooterViewProps {
-  data: FooterData;
-  settings?: FooterSettings;
-}
-
-export function Footer({ data, settings }: FooterViewProps) {
-  const showLogo = settings?.showLogo ?? true;
-  const links = data.links ?? [];
-
+export const Footer: React.FC<{ data: FooterData; settings?: FooterSettings }> = ({ data }) => {
   return (
-    <footer className="border-t border-border px-6 py-8">
-      <div className="max-w-6xl px-6 mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-6">
-          {showLogo && (
-            <div className="flex items-center gap-2.5">
-              <OlonMark size={18} />
-              <span className="text-base  font-display text-foreground tracking-[-0.02em]">
-                {data.brandText}
-              </span>
-            </div>
-          )}
-          {links.length > 0 && (
-            <div className="flex items-center gap-4">
-              {links.map((link) => (
+    <footer
+      style={{
+        '--local-bg': 'var(--background)',
+        '--local-text': 'var(--foreground)',
+        '--local-text-muted': 'var(--muted-foreground)',
+        '--local-accent': 'var(--accent)',
+        '--local-border': 'color-mix(in oklch, var(--foreground) 8%, transparent)',
+      } as React.CSSProperties}
+      className="py-12 border-t border-[var(--local-border)] bg-[var(--local-bg)] relative z-0"
+    >
+      <div className="max-w-[1200px] mx-auto px-8">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5 font-bold text-[0.9rem] text-[var(--local-text-muted)]">
+            <OlonMark size={20} />
+            <span data-jp-field="brandText">{data.brandText}{data.brandHighlight && <span className="text-[var(--local-accent)]" data-jp-field="brandHighlight">{data.brandHighlight}</span>}</span>
+          </div>
+          {data.links && data.links.length > 0 && (
+            <nav className="flex gap-6">
+              {data.links.map((link, idx) => (
                 <a
-                  key={link.label}
+                  key={idx}
                   href={link.href}
-                  className="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-[0.82rem] text-[var(--local-text-muted)] hover:text-[var(--local-accent)] transition-colors no-underline"
+                  data-jp-item-id={(link as { id?: string }).id ?? `legacy-${idx}`}
+                  data-jp-item-field="links"
                 >
                   {link.label}
                 </a>
               ))}
-              {data.designSystemHref && (
-                <a
-                  href={data.designSystemHref}
-                  className="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Design System
-                </a>
-              )}
-            </div>
+            </nav>
           )}
+          <div className="text-[0.8rem] text-[var(--local-text-muted)] opacity-60" data-jp-field="copyright">
+            {data.copyright}
+          </div>
         </div>
-        <span className="font-mono-olon text-[11px] text-muted-foreground">
-          {data.copyright}
-        </span>
       </div>
     </footer>
   );
-}
+};
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/footer/index.ts..."
@@ -5830,17 +2699,17 @@ cat << 'END_OF_FILE_CONTENT' > "src/components/footer/schema.ts"
 import { z } from 'zod';
 
 export const FooterSchema = z.object({
-  brandText:        z.string().describe('ui:text'),
-  copyright:        z.string().describe('ui:text'),
+  brandText: z.string().describe('ui:text'),
+  brandHighlight: z.string().optional().describe('ui:text'),
+  copyright: z.string().describe('ui:text'),
   links: z.array(z.object({
     label: z.string().describe('ui:text'),
-    href:  z.string().describe('ui:text'),
+    href: z.string().describe('ui:text'),
   })).optional().describe('ui:list'),
-  designSystemHref: z.string().optional().describe('ui:text'),
 });
 
 export const FooterSettingsSchema = z.object({
-  showLogo: z.boolean().default(true).describe('ui:checkbox'),
+  showLogo: z.boolean().optional().describe('ui:checkbox'),
 });
 
 END_OF_FILE_CONTENT
@@ -5849,7 +2718,7 @@ cat << 'END_OF_FILE_CONTENT' > "src/components/footer/types.ts"
 import { z } from 'zod';
 import { FooterSchema, FooterSettingsSchema } from './schema';
 
-export type FooterData     = z.infer<typeof FooterSchema>;
+export type FooterData = z.infer<typeof FooterSchema>;
 export type FooterSettings = z.infer<typeof FooterSettingsSchema>;
 
 END_OF_FILE_CONTENT
@@ -5969,333 +2838,129 @@ END_OF_FILE_CONTENT
 mkdir -p "src/components/header"
 echo "Creating src/components/header/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/View.tsx"
-import { useState, useRef, useEffect } from 'react';
-import { Menu, X, ChevronDown } from 'lucide-react';
-import { OlonMark } from '@/components/OlonWordmark';
-import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import type { HeaderData, HeaderSettings } from './types';
+import { OlonMark } from '@/components/ui/OlonMark';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import type { MenuItem } from '@olonjs/core';
+import type { HeaderData, HeaderSettings } from './types';
 
-interface NavChild {
-  label: string;
-  href: string;
-}
-
-interface NavItem {
-  label: string;
-  href: string;
-  variant?: string;
-  children?: NavChild[];
-}
-
-interface HeaderViewProps {
+export const Header: React.FC<{
   data: HeaderData;
   settings?: HeaderSettings;
   menu: MenuItem[];
-}
-
-function isMenuRef(value: unknown): value is { $ref: string } {
-  if (!value || typeof value !== 'object') return false;
-  const rec = value as Record<string, unknown>;
-  return typeof rec.$ref === 'string' && rec.$ref.trim().length > 0;
-}
-
-function toNavItem(raw: unknown): NavItem | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const rec = raw as Record<string, unknown>;
-  if (typeof rec.label !== 'string' || typeof rec.href !== 'string') return null;
-  const children = Array.isArray(rec.children)
-    ? (rec.children as unknown[])
-        .map((c) => toNavItem(c))
-        .filter((c): c is NavChild => c !== null)
-    : undefined;
-  const variant = typeof rec.variant === 'string' ? rec.variant : undefined;
-  return { label: rec.label, href: rec.href, ...(variant ? { variant } : {}), ...(children && children.length > 0 ? { children } : {}) };
-}
-
-export function Header({ data, settings, menu }: HeaderViewProps) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
-  const isSticky = settings?.sticky ?? true;
-  const navRef = useRef<HTMLElement>(null);
-
-  const linksField = data.links as unknown;
-  const rawLinks = Array.isArray(linksField) ? linksField : [];
-  const menuItems = Array.isArray(menu) ? (menu as unknown[]) : [];
-  // If tenant explicitly uses a JSON ref for links, resolve from menu config.
-  const source =
-    isMenuRef(linksField)
-      ? menuItems
-      : (rawLinks.length > 0 ? rawLinks : menuItems);
-  const navItems: NavItem[] = source.map(toNavItem).filter((i): i is NavItem => i !== null);
-
-  useEffect(() => {
-    if (!openDropdown) return;
-    function handleClick(e: MouseEvent) {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) {
-        setOpenDropdown(null);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [openDropdown]);
+}> = ({ data, menu }) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header
-      className={cn(
-        'top-0 left-0 right-0 z-50 border-b border-border bg-background/90 backdrop-blur-md',
-        isSticky ? 'fixed' : 'relative'
-      )}
-    >
-      <div className="max-w-6xl mx-auto px-6 h-18 flex items-center gap-8">
+    <>
+      <div style={{ height: '56px' }} aria-hidden />
+      <header
+        className={cn(
+          'fixed top-0 left-0 right-0 w-full h-14 z-50 transition-all duration-300',
+          'flex items-center',
+          'bg-background/88 backdrop-blur-[16px] border-b border-border/60'
+        )}
+      >
+        <div className="max-w-[1040px] w-full mx-auto px-8 flex items-center gap-3">
 
-        {/* Logo */}
-        <a href="/" className="flex items-center gap-2 shrink-0" aria-label="OlonJS home">
-          <OlonMark size={26} className="mb-0.5" />
-          <span
-            className="text-2xl text-accent leading-none"
-            style={{
-              fontFamily:           'var(--wordmark-font)',
-              letterSpacing:        'var(--wordmark-tracking)',
-              fontWeight:           'var(--wordmark-weight)',
-              fontVariationSettings: '"wdth" var(--wordmark-width)',
-            }}
+          <a
+            href="#"
+            className="flex items-center gap-2 no-underline shrink-0"
+            aria-label="OlonJS home"
           >
-            {data.logoText}
-          </span>
-          {data.badge && (
-            <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium font-mono-olon bg-primary-900 text-primary-light border border-primary-800 rounded-sm">
-              {data.badge}
-            </span>
-          )}
-        </a>
-
-        {/* Desktop nav */}
-        <nav ref={navRef} className="hidden md:flex items-center gap-0.5 flex-1">
-          {navItems.map((item) => {
-            const hasChildren = item.children && item.children.length > 0;
-            const isOpen = openDropdown === item.label;
-            const isSecondary = item.variant === 'secondary';
-
-            if (isSecondary) {
-              return (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className="flex items-center gap-1 px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground rounded-md border border-border bg-elevated hover:bg-elevated/70 transition-colors duration-150"
-                >
-                  {item.label}
-                </a>
-              );
-            }
-
-            if (!hasChildren) {
-              return (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className="flex items-center gap-1 px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground rounded-md transition-colors duration-150 hover:bg-elevated"
-                >
-                  {item.label}
-                </a>
-              );
-            }
-
-            return (
-              <div key={item.label} className="relative">
-                <button
-                  type="button"
-                  onClick={() => setOpenDropdown(isOpen ? null : item.label)}
-                  className={cn(
-                    'flex items-center gap-1 px-3 py-1.5 text-[13px] rounded-md transition-colors duration-150',
-                    isOpen ? 'text-foreground bg-elevated' : 'text-muted-foreground hover:text-foreground hover:bg-elevated'
-                  )}
-                  aria-expanded={hasChildren ? isOpen : undefined}
-                >
-                  {item.label}
-                  {hasChildren && (
-                    <ChevronDown
-                      size={11}
-                      className={cn('opacity-40 mt-px transition-transform duration-150', isOpen && 'rotate-180 opacity-70')}
-                    />
-                  )}
-                </button>
-
-                {hasChildren && (
-                  <div
-                    className={cn(
-                      'absolute left-0 top-[calc(100%+8px)] min-w-[220px] rounded-lg border border-border bg-card shadow-lg shadow-black/20 overflow-hidden',
-                      'transition-all duration-150 origin-top-left',
-                      isOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
-                    )}
-                  >
-                    <div className="p-1.5">
-                      {item.children!.map((child, i) => (
-                        <a
-                          key={child.label}
-                          href={child.href}
-                          onClick={() => setOpenDropdown(null)}
-                          className={cn(
-                            'flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] text-muted-foreground hover:text-foreground hover:bg-elevated transition-colors duration-100 group',
-                            i < item.children!.length - 1 && ''
-                          )}
-                        >
-                          <span className="w-6 h-6 rounded-md bg-primary-900 border border-primary-800 flex items-center justify-center shrink-0 text-[10px] font-medium font-mono-olon text-primary-light group-hover:border-primary transition-colors">
-                            {child.label.slice(0, 2).toUpperCase()}
-                          </span>
-                          <span className="font-medium">{child.label}</span>
-                        </a>
-                      ))}
-                    </div>
-                    <div className="px-3 py-2 border-t border-border bg-elevated/50">
-                      <a
-                        href={item.href}
-                        onClick={() => setOpenDropdown(null)}
-                        className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                      >
-                        View all {item.label.toLowerCase()} →
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-
-        {/* Actions */}
-        <div className="hidden md:flex items-center gap-1 ml-auto shrink-0">
-          <ThemeToggle />
-          {data.signinHref && (
-            <a
-              href={data.signinHref}
-              className="text-[13px] text-muted-foreground hover:text-foreground transition-colors duration-150 px-3 py-1.5 rounded-md hover:bg-elevated"
+            <OlonMark size={22} />
+            <span
+              className="text-lg font-bold tracking-tight text-foreground"
+              data-jp-field="logoText"
             >
-              Sign in
-            </a>
+              {data.logoText}
+              {data.logoHighlight && (
+                <span className="text-primary" data-jp-field="logoHighlight">
+                  {data.logoHighlight}
+                </span>
+              )}
+            </span>
+          </a>
+
+          {data.badge && (
+            <>
+              <span className="w-px h-4 bg-border" aria-hidden />
+              <Badge variant="pill" data-jp-field="badge">
+                {data.badge}
+              </Badge>
+            </>
           )}
-          {data.ctaHref && (
-            <Button variant="accent" size="sm" className="h-8 px-4 text-[13px] font-medium" asChild>
-              <a href={data.ctaHref}>{data.ctaLabel ?? 'Get started →'}</a>
-            </Button>
-          )}
+
+          <div className="flex-1" />
+
+          <nav className="hidden md:flex items-center gap-0.5" aria-label="Site">
+            {menu.map((item, idx) => (
+              <Button
+                key={(item as { id?: string }).id ?? idx}
+                asChild
+                variant={item.isCta ? 'default' : 'ghost'}
+                size="sm"
+                className={cn(
+                  'text-[13px]',
+                  !item.isCta && 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <a
+                  href={item.href}
+                  data-jp-item-id={(item as { id?: string }).id ?? `legacy-${idx}`}
+                  data-jp-item-field="links"
+                  target={item.external ? '_blank' : undefined}
+                  rel={item.external ? 'noopener noreferrer' : undefined}
+                >
+                  {item.label}
+                </a>
+              </Button>
+            ))}
+          </nav>
+
+          <button
+            type="button"
+            className="md:hidden p-2 rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {mobileMenuOpen ? (
+                <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>
+              ) : (
+                <><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></>
+              )}
+            </svg>
+          </button>
         </div>
 
-        {/* Mobile toggle */}
-        <button
-          className="md:hidden ml-auto p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Toggle menu"
-        >
-          {mobileOpen ? <X size={16} /> : <Menu size={16} />}
-        </button>
-      </div>
-
-      {/* Mobile drawer */}
-      <div className={cn(
-        'md:hidden border-t border-border bg-card overflow-hidden transition-all duration-200',
-        mobileOpen ? 'max-h-[32rem]' : 'max-h-0'
-      )}>
-        <nav className="px-4 py-3 flex flex-col gap-0.5">
-          {navItems.map((item) => {
-            const hasChildren = item.children && item.children.length > 0;
-            const isExpanded = mobileExpanded === item.label;
-            const isSecondary = item.variant === 'secondary';
-
-            if (isSecondary) {
-              return (
+        {mobileMenuOpen && (
+          <nav
+            className="absolute top-14 left-0 right-0 md:hidden border-b border-border bg-background/95 backdrop-blur-[16px]"
+            aria-label="Mobile menu"
+          >
+            <div className="max-w-[1040px] mx-auto px-8 py-4 flex flex-col gap-1">
+              {menu.map((item, idx) => (
                 <a
-                  key={item.label}
+                  key={(item as { id?: string }).id ?? idx}
                   href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="mt-1 flex items-center px-3 py-2.5 text-[13px] text-muted-foreground hover:text-foreground border border-border bg-elevated hover:bg-elevated/70 rounded-md transition-colors"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2.5 no-underline"
+                  onClick={() => setMobileMenuOpen(false)}
+                  data-jp-item-id={(item as { id?: string }).id ?? `legacy-${idx}`}
+                  data-jp-item-field="links"
                 >
                   {item.label}
                 </a>
-              );
-            }
-
-            if (!hasChildren) {
-              return (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center px-3 py-2.5 text-[13px] text-muted-foreground hover:text-foreground hover:bg-elevated rounded-md transition-colors"
-                >
-                  {item.label}
-                </a>
-              );
-            }
-
-            return (
-              <div key={item.label}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (hasChildren) {
-                      setMobileExpanded(isExpanded ? null : item.label);
-                    }
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2.5 text-[13px] text-muted-foreground hover:text-foreground hover:bg-elevated rounded-md transition-colors text-left"
-                >
-                  <span>{item.label}</span>
-                  {hasChildren && (
-                    <ChevronDown
-                      size={13}
-                      className={cn('opacity-40 transition-transform duration-150', isExpanded && 'rotate-180 opacity-70')}
-                    />
-                  )}
-                </button>
-
-                {hasChildren && isExpanded && (
-                  <div className="ml-3 pl-3 border-l border-border mt-0.5 mb-1 flex flex-col gap-0.5">
-                    {item.children!.map((child) => (
-                      <a
-                        key={child.label}
-                        href={child.href}
-                        onClick={() => { setMobileOpen(false); setMobileExpanded(null); }}
-                        className="flex items-center gap-2.5 px-3 py-2 text-[12px] text-muted-foreground hover:text-foreground hover:bg-elevated rounded-md transition-colors"
-                      >
-                        <span className="w-5 h-5 rounded bg-primary-900 border border-primary-800 flex items-center justify-center shrink-0 text-[9px] font-medium font-mono-olon text-primary-light">
-                          {child.label.slice(0, 2).toUpperCase()}
-                        </span>
-                        {child.label}
-                      </a>
-                    ))}
-                    <a
-                      href={item.href}
-                      onClick={() => { setMobileOpen(false); setMobileExpanded(null); }}
-                      className="px-3 py-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      View all →
-                    </a>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          <div className="flex gap-2 pt-3 mt-2 border-t border-border">
-            {data.signinHref && (
-              <Button variant="outline" size="sm" className="flex-1 text-[13px]" asChild>
-                <a href={data.signinHref}>Sign in</a>
-              </Button>
-            )}
-            {data.ctaHref && (
-              <Button variant="accent" size="sm" className="flex-1 text-[13px]" asChild>
-                <a href={data.ctaHref}>{data.ctaLabel ?? 'Get started'}</a>
-              </Button>
-            )}
-          </div>
-        </nav>
-      </div>
-    </header>
+              ))}
+            </div>
+          </nav>
+        )}
+      </header>
+    </>
   );
-}
+};
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/header/index.ts..."
@@ -6303,42 +2968,54 @@ cat << 'END_OF_FILE_CONTENT' > "src/components/header/index.ts"
 export * from './View';
 export * from './schema';
 export * from './types';
-
 END_OF_FILE_CONTENT
 echo "Creating src/components/header/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/schema.ts"
 import { z } from 'zod';
 
+/**
+ * 📝 HEADER SCHEMA (Contract)
+ * Definisce la struttura dati che l'Admin userà per generare la form.
+ */
 export const HeaderSchema = z.object({
-  logoText:         z.string().describe('ui:text'),
-  badge:            z.string().optional().describe('ui:text'),
+  logoText: z.string().describe('ui:text'),
+  logoHighlight: z.string().optional().describe('ui:text'),
+  logoIconText: z.string().optional().describe('ui:text'),
+  badge: z.string().optional().describe('ui:text'),
   links: z.array(z.object({
-    label:    z.string().describe('ui:text'),
-    href:     z.string().describe('ui:text'),
-    variant:  z.string().optional().describe('ui:text'),
-    children: z.array(z.object({
-      label: z.string().describe('ui:text'),
-      href:  z.string().describe('ui:text'),
-    })).optional().describe('ui:list'),
+    label: z.string().describe('ui:text'),
+    href: z.string().describe('ui:text'),
+    isCta: z.boolean().default(false).describe('ui:checkbox'),
+    external: z.boolean().default(false).optional().describe('ui:checkbox'),
   })).describe('ui:list'),
-  ctaLabel:         z.string().optional().describe('ui:text'),
-  ctaHref:          z.string().optional().describe('ui:text'),
-  signinHref:       z.string().optional().describe('ui:text'),
 });
 
+/**
+ * ⚙️ HEADER SETTINGS
+ * Definisce i parametri tecnici (non di contenuto).
+ */
 export const HeaderSettingsSchema = z.object({
   sticky: z.boolean().default(true).describe('ui:checkbox'),
 });
-
 END_OF_FILE_CONTENT
 echo "Creating src/components/header/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/types.ts"
 import { z } from 'zod';
 import { HeaderSchema, HeaderSettingsSchema } from './schema';
 
-export type HeaderData     = z.infer<typeof HeaderSchema>;
-export type HeaderSettings = z.infer<typeof HeaderSettingsSchema>;
+/**
+ * 🧩 HEADER DATA
+ * Tipo inferito dallo schema Zod del contenuto.
+ * Utilizzato dalla View per renderizzare logo e links.
+ */
+export type HeaderData = z.infer<typeof HeaderSchema>;
 
+/**
+ * ⚙️ HEADER SETTINGS
+ * Tipo inferito dallo schema Zod dei settings.
+ * Gestisce comportamenti tecnici come lo 'sticky'.
+ */
+export type HeaderSettings = z.infer<typeof HeaderSettingsSchema>;
 END_OF_FILE_CONTENT
 mkdir -p "src/components/hero"
 echo "Creating src/components/hero/RadialBackground.tsx..."
@@ -6430,158 +3107,193 @@ export function RadialBackground({
 END_OF_FILE_CONTENT
 echo "Creating src/components/hero/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/hero/View.tsx"
-import type { CSSProperties } from 'react';
-import { ArrowRight, Github, Terminal } from 'lucide-react';
+import React from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RadialBackground } from './RadialBackground';
 import type { HeroData, HeroSettings } from './types';
 
-interface HeroViewProps {
-  data: HeroData;
-  settings?: HeroSettings;
-}
+const CODE_LINES = [
+  { type: 'p', text: '{' },
+  { type: 'k', text: '  "slug"',   after: ': ', val: '"homepage"', comma: ',' },
+  { type: 'k', text: '  "meta"',   after: ': ', val: '{ "title": "Acme Corp" }', comma: ',' },
+  { type: 'k', text: '  "sections"', after: ': [' },
+  { type: 'p', text: '    {' },
+  { type: 'k', text: '      "type"', after: ':  ', val: '"hero"', comma: ',' },
+  { type: 'k', text: '      "data"', after: ': {' },
+  { type: 'k', text: '        "title"', after: ': ', val: '"Ship faster with agents"', comma: ',' },
+  { type: 'k', text: '        "cta"',   after: ':   ', val: '"Get started"' },
+  { type: 'p', text: '      }' },
+  { type: 'p', text: '    },' },
+  { type: 'c', text: '    { "type": "features" /* ... */ }' },
+  { type: 'p', text: '  ]' },
+  { type: 'p', text: '}' },
+] as const;
 
-export function Hero({ data, settings }: HeroViewProps) {
-  const showCode = settings?.showCode ?? true;
-  const ctas = data.ctas ?? [];
-  const heroImage = data.heroImage;
+const tokenColor: Record<string, string> = {
+  k: 'text-[#84ABFF]',
+  s: 'text-[#86efac]',
+  c: 'text-[#4b5563]',
+  p: 'text-[#9ca3af]',
+};
+
+export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ data }) => {
+  const primaryCta = data.ctas?.find(c => c.variant === 'primary') ?? data.ctas?.[0];
+  const secondaryCta = data.ctas?.find(c => c.variant === 'secondary') ?? data.ctas?.[1];
 
   return (
-    <section
-      className="relative overflow-hidden pt-36 pb-28 px-6"
-      id={data.anchorId}
-      style={{
-        '--local-bg': 'var(--background)',
-        '--local-text': 'var(--foreground)',
-        '--local-text-muted': 'var(--muted-foreground)',
-        '--local-border': 'var(--border)',
-      } as CSSProperties}
-    >
-      <RadialBackground />
-      <div className="relative z-10 max-w-4xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-20 gap-8 lg:gap-10 items-start">
-          <div className="order-2 md:order-1 md:col-span-11">
+    <section className="jp-hero relative pt-[156px] pb-28 text-center overflow-hidden">
 
-          {/* Eyebrow */}
-          {data.eyebrow && (
-            <p className="font-mono-olon text-xs font-medium tracking-label uppercase text-muted-foreground mb-3" data-jp-field="eyebrow">
-              {data.eyebrow}
-            </p>
-          )}
+      {/* Background glow — absolute, scoped to hero section */}
+      <div
+        className="pointer-events-none absolute z-0 rounded-full"
+        style={{
+          width: '900px',
+          height: '700px',
+          background: 'radial-gradient(ellipse at center, rgba(23,99,255,.10) 0%, transparent 68%)',
+          top: '-160px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+        }}
+        aria-hidden
+      />
+      {/* Grid background — absolute, scoped to hero section */}
+      <div
+        className="pointer-events-none absolute inset-0 z-0 opacity-40"
+        style={{
+          backgroundImage:
+            'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
+          maskImage: 'radial-gradient(ellipse 80% 55% at 50% 0%, black 0%, transparent 100%)',
+        }}
+        aria-hidden
+      />
 
-          {/* Headline */}
-          <h1 className="font-display font-normal text-7xl  text-foreground leading-tight tracking-display mb-1" data-jp-field="title">
-            {data.title}
-          </h1>
+      <div className="relative z-10 max-w-[1040px] mx-auto px-8">
+
+        {/* Eyebrow badge */}
+        {data.badge && (
+          <div className="inline-flex items-center gap-2 mb-8">
+            <Badge
+              variant="pill"
+              className="gap-2 py-1.5 px-4 text-[12px] tracking-[.05em] font-mono"
+              data-jp-field="badge"
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"
+                aria-hidden
+              />
+              {data.badge}
+            </Badge>
+          </div>
+        )}
+
+        {/* Headline */}
+        <h1
+          className="font-display font-bold tracking-[-0.038em] leading-[1.06] text-foreground mb-2 mx-auto"
+          style={{ fontSize: 'clamp(44px, 6.5vw, 74px)', maxWidth: '840px' }}
+          data-jp-field="title"
+        >
+          {data.title}
           {data.titleHighlight && (
-            <h2 className="font-display font-normal italic text-5xl md:text-6xl text-primary-light leading-tight tracking-display mb-7" data-jp-field="titleHighlight">
-              {data.titleHighlight}
-            </h2>
-          )}
-
-          {/* Body */}
-          {data.description && (
-            <p className="text-md text-muted-foreground leading-relaxed max-w-xl mb-10" data-jp-field="description">
-              {data.description}
-            </p>
-          )}
-
-          {/* CTA row */}
-          <div className="flex flex-wrap items-center gap-3 mb-16">
-            {ctas.map((cta) => (
-              <Button
-                key={cta.id ?? cta.label}
-                variant={cta.variant === 'accent' ? 'accent' : cta.variant === 'secondary' ? 'outline' : 'default'}
-                size="lg"
-                className="text-base"
-                asChild
+            <>
+              {' '}
+              <span
+                className="bg-gradient-to-br from-[#84ABFF] via-[#1763FF] to-[#0F52E0] bg-clip-text text-transparent"
+                data-jp-field="titleHighlight"
               >
+                {data.titleHighlight}
+              </span>
+            </>
+          )}
+        </h1>
+
+        {/* Subtitle */}
+        {data.description && (
+          <p
+            className="text-muted-foreground leading-[1.7] mx-auto mt-6 mb-12"
+            style={{ fontSize: 'clamp(15px, 2vw, 18px)', maxWidth: '560px' }}
+            data-jp-field="description"
+          >
+            {data.description}
+          </p>
+        )}
+
+        {/* CTAs */}
+        {(primaryCta || secondaryCta) && (
+          <div className="flex items-center justify-center gap-3 flex-wrap mb-0">
+            {primaryCta && (
+              <Button asChild variant="default" size="lg" className="gap-2 px-7 shadow-[0_0_32px_rgba(23,99,255,.38)]">
                 <a
-                  href={cta.href}
-                  data-jp-item-id={cta.id ?? cta.label}
+                  href={primaryCta.href}
+                  data-jp-item-id={primaryCta.id}
                   data-jp-item-field="ctas"
-                  data-jp-field="href"
                 >
-                  {cta.variant === 'accent' ? (
-                    <><span data-jp-field="label">{cta.label}</span> <ArrowRight className="h-4 w-4" /></>
-                  ) : cta.variant === 'secondary' ? (
-                    <><Github className="h-4 w-4" /> <span data-jp-field="label">{cta.label}</span></>
-                  ) : (
-                    <span data-jp-field="label">{cta.label}</span>
-                  )}
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.8 }}>
+                    <rect x="2.5" y="2" width="11" height="12" rx="2" stroke="currentColor" strokeWidth="1.4"/>
+                    <path d="M5.5 6h5M5.5 9h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                  {primaryCta.label}
                 </a>
               </Button>
-            ))}
-            {data.docsHref && (
-              <a
-                href={data.docsHref}
-                data-jp-field="docsHref"
-                className="text-base text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
-              >
-                <Terminal className="h-4 w-4" />
-                <span data-jp-field="docsLabel">{data.docsLabel ?? 'Read the docs'}</span>
-              </a>
+            )}
+            {secondaryCta && (
+              <Button asChild variant="outline" size="lg" className="gap-2 px-7">
+                <a
+                  href={secondaryCta.href}
+                  data-jp-item-id={secondaryCta.id}
+                  data-jp-item-field="ctas"
+                  target={secondaryCta.href?.startsWith('http') ? '_blank' : undefined}
+                  rel={secondaryCta.href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+                >
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.7 }}>
+                    <path d="M8 1C4.13 1 1 4.13 1 8c0 3.09 2.01 5.71 4.79 6.63.35.06.48-.15.48-.34v-1.2c-1.95.42-2.36-.94-2.36-.94-.32-.81-.78-1.02-.78-1.02-.64-.43.05-.42.05-.42.7.05 1.07.72 1.07.72.62 1.07 1.64.76 2.04.58.06-.45.24-.76.44-.93-1.56-.18-3.2-.78-3.2-3.47 0-.77.27-1.4.72-1.89-.07-.18-.31-.9.07-1.87 0 0 .59-.19 1.93.72A6.7 6.7 0 0 1 8 5.17c.6 0 1.2.08 1.76.24 1.34-.91 1.93-.72 1.93-.72.38.97.14 1.69.07 1.87.45.49.72 1.12.72 1.89 0 2.7-1.64 3.29-3.2 3.47.25.22.48.65.48 1.31v1.94c0 .19.12.4.48.34C12.99 13.71 15 11.09 15 8c0-3.87-3.13-7-7-7z" fill="currentColor"/>
+                  </svg>
+                  {secondaryCta.label}
+                </a>
+              </Button>
             )}
           </div>
+        )}
 
-            {/* Code block */}
-            {showCode && (
-              <div className="rounded-lg border border-border overflow-hidden max-w-2xl">
-                <div className="flex items-center justify-between px-4 py-2.5 bg-elevated border-b border-border">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-border-strong" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-border-strong" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-border-strong" />
-                  </div>
-                  <span className="font-mono-olon text-xs text-muted-foreground">olon.config.ts</span>
-                  <span className="font-mono-olon text-xs text-primary-400 hover:text-primary-light cursor-default transition-colors" data-jp-field="codeLabel">
-                    {data.codeLabel ?? 'Copy'}
-                  </span>
+        {/* Code window */}
+        <div className="mt-[68px] mx-auto" style={{ maxWidth: '540px' }}>
+          <div
+            className="rounded-xl border border-border text-left overflow-hidden"
+            style={{ background: '#060d14', boxShadow: '0 32px 64px rgba(0,0,0,.44), 0 0 0 1px rgba(255,255,255,.04)' }}
+          >
+            <div className="flex items-center gap-1.5 px-4 py-3 bg-card border-b border-border">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />
+              <span className="flex-1 text-center font-mono text-[11px] text-muted-foreground/60">
+                GET /homepage.json
+              </span>
+            </div>
+            <div className="px-6 py-5 font-mono text-[12.5px] leading-[1.8] overflow-x-auto">
+              {CODE_LINES.map((ln, i) => (
+                <div key={i}>
+                  {ln.type === 'k' ? (
+                    <span>
+                      <span className={tokenColor.k}>{ln.text}</span>
+                      {'after' in ln && <span className={tokenColor.p}>{ln.after}</span>}
+                      {'val' in ln && <span className="text-[#86efac]">{ln.val}</span>}
+                      {'comma' in ln && <span className={tokenColor.p}>{ln.comma}</span>}
+                    </span>
+                  ) : ln.type === 'c' ? (
+                    <span className={tokenColor.c}>{ln.text}</span>
+                  ) : (
+                    <span className={tokenColor.p}>{ln.text}</span>
+                  )}
                 </div>
-                <pre className="px-5 py-5 bg-card font-mono-olon text-sm leading-[1.8] overflow-x-auto">
-                  <code>
-                    <span><span className="text-primary-400">import</span><span className="text-foreground"> {'{ defineConfig }'} </span><span className="text-primary-400">from</span><span className="text-primary-200"> 'olonjs'</span></span>
-                    {'\n\n'}
-                    <span><span className="text-primary-400">export default</span><span className="text-primary-light"> defineConfig</span><span className="text-foreground">{'({'}</span></span>
-                    {'\n  '}
-                    <span><span className="text-accent">tenants</span><span className="text-foreground">: [{'{'}</span></span>
-                    {'\n    '}
-                    <span><span className="text-accent">slug</span><span className="text-foreground">: </span><span className="text-primary-200">'acme-corp'</span><span className="text-muted-foreground">,</span></span>
-                    {'\n    '}
-                    <span><span className="text-accent">routes</span><span className="text-foreground">: </span><span className="text-primary-light">autoDiscover</span><span className="text-foreground">(</span><span className="text-primary-200">'./src/pages'</span><span className="text-foreground">),</span></span>
-                    {'\n    '}
-                    <span><span className="text-accent">schema</span><span className="text-foreground">: </span><span className="text-primary-200">'./schemas/page.json'</span><span className="text-foreground">,</span></span>
-                    {'\n  '}
-                    <span><span className="text-foreground">{'}],'}</span></span>
-                    {'\n  '}
-                    <span><span className="text-accent">output</span><span className="text-foreground">: </span><span className="text-primary-200">'vercel'</span><span className="text-muted-foreground">,  </span><span className="text-muted-foreground">{'// \'nx\' | \'vercel\' | \'custom\''}</span></span>
-                    {'\n  '}
-                    <span><span className="text-accent">governance</span><span className="text-foreground">: {'{'} </span><span className="text-accent">audit</span><span className="text-foreground">: </span><span className="text-primary-light">true</span><span className="text-foreground">, </span><span className="text-accent">strict</span><span className="text-foreground">: </span><span className="text-primary-light">true</span><span className="text-foreground"> {'}'}</span></span>
-                    {'\n'}
-                    <span><span className="text-foreground">{'}'}</span></span>
-                  </code>
-                </pre>
-              </div>
-            )}
-          </div>
-
-          {/* Right column (40%) - image placeholder */}
-          <div className="order-1 md:order-2 md:col-span-9">
-            <div className="relative rounded-md overflow-hidden bg-card hero-media-portrait">
-              <img
-                src={heroImage?.url ?? '/images/olon-hero.png'}
-                alt={heroImage?.alt ?? 'Olon hero visual'}
-                data-jp-field="heroImage"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 pointer-events-none hero-media-overlay" />
+              ))}
             </div>
           </div>
         </div>
+
       </div>
     </section>
   );
-}
+};
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/hero/index.ts..."
@@ -6594,32 +3306,31 @@ END_OF_FILE_CONTENT
 echo "Creating src/components/hero/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/hero/schema.ts"
 import { z } from 'zod';
-import { BaseSectionData, CtaSchema, ImageSelectionSchema } from '@/lib/base-schemas';
+import { BaseSectionData, CtaSchema } from '@/lib/base-schemas';
 
-export const HeroSchema = BaseSectionData.extend({
-  eyebrow:          z.string().optional().describe('ui:text'),
-  title:            z.string().describe('ui:text'),
-  titleHighlight:   z.string().optional().describe('ui:text'),
-  description:      z.string().optional().describe('ui:textarea'),
-  ctas:             z.array(CtaSchema).optional().describe('ui:list'),
-  docsLabel:        z.string().optional().describe('ui:text'),
-  docsHref:         z.string().optional().describe('ui:text'),
-  codeLabel:        z.string().optional().describe('ui:text'),
-  heroImage:        ImageSelectionSchema.optional().describe('ui:image-picker'),
+const HeroMetricSchema = z.object({
+  val: z.string().describe('ui:text'),
+  label: z.string().describe('ui:text'),
 });
 
-export const HeroSettingsSchema = z.object({
-  showCode: z.boolean().default(true).describe('ui:checkbox'),
+export const HeroSchema = BaseSectionData.extend({
+  badge: z.string().optional().describe('ui:text'),
+  title: z.string().describe('ui:text'),
+  titleHighlight: z.string().optional().describe('ui:text'),
+  description: z.string().optional().describe('ui:textarea'),
+  ctas: z.array(CtaSchema).optional().describe('ui:list'),
+  metrics: z.array(HeroMetricSchema).optional().describe('ui:list'),
 });
 
 END_OF_FILE_CONTENT
 echo "Creating src/components/hero/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/hero/types.ts"
 import { z } from 'zod';
-import { HeroSchema, HeroSettingsSchema } from './schema';
+import { BaseSectionSettingsSchema } from '@/lib/base-schemas';
+import { HeroSchema } from './schema';
 
-export type HeroData     = z.infer<typeof HeroSchema>;
-export type HeroSettings = z.infer<typeof HeroSettingsSchema>;
+export type HeroData = z.infer<typeof HeroSchema>;
+export type HeroSettings = z.infer<typeof BaseSectionSettingsSchema>;
 
 END_OF_FILE_CONTENT
 mkdir -p "src/components/login"
@@ -10052,54 +6763,31 @@ echo "Creating src/data/config/menu.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/config/menu.json"
 {
   "main": [
-    { 
-      "label": "Platform",
-      "href": "/platform",
-      "children": [
-        {
-          "label": "Overview",
-          "href": "/platform/overview"
-        },
-        {
-          "label": "Architecture",
-          "href": "/platform/architecture"
-        },
-        {
-          "label": "Security",
-          "href": "/platform/security"
-        },
-        {
-          "label": "Integrations",
-          "href": "/platform/integrations"
-        },
-        {
-          "label": "Roadmap",
-          "href": "/platform/roadmap"
-        }
-      ]
+    {
+      "label": "The Problem",
+      "href": "#problem"
     },
     {
-      "label": "Solutions",
-      "href": "/solutions"
+      "label": "Architecture",
+      "href": "#architecture"
     },
     {
-      "label": "Pricing",
-      "href": "/pricing"
+      "label": "Why",
+      "href": "#why"
     },
     {
-      "label": "Resources",
-      "href": "/resources"
+      "label": "DX",
+      "href": "#devex"
     }
   ]
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/config/menu.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/config/site.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
 {
   "identity": {
-    "title": "OlonJS",
-    "logoUrl": "/brand/mark/olon-mark-dark.svg"
+    "title": "JsonPages",
+    "logoUrl": "/logo.svg"
   },
   "pages": [
     {
@@ -10107,22 +6795,30 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
       "label": "Home"
     },
     {
-      "slug": "design-system",
-      "label": "Design System"
+      "slug": "docs",
+      "label": "Docs"
+    },
+    {
+      "slug": "architecture",
+      "label": "Architecture"
+    },
+    {
+      "slug": "usage",
+      "label": "Usage"
     }
   ],
   "header": {
     "id": "global-header",
     "type": "header",
     "data": {
-      "logoText": "Olon",
-      "badge": "",
+      "logoText": "olon",
+      "logoHighlight": "JS",
       "links": {
         "$ref": "../config/menu.json#/main"
-      },
-      "ctaLabel": "Get started →",
-      "ctaHref": "#contact",
-      "signinHref": "#login"
+      }
+    },
+    "settings": {
+      "sticky": true
     }
   },
   "footer": {
@@ -10130,22 +6826,22 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
     "type": "footer",
     "data": {
       "brandText": "Olon",
-      "copyright": "© 2025 OlonJS · v1.4 · Holon",
+      "brandHighlight": "JS",
+      "copyright": "© 2026 OlonJS · Guido Serio",
       "links": [
         {
+          "label": "Docs",
+          "href": "https://github.com/olonjs/olonjs?tab=readme-ov-file#-documentation-index"
+        },
+        {
           "label": "GitHub",
-          "href": "#"
+          "href": "https://github.com/olonjs/olonjs"
         },
         {
-          "label": "Privacy",
-          "href": "#"
-        },
-        {
-          "label": "Terms",
-          "href": "#"
+          "label": "MIT License",
+          "href": "https://github.com/olonjs/olonjs?tab=readme-ov-file#MIT-1-ov-file"
         }
-      ],
-      "designSystemHref": "/design-system"
+      ]
     },
     "settings": {
       "showLogo": true
@@ -10153,226 +6849,38 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/site.json"
   }
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/config/site.json:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/data/config/theme.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/config/theme.json"
 {
   "name": "Olon",
   "tokens": {
     "colors": {
-      "background": "#0B0907",
-      "card": "#130F0D",
-      "elevated": "#1E1814",
-      "overlay": "#241D17",
-      "popover": "#1A1410",
-      "popover-foreground": "#F2EDE6",
-      "foreground": "#F2EDE6",
-      "card-foreground": "#F2EDE6",
-      "muted-foreground": "#9A8D80",
-      "placeholder": "#5C5248",
-      "primary": "#5B3F9A",
-      "primary-foreground": "#EDE8F8",
-      "primary-light": "#B8A4E0",
-      "primary-dark": "#3D2770",
-      "primary-50": "#EDE8F8",
-      "primary-100": "#CEC1F0",
-      "primary-200": "#B8A4E0",
-      "primary-300": "#A48ED5",
-      "primary-400": "#8B6FC6",
-      "primary-500": "#7254B0",
-      "primary-600": "#5B3F9A",
-      "primary-700": "#4C3482",
-      "primary-800": "#3D2770",
-      "primary-900": "#271852",
-      "accent": "#E2D5B0",
-      "accent-foreground": "#0B0907",
-      "secondary": "#1E1814",
-      "secondary-foreground": "#F2EDE6",
-      "muted": "#1E1814",
-      "border": "#2E271F",
-      "border-strong": "#4A3D30",
-      "input": "#2E271F",
-      "ring": "#5B3F9A",
-      "destructive": "#7F1D1D",
-      "destructive-foreground": "#FCA5A5",
-      "destructive-border": "#991B1B",
-      "destructive-ring": "#EF4444",
-      "success": "#14532D",
-      "success-foreground": "#86EFAC",
-      "success-border": "#166534",
-      "success-indicator": "#22C55E",
-      "warning": "#78350F",
-      "warning-foreground": "#FCD34D",
-      "warning-border": "#92400E",
-      "info": "#1E3A5F",
-      "info-foreground": "#93C5FD",
-      "info-border": "#1E40AF"
-    },
-    "modes": {
-      "light": {
-        "colors": {
-          "background": "#F2EDE6",
-          "card": "#FFFFFF",
-          "elevated": "#F5F2EE",
-          "overlay": "#EDE9E3",
-          "popover": "#FFFFFF",
-          "popover-foreground": "#1A1410",
-          "foreground": "#1A1410",
-          "card-foreground": "#1A1410",
-          "muted-foreground": "#6B6058",
-          "placeholder": "#A89E96",
-          "primary": "#5B3F9A",
-          "primary-foreground": "#FAFAF8",
-          "primary-light": "#7254B0",
-          "primary-dark": "#3D2770",
-          "primary-50": "#EDE8F8",
-          "primary-100": "#CEC1F0",
-          "primary-200": "#B8A4E0",
-          "primary-300": "#A48ED5",
-          "primary-400": "#8B6FC6",
-          "primary-500": "#7254B0",
-          "primary-600": "#5B3F9A",
-          "primary-700": "#4C3482",
-          "primary-800": "#3D2770",
-          "primary-900": "#271852",
-          "accent": "#2E271F",
-          "accent-foreground": "#FFFFFF",
-          "secondary": "#F5F2EE",
-          "secondary-foreground": "#1A1410",
-          "muted": "#F5F2EE",
-          "border": "#DDD8D2",
-          "border-strong": "#C4BEB8",
-          "input": "#DDD8D2",
-          "ring": "#5B3F9A",
-          "destructive": "#FEF2F2",
-          "destructive-foreground": "#991B1B",
-          "destructive-border": "#FECACA",
-          "destructive-ring": "#EF4444",
-          "success": "#F0FDF4",
-          "success-foreground": "#166534",
-          "success-border": "#BBF7D0",
-          "success-indicator": "#16A34A",
-          "warning": "#FFFBEB",
-          "warning-foreground": "#92400E",
-          "warning-border": "#FDE68A",
-          "info": "#EFF6FF",
-          "info-foreground": "#1E40AF",
-          "info-border": "#BFDBFE"
-        }
-      }
+      "primary": "#1763FF",
+      "secondary": "#0F52E0",
+      "accent": "#84ABFF",
+      "background": "#0d1117",
+      "surface": "#0d1421",
+      "surfaceAlt": "#141b24",
+      "text": "#c8d6e8",
+      "textMuted": "#8fa3c4",
+      "border": "#253044"
     },
     "typography": {
       "fontFamily": {
-        "primary": "'Geist', 'Geist Fallback', system-ui, sans-serif",
-        "mono": "'Geist Mono', 'Geist Mono Fallback', monospace",
-        "display": "'Merriweather Variable', Georgia, serif"
-      },
-      "wordmark": {
-        "fontFamily": "'Merriweather Variable', sans-serif",
-        "weight": "500",
-        "width": "112"
-      },
-      "scale": {
-        "xs": "11px",
-        "sm": "13px",
-        "base": "1rem",
-        "md": "1.125rem",
-        "lg": "1.25rem",
-        "xl": "1.5rem",
-        "2xl": "1.625rem",
-        "3xl": "1.75rem",
-        "4xl": "2rem",
-        "5xl": "2.5rem",
-        "6xl": "3rem",
-        "7xl": "4.5rem"
-      },
-      "tracking": {
-        "tight": "-0.03em",
-        "display": "-0.035em",
-        "normal": "0em",
-        "wide": "0.04em",
-        "label": "0.12em"
-      },
-      "leading": {
-        "none": "1",
-        "tight": "1.2",
-        "snug": "1.35",
-        "normal": "1.65",
-        "relaxed": "1.75"
+        "primary": "'JetBrains Mono', Helvetica, Arial, sans-serif",
+        "mono": "'JetBrains Mono', 'Fira Code', monospace",
+        "display": "'JetBrains Mono', Helvetica, Arial, sans-serif"
       }
     },
     "borderRadius": {
-      "xl": "16px",
-      "lg": "12px",
-      "md": "8px",
-      "sm": "4px",
-      "full": "9999px"
-    },
-    "spacing": {
-      "container-max": "1152px",
-      "section-y": "96px",
-      "header-h": "56px",
-      "sidebar-w": "240px"
-    },
-    "zIndex": {
-      "base": "0",
-      "elevated": "10",
-      "dropdown": "100",
-      "sticky": "200",
-      "overlay": "300",
-      "modal": "400",
-      "toast": "500"
+      "sm": "0.25rem",
+      "md": "0.5rem",
+      "lg": "0.75rem"
     }
   }
 }
 END_OF_FILE_CONTENT
-# SKIP: src/data/config/theme.json:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/data/pages"
-echo "Creating src/data/pages/design-system.json..."
-cat << 'END_OF_FILE_CONTENT' > "src/data/pages/design-system.json"
-{
-  "id": "design-system-page",
-  "slug": "design-system",
-  "meta": {
-    "title": "Olon Design System — Design Language",
-    "description": "Token reference, color system, typography, components and brand identity for the OlonJS design language."
-  },
-  "sections": [
-    {
-      "id": "ds-main",
-      "type": "design-system",
-      "data": {
-        "title": "Olon"
-      },
-      "settings": {}
-    }
-  ],
-  "global-header": false
-}
-END_OF_FILE_CONTENT
-# SKIP: src/data/pages/design-system.json:Zone.Identifier is binary and cannot be embedded as text.
-echo "Creating src/data/pages/docs.json..."
-cat << 'END_OF_FILE_CONTENT' > "src/data/pages/docs.json"
-{
-  "id": "docs-page",
-  "slug": "docs",
-  "meta": {
-    "title": "OlonJS Architecture Specifications v1.5",
-    "description": "Mandatory Standard — Sovereign Core Edition. Canonical Studio actions, SSG, Save to file, and Hot Save."
-  },
-  "sections": [
-    {
-      "id": "docs-main",
-      "type": "tiptap",
-      "data": {
-        "content": "# 📐 OlonJS Architecture Specifications v1.5\n\n**Status:** Mandatory Standard\\\n**Version:** 1.5.0 (Sovereign Core Edition — Architecture + Studio/ICE UX, Path-Deterministic Nested Editing, Deterministic Local Design Tokens, Three-Layer CSS Bridge Contract)\\\n**Target:** Senior Architects / AI Agents / Enterprise Governance\n\nThis tenant follows the current OlonJS source-of-truth model: the tenant app owns content, schemas, theme, and persistence wiring; `@olonjs/core` owns the Studio shell, routing, preview, and editing engine.\n\n---\n\n## Canonical Editorial Flows\n\nThe supported Studio flows are now:\n\n- `SSG` for static HTML and route output.\n- `Save to file` for local JSON persistence back into tenant source files.\n- `Hot Save` for cloud/editorial persistence when the tenant config provides it.\n- `Add Section` for deterministic section lifecycle management inside Studio.\n\nPrevious one-off bake and JSON export paths are no longer part of Studio.\n\n---\n\n## Persistence Model\n\n`@olonjs/core` no longer performs HTML bake or ZIP export. Studio now invokes tenant-provided persistence callbacks:\n\n- `saveToFile(state, slug)`\n- `hotSave(state, slug)`\n\nThis keeps persistence explicit, tenant-owned, and aligned with the current `JsonPagesConfig` contract.\n\n---\n\n## Tenant Source Of Truth\n\n`apps/tenant-alpha` is the DNA source of truth for this tenant. Generated CLI templates are downstream artifacts and should be regenerated from source apps instead of being edited manually.\n\nThe canonical content and design files remain:\n\n- `src/data/config/site.json`\n- `src/data/config/menu.json`\n- `src/data/config/theme.json`\n- `src/data/pages/<slug>.json`\n\n---\n\n## Reference Specs\n\nUse these monorepo sources for the full protocol and architecture details:\n\n- `specs/olonjsSpecs_V_1_5.md`\n- `apps/tenant-alpha/specs/olonjsSpecs_V.1.3.md`\n\nThese source specs are the maintained references for architecture, Studio behavior, and tenant compliance."
-      },
-      "settings": {}
-    }
-  ]
-}
-
-END_OF_FILE_CONTENT
 echo "Creating src/data/pages/home.json..."
 cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
 {
@@ -10380,120 +6888,121 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
   "slug": "home",
   "meta": {
     "title": "OlonJS — The Contract Layer for the Agentic Web",
-    "description": "OlonJS standardizes machine-readable web content across tenants. Predictable page endpoints for agents, typed schema contracts, repeatable governance."
+    "description": "A deterministic machine contract for websites: typed, schema-driven content endpoints that make any site reliably readable and operable by AI agents."
   },
   "sections": [
     {
       "id": "hero-main",
       "type": "hero",
       "data": {
-        "eyebrow": "Contract layer · v1.4 · Open Core",
-        "title": "Start Building",
-        "titleHighlight": "for the agentic web.",
-        "description": "AI agents are becoming operational actors in commerce, marketing, and support. But websites are still built for humans first: HTML-heavy, CMS-fragmented, and inconsistent across properties. That makes agent integration slow, brittle, and expensive. Olon introduces a deterministic machine contract for websites OlonJS. This makes content reliably readable and operable by agents while preserving normal human UI.",
+        "badge": "Open source · MIT License",
+        "title": "The Contract Layer for the",
+        "titleHighlight": "Agentic Web",
+        "description": "Agents are becoming operational actors in commerce, marketing, and support. OlonJS introduces a deterministic machine contract for websites — so agents can reliably read and operate any site, without custom glue.",
         "ctas": [
           {
-            "id": "cta-started",
-            "label": "Get started",
-            "href": "#contact",
-            "variant": "accent"
+            "id": "cta-1",
+            "label": "Read the Spec",
+            "href": "https://github.com/olonjs/olonjs/blob/main/specs/olonjsSpecs_V_1_5.md",
+            "variant": "primary"
           },
           {
-            "id": "cta-github",
-            "label": "GitHub",
-            "href": "#",
+            "id": "cta-2",
+            "label": "View on GitHub",
+            "href": "https://github.com/olonjs/olonjs?tab=readme-ov-file#readme",
             "variant": "secondary"
           }
         ],
-        "docsLabel": "Explore platform",
-        "docsHref": "/platform/overview",
-        "heroImage": {
-          "url": "https://bat5elmxofxdroan.public.blob.vercel-storage.com/tenant-assets/511f18d7-d8ac-4292-ad8a-b0efa99401a3/1774286598548-adac7c36-9001-451d-9b16-c3787ac27f57-signup-hero-olon-graded_1_.png",
-          "alt": ""
-        }
+        "metrics": []
       },
-      "settings": {
-        "showCode": false
-      }
+      "settings": {}
     },
     {
-      "id": "features-section",
-      "type": "feature-grid",
+      "id": "problem-section",
+      "type": "problem-statement",
       "data": {
-        "label": "Why OlonJS",
-        "sectionTitle": "A whole in itself,",
-        "sectionTitleItalic": "part of something greater.",
-        "sectionLead": "Built on the concept of the holon — every component autonomous yet part of the larger contract. Governance and developer experience, unified.",
-        "cards": [
+        "anchorId": "problem",
+        "label": "The challenge",
+        "problemTag": "The problem",
+        "problemTitle": "Websites aren't built for agents",
+        "problemItems": [
           {
-            "id": "card-endpoints",
-            "icon": {
-              "url": "/icons/features/icon-json-files.svg",
-              "alt": "JSON files icon"
-            },
-            "title": "Canonical JSON endpoints",
-            "description": "Every page available at /{slug}.json — deterministic, typed, agent-readable. No custom integration per tenant."
+            "id": "pi-1",
+            "text": "Agentic workflows are growing, but integration is mostly custom glue — rebuilt tenant by tenant"
           },
           {
-            "id": "card-schema",
-            "icon": {
-              "url": "/icons/features/icon-zod-schemas.svg",
-              "alt": "Zod schemas icon"
-            },
-            "title": "Schema-driven contracts",
-            "description": "Typed components validated against your schema. Shared conventions eliminate prompt ambiguity across teams."
+            "id": "pi-2",
+            "text": "Every site has a different content structure, routing assumptions, and edge cases"
           },
           {
-            "id": "card-ai",
-            "icon": {
-              "url": "/icons/features/icon-ai-specs.svg",
-              "alt": "AI specs icon"
-            },
-            "title": "AI-native velocity",
-            "description": "Structure is deterministic, so AI can scaffold and evolve tenants faster. Ship new experiences in hours, not weeks."
-          },
-          {
-            "id": "card-multitenant",
-            "icon": {
-              "url": "/icons/features/icon-own-data.svg",
-              "alt": "Own data icon"
-            },
-            "title": "Multi-tenant at scale",
-            "description": "One convention across many tenants enables reusable automations. No per-tenant custom integration work."
-          },
-          {
-            "id": "card-governance",
-            "icon": {
-              "url": "/icons/features/icon-governance.svg",
-              "alt": "Governance icon"
-            },
-            "title": "Enterprise governance",
-            "description": "Audit trails, compliance controls, and private cloud deployment via NX monorepo. SOC2-ready by design."
-          },
-          {
-            "id": "card-deploy",
-            "icon": {
-              "url": "/icons/features/icon-clean-commits.svg",
-              "alt": "Clean commits icon"
-            },
-            "title": "Deployment flexibility",
-            "description": "OSS core you can trust. Vercel-native cloud for speed. Private cloud for governance-heavy orgs."
+            "id": "pi-3",
+            "text": "HTML-heavy, CMS-fragmented, inconsistent across properties — slow, brittle, expensive"
           }
         ],
-        "proofStatement": "Working end-to-end with production routing parity.",
-        "proofSub": "Early customer usage across real tenant deployments · Clear hardening path to enterprise-grade governance.",
-        "tiers": [
+        "solutionTag": "Our solution",
+        "solutionTitle": "A standard machine contract across tenants",
+        "solutionItems": [
           {
-            "id": "tier-oss",
-            "label": "OSS"
+            "id": "si-1",
+            "text": "Predictable page endpoints for agents —",
+            "code": "/{slug}.json"
           },
           {
-            "id": "tier-cloud",
-            "label": "Cloud"
+            "id": "si-2",
+            "text": "Typed, schema-driven content contracts — validated, versioned, auditable"
           },
           {
-            "id": "tier-enterprise",
-            "label": "Enterprise"
+            "id": "si-3",
+            "text": "Repeatable governance and deployment patterns across every tenant"
+          }
+        ]
+      },
+      "settings": {}
+    },
+    {
+      "id": "architecture-section",
+      "type": "feature-grid",
+      "data": {
+        "anchorId": "architecture",
+        "label": "Architecture",
+        "sectionTitle": "Built for enterprise scale",
+        "sectionLead": "Every layer is designed for determinism — from file system layout to component contracts to Studio UX.",
+        "cards": [
+          {
+            "id": "fc-1",
+            "emoji": "📐",
+            "title": "Modular Type Registry",
+            "description": "Core defines empty registries; tenants inject types via module augmentation. Full TypeScript safety, zero Core changes."
+          },
+          {
+            "id": "fc-2",
+            "emoji": "🧱",
+            "title": "Tenant Block Protocol",
+            "description": "Self-contained capsules (View + schema + types) enable automated ingestion and consistent editor generation."
+          },
+          {
+            "id": "fc-3",
+            "emoji": "⚙️",
+            "title": "Deterministic CLI",
+            "description": "@olonjs/cli projects new tenants from a canonical script — reproducible across every environment."
+          },
+          {
+            "id": "fc-4",
+            "emoji": "🎯",
+            "title": "ICE Data Contract",
+            "description": "Mandatory DOM attributes bind the Studio canvas to Inspector fields without coupling to tenant DOM structure."
+          },
+          {
+            "id": "fc-5",
+            "emoji": "📦",
+            "title": "Base Schema Fragments",
+            "description": "Shared BaseSectionData and BaseArrayItem enforce anchor IDs and stable React keys across all capsules."
+          },
+          {
+            "id": "fc-6",
+            "emoji": "🔗",
+            "title": "Path-Based Selection",
+            "description": "v1.4 strict path semantics eliminate nested array ambiguity. Studio selection is root-to-leaf, always deterministic."
           }
         ]
       },
@@ -10502,112 +7011,102 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
       }
     },
     {
-      "id": "contact-section",
-      "type": "contact",
+      "id": "why-now",
+      "type": "git-section",
       "data": {
-        "label": "Contact",
-        "title": "Ready to define",
-        "titleHighlight": "your contract?",
-        "description": "Whether you're running a single tenant or deploying enterprise-grade governance across dozens of properties — let's talk.",
-        "tiers": [
+        "anchorId": "why",
+        "label": "Timing",
+        "title": "Why this matters",
+        "titleAccent": "now",
+        "cards": [
           {
-            "id": "tier-oss",
-            "label": "OSS",
-            "desc": "Open source core — free forever",
-            "sub": "Adoption, trust, ecosystem growth"
+            "id": "wc-1",
+            "title": "Agentic commerce is live",
+            "description": "Operational standards are missing. Without a contract layer, teams face high integration cost and low reliability."
           },
           {
-            "id": "tier-cloud",
-            "label": "Cloud",
-            "desc": "Vercel-native self-serve workflow",
-            "sub": "Fast for modern dev teams"
+            "id": "wc-2",
+            "title": "Enterprises need governance",
+            "description": "A contract layer you can audit, version, and scale — not a one-off adapter for every new agent workflow."
           },
           {
-            "id": "tier-enterprise",
-            "label": "Enterprise",
-            "desc": "Private cloud + NX monorepo",
-            "sub": "Security, compliance, controlled deployment"
+            "id": "wc-3",
+            "title": "AI tooling is ready",
+            "description": "Deterministic structure means AI can scaffold, validate, and evolve tenants with less prompt ambiguity."
+          },
+          {
+            "id": "wc-4",
+            "title": "Speed compounds",
+            "description": "Teams that standardize now ship new experiences in hours while others rebuild integration logic repeatedly."
           }
-        ],
-        "formTitle": "Get in touch",
-        "successTitle": "Message received",
-        "successBody": "We'll respond within one business day.",
-        "disclaimer": "No spam. Unsubscribe at any time."
+        ]
       },
-      "settings": {
-        "showTiers": true
-      }
+      "settings": {}
     },
     {
-      "id": "login-section",
-      "type": "login",
+      "id": "dx-section",
+      "type": "devex",
       "data": {
-        "title": "Start your journey",
-        "subtitle": "Enter your credentials to continue",
-        "forgotHref": "#",
-        "signupHref": "#contact",
-        "termsHref": "#",
-        "privacyHref": "#"
-      },
-      "settings": {
-        "showOauth": true
-      }
-    }
-  ]
-}
-END_OF_FILE_CONTENT
-mkdir -p "src/data/pages/platform"
-# SKIP: src/data/pages/platform.json:Zone.Identifier is binary and cannot be embedded as text.
-echo "Creating src/data/pages/platform/overview.json..."
-cat << 'END_OF_FILE_CONTENT' > "src/data/pages/platform/overview.json"
-{
-  "id": "overview-page",
-  "slug": "platform/overview",
-  "meta": {
-    "title": "OlonJS — Platform Overview",
-    "description": "Overview of the OlonJS platform, architecture direction, and product surface."
-  },
-  "sections": [
-    {
-      "id": "doc-page-hero",
-      "type": "page-hero",
-      "data": {
-        "breadcrumb": [
+        "anchorId": "devex",
+        "label": "Developer Velocity",
+        "title": "AI-native advantage,\nfrom day one",
+        "description": "OlonJS dramatically increases AI-assisted development speed. Because structure is deterministic, agents scaffold and evolve tenants faster — with lower regression risk.",
+        "features": [
           {
-            "id": "crumb-home",
-            "label": "Home",
-            "href": "/"
+            "id": "df-1",
+            "text": "AI scaffolds and evolves tenants faster because structure is deterministic"
           },
           {
-            "id": "crumb-platform",
-            "label": "Platform",
-            "href": "/platform/overview"
+            "id": "df-2",
+            "text": "Shared conventions reduce prompt ambiguity and implementation drift"
+          },
+          {
+            "id": "df-3",
+            "text": "Ship new tenant experiences in hours, not weeks"
           }
         ],
-        "badge": "",
-        "title": "Platform",
-        "titleItalic": "Overview",
-        "description": "High-level overview of the OlonJS platform."
-      }
-    }
-  ]
-}
-END_OF_FILE_CONTENT
-echo "Creating src/data/pages/post.json..."
-cat << 'END_OF_FILE_CONTENT' > "src/data/pages/post.json"
-{
-  "id": "post-page",
-  "slug": "post",
-  "meta": {
-    "title": "Post",
-    "description": "Smoke test page for header + tiptap + footer flow."
-  },
-  "sections": [
+        "stats": [
+          {
+            "id": "ds-1",
+            "value": "10×",
+            "label": "Faster scaffolding"
+          },
+          {
+            "id": "ds-2",
+            "value": "∅",
+            "label": "Glue per tenant"
+          },
+          {
+            "id": "ds-3",
+            "value": "100%",
+            "label": "Type-safe contracts"
+          }
+        ]
+      },
+      "settings": {}
+    },
     {
-      "id": "post-editorial-main",
-      "type": "tiptap",
+      "id": "cta-final",
+      "type": "cta-banner",
       "data": {
-        "content": "# JsonPages Cloud – Terms of Service & EULA\n\n---\n\n### **Last Updated:** March 2026\n\n### 1. THE SERVICE\n\nJsonPages provides a hybrid content management infrastructure consisting of:\n\n- **The Core:** An open-source library (@jsonpages/core) governed by the **MIT License**.\n- **The Cloud:** A proprietary SaaS platform (`cloud.jsonpages.io`) that provides the \"Git Bridge,\" Asset Pipeline, and Managed Infrastructure.\n\nBy using the Cloud Service, you agree to these terms.\n\n### 2. DATA SOVEREIGNTY & OWNERSHIP\n\n- **Your Content:** All data (JSON files), code, and assets managed through JsonPages remain your exclusive property. JsonPages acts only as an **orchestrator**.\n- **The Bridge:** You grant JsonPages the necessary permissions to perform Git operations (commits/pushes) on your behalf to your designated repositories (GitHub/GitLab).\n- **Portability:** Since your content is stored as flat JSON files in your own repository, you retain the right to migrate away from the Cloud Service at any time without data lock-in.\n- \n\n### 3. SUBSCRIPTIONS & ENTITLEMENTS\n\n- **Billing:** The Cloud Service is billed on a subscription basis (**Monthly Recurring Revenue**).\n- **Entitlements:** Each \"Project\" or \"Tenant\" consumes one entitlement. Active entitlements grant access to the Visual Studio (ICE) and the Cloud Save API.\n- **Third-Party Costs:** You are solely responsible for any costs incurred on third-party platforms (e.g., **Vercel** hosting, **GitHub** storage, **Cloudflare** workers).\n\n### 4. ACCEPTABLE USE\n\nYou may not use JsonPages Cloud to:\n\n- Host or manage illegal, harmful, or offensive content.\n- Attempt to reverse-engineer the proprietary Cloud Bridge or bypass entitlement checks.\n- Interfere with the stability of the API for other users.\n- \n\n### 5. LIMITATION OF LIABILITY\n\n- **\"As-Is\" Basis:** The service is provided \"as-is.\" While we strive for 99.9% uptime, JsonPages is not liable for data loss resulting from Git conflicts, third-party outages (Vercel/GitHub), or user error.\n- **No Warranty:** We do not warrant that the service will be error-free or uninterrupted.\n- \n\n### 6. TERMINATION\n\n- **By You:** You can cancel your subscription at any time. Your Studio access will remain active until the end of the current billing cycle.\n- \n- **By Us:** We reserve the right to suspend accounts that violate these terms or fail to settle outstanding invoices.\n\n### 7. GOVERNING LAW\n\nThese terms are governed by the laws of **Italy/European Union**, without regard to conflict of law principles."
+        "anchorId": "get-started",
+        "title": "Ready to give your site\na machine contract?",
+        "description": "Read the full specification or explore the source on GitHub. Zero dependencies to start — one JSON endpoint per page.",
+        "cliCommand": "npx @olonjs/cli@latest new tenant",
+        "ctas": [
+          {
+            "id": "cta-docs",
+            "label": "Read the Specification",
+            "href": "https://github.com/olonjs/olonjs/blob/main/specs/olonjsSpecs_V_1_5.md",
+            "variant": "primary"
+          },
+          {
+            "id": "cta-gh",
+            "label": "View on GitHub",
+            "href": "https://github.com/olonjs/olonjs#readme-ov-file",
+            "variant": "secondary"
+          }
+        ]
       },
       "settings": {}
     }
@@ -11128,741 +7627,313 @@ echo "Creating src/index.css..."
 cat << 'END_OF_FILE_CONTENT' > "src/index.css"
 @import "tailwindcss";
 
-/* ═══════════════════════════════════════════════════════════════
-   OLON DESIGN SYSTEM — index.css
-   v1.4 · Holon · Labradorite
+@source "./**/*.tsx";
 
-   Architecture:
-   1. :root      — bridge: reads vars injected by @olonjs/core from theme.json
-                   SOT lives in src/data/config/theme.json
-   2. @theme      — Tailwind v4 bridge: --color-{slug}: var(--{slug})
-   3. @layer base — global resets + base element styles
-   4. @layer utilities — custom utility classes
-═══════════════════════════════════════════════════════════════ */
-
-
-/* ─────────────────────────────────────────────────────────────
-   1. TOKEN BRIDGE
-   Reads CSS vars injected by @olonjs/core engine from theme.json.
-   engine injects: --theme-colors-{name}, --theme-typography-*,
-                   --theme-border-radius-*, --theme-spacing-*
-   Aliases: --theme-font-*, --theme-radius-*, --theme-primary etc.
-───────────────────────────────────────────────────────────── */
-:root {
-
-  /* ── Backgrounds ─────────────────────────────────────────── */
-  --background:           var(--theme-colors-background);
-  --card:                 var(--theme-colors-card);
-  --elevated:             var(--theme-colors-elevated);
-  --overlay:              var(--theme-colors-overlay);
-  --popover:              var(--theme-colors-popover);
-  --popover-foreground:   var(--theme-colors-popover-foreground);
-
-  /* ── Foregrounds ─────────────────────────────────────────── */
-  --foreground:           var(--theme-colors-foreground);
-  --card-foreground:      var(--theme-colors-card-foreground);
-  --muted-foreground:     var(--theme-colors-muted-foreground);
-  --placeholder:          var(--theme-colors-placeholder);
-
-  /* ── Brand — Labradorite ramp ────────────────────────────── */
-  --primary:              var(--theme-colors-primary);
-  --primary-foreground:   var(--theme-colors-primary-foreground);
-  --primary-light:        var(--theme-colors-primary-light);
-  --primary-dark:         var(--theme-colors-primary-dark);
-  --primary-50:           var(--theme-colors-primary-50);
-  --primary-100:          var(--theme-colors-primary-100);
-  --primary-200:          var(--theme-colors-primary-200);
-  --primary-300:          var(--theme-colors-primary-300);
-  --primary-400:          var(--theme-colors-primary-400);
-  --primary-500:          var(--theme-colors-primary-500);
-  --primary-600:          var(--theme-colors-primary-600);
-  --primary-700:          var(--theme-colors-primary-700);
-  --primary-800:          var(--theme-colors-primary-800);
-  --primary-900:          var(--theme-colors-primary-900);
-
-  /* ── Accent ──────────────────────────────────────────────── */
-  --accent:               var(--theme-colors-accent);
-  --accent-foreground:    var(--theme-colors-accent-foreground);
-
-  /* ── Secondary ───────────────────────────────────────────── */
-  --secondary:            var(--theme-colors-secondary);
-  --secondary-foreground: var(--theme-colors-secondary-foreground);
-
-  /* ── Muted ───────────────────────────────────────────────── */
-  --muted:                var(--theme-colors-muted);
-
-  /* ── Border ──────────────────────────────────────────────── */
-  --border:               var(--theme-colors-border);
-  --border-strong:        var(--theme-colors-border-strong);
-
-  /* ── Form ────────────────────────────────────────────────── */
-  --input:                var(--theme-colors-input);
-  --ring:                 var(--theme-colors-ring);
-
-  /* ── Feedback — Destructive ──────────────────────────────── */
-  --destructive:              var(--theme-colors-destructive);
-  --destructive-foreground:   var(--theme-colors-destructive-foreground);
-  --destructive-border:       var(--theme-colors-destructive-border);
-  --destructive-ring:         var(--theme-colors-destructive-ring);
-
-  /* ── Feedback — Success ──────────────────────────────────── */
-  --success:              var(--theme-colors-success);
-  --success-foreground:   var(--theme-colors-success-foreground);
-  --success-border:       var(--theme-colors-success-border);
-  --success-indicator:    var(--theme-colors-success-indicator);
-
-  /* ── Feedback — Warning ──────────────────────────────────── */
-  --warning:              var(--theme-colors-warning);
-  --warning-foreground:   var(--theme-colors-warning-foreground);
-  --warning-border:       var(--theme-colors-warning-border);
-
-  /* ── Feedback — Info ─────────────────────────────────────── */
-  --info:                 var(--theme-colors-info);
-  --info-foreground:      var(--theme-colors-info-foreground);
-  --info-border:          var(--theme-colors-info-border);
-
-  /* ── Radius (xl/full not aliased by engine, bridge here) ─── */
-  --theme-radius-xl:      var(--theme-border-radius-xl);
-  --theme-radius-full:    var(--theme-border-radius-full);
-
-  /* ── Typography — scale ──────────────────────────────────── */
-  --theme-text-xs:        var(--theme-typography-scale-xs);
-  --theme-text-sm:        var(--theme-typography-scale-sm);
-  --theme-text-base:      var(--theme-typography-scale-base);
-  --theme-text-md:        var(--theme-typography-scale-md);
-  --theme-text-lg:        var(--theme-typography-scale-lg);
-  --theme-text-xl:        var(--theme-typography-scale-xl);
-  --theme-text-2xl:       var(--theme-typography-scale-2xl);
-  --theme-text-3xl:       var(--theme-typography-scale-3xl);
-  --theme-text-4xl:       var(--theme-typography-scale-4xl);
-  --theme-text-5xl:       var(--theme-typography-scale-5xl);
-  --theme-text-6xl:       var(--theme-typography-scale-6xl);
-  --theme-text-7xl:       var(--theme-typography-scale-7xl);
-
-  /* ── Typography — tracking ───────────────────────────────── */
-  --theme-tracking-tight:   var(--theme-typography-tracking-tight);
-  --theme-tracking-display: var(--theme-typography-tracking-display);
-  --theme-tracking-normal:  var(--theme-typography-tracking-normal);
-  --theme-tracking-wide:    var(--theme-typography-tracking-wide);
-  --theme-tracking-label:   var(--theme-typography-tracking-label);
-
-  /* ── Typography — wordmark ───────────────────────────────── */
-  --wordmark-font:     var(--theme-typography-wordmark-font-family);
-  --wordmark-tracking: var(--theme-typography-wordmark-tracking);
-  --wordmark-weight:   var(--theme-typography-wordmark-weight);
-  --wordmark-width:    var(--theme-typography-wordmark-width);
-
-  /* ── Typography — leading ────────────────────────────────── */
-  --theme-leading-none:    var(--theme-typography-leading-none);
-  --theme-leading-tight:   var(--theme-typography-leading-tight);
-  --theme-leading-snug:    var(--theme-typography-leading-snug);
-  --theme-leading-normal:  var(--theme-typography-leading-normal);
-  --theme-leading-relaxed: var(--theme-typography-leading-relaxed);
-
-  /* ── Spacing ─────────────────────────────────────────────── */
-  --theme-container-max:  var(--theme-spacing-container-max);
-  --theme-section-y:      var(--theme-spacing-section-y);
-  --theme-header-h:       var(--theme-spacing-header-h);
-  --theme-sidebar-w:      var(--theme-spacing-sidebar-w);
-
-  /* ── Z-index ─────────────────────────────────────────────── */
-  --z-base:     var(--theme-z-index-base);
-  --z-elevated: var(--theme-z-index-elevated);
-  --z-dropdown: var(--theme-z-index-dropdown);
-  --z-sticky:   var(--theme-z-index-sticky);
-  --z-overlay:  var(--theme-z-index-overlay);
-  --z-modal:    var(--theme-z-index-modal);
-  --z-toast:    var(--theme-z-index-toast);
-}
-
-
-/* ─────────────────────────────────────────────────────────────
-   2. @theme — Tailwind v4 TOKEN BRIDGE
-   Pattern: --color-{slug}: var(--{slug})
-   Every token exposed here becomes a Tailwind utility class.
-───────────────────────────────────────────────────────────── */
 @theme {
+  /* 
+     🎯 MASTER MAPPING (V2.7 Landing) 
+  */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
 
-  /* Colors — Backgrounds */
-  --color-background:              var(--background);
-  --color-card:                    var(--card);
-  --color-elevated:                var(--elevated);
-  --color-overlay:                 var(--overlay);
-  --color-popover:                 var(--popover);
-  --color-popover-foreground:      var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
 
-  /* Colors — Foregrounds */
-  --color-foreground:              var(--foreground);
-  --color-card-foreground:         var(--card-foreground);
-  --color-muted-foreground:        var(--muted-foreground);
-  --color-placeholder:             var(--placeholder);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
 
-  /* Colors — Brand ramp */
-  --color-primary:                 var(--primary);
-  --color-primary-foreground:      var(--primary-foreground);
-  --color-primary-light:           var(--primary-light);
-  --color-primary-dark:            var(--primary-dark);
-  --color-primary-50:              var(--primary-50);
-  --color-primary-100:             var(--primary-100);
-  --color-primary-200:             var(--primary-200);
-  --color-primary-300:             var(--primary-300);
-  --color-primary-400:             var(--primary-400);
-  --color-primary-500:             var(--primary-500);
-  --color-primary-600:             var(--primary-600);
-  --color-primary-700:             var(--primary-700);
-  --color-primary-800:             var(--primary-800);
-  --color-primary-900:             var(--primary-900);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
 
-  /* Colors — Accent */
-  --color-accent:                  var(--accent);
-  --color-accent-foreground:       var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
 
-  /* Colors — Secondary */
-  --color-secondary:               var(--secondary);
-  --color-secondary-foreground:    var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  
+  --radius-lg: var(--theme-radius-lg);
+  --radius-md: var(--theme-radius-md);
+  --radius-sm: var(--theme-radius-sm);
 
-  /* Colors — Muted */
-  --color-muted:                   var(--muted);
+  --font-primary: var(--theme-font-primary);
+  --font-mono: var(--theme-font-mono);
 
-  /* Colors — Border */
-  --color-border:                  var(--border);
-  --color-border-strong:           var(--border-strong);
-
-  /* Colors — Form */
-  --color-input:                   var(--input);
-  --color-ring:                    var(--ring);
-
-  /* Colors — Feedback */
-  --color-destructive:             var(--destructive);
-  --color-destructive-foreground:  var(--destructive-foreground);
-  --color-destructive-border:      var(--destructive-border);
-  --color-destructive-ring:        var(--destructive-ring);
-  --color-success:                 var(--success);
-  --color-success-foreground:      var(--success-foreground);
-  --color-success-border:          var(--success-border);
-  --color-success-indicator:       var(--success-indicator);
-  --color-warning:                 var(--warning);
-  --color-warning-foreground:      var(--warning-foreground);
-  --color-warning-border:          var(--warning-border);
-  --color-info:                    var(--info);
-  --color-info-foreground:         var(--info-foreground);
-  --color-info-border:             var(--info-border);
-
-  /* Radius */
-  --radius-xl:                     var(--theme-radius-xl);
-  --radius-lg:                     var(--theme-radius-lg);
-  --radius-md:                     var(--theme-radius-md);
-  --radius-sm:                     var(--theme-radius-sm);
-  --radius-full:                   var(--theme-radius-full);
-
-  /* Fonts */
-  --font-primary:                  var(--theme-font-primary);
-  --font-mono:                     var(--theme-font-mono);
-  --font-display:                  var(--theme-font-display);
-
-  /* Text scale */
-  --text-xs:                       var(--theme-text-xs);
-  --text-sm:                       var(--theme-text-sm);
-  --text-base:                     var(--theme-text-base);
-  --text-md:                       var(--theme-text-md);
-  --text-lg:                       var(--theme-text-lg);
-  --text-xl:                       var(--theme-text-xl);
-  --text-2xl:                      var(--theme-text-2xl);
-  --text-3xl:                      var(--theme-text-3xl);
-  --text-4xl:                      var(--theme-text-4xl);
-  --text-5xl:                      var(--theme-text-5xl);
-  --text-6xl:                      var(--theme-text-6xl);
-  --text-7xl:                      var(--theme-text-7xl);
-
-  /* Line heights */
-  --leading-none:                  var(--theme-leading-none);
-  --leading-tight:                 var(--theme-leading-tight);
-  --leading-snug:                  var(--theme-leading-snug);
-  --leading-normal:                var(--theme-leading-normal);
-  --leading-relaxed:               var(--theme-leading-relaxed);
-
-  /* Tracking */
-  --tracking-tight:                var(--theme-tracking-tight);
-  --tracking-display:              var(--theme-tracking-display);
-  --tracking-normal:               var(--theme-tracking-normal);
-  --tracking-wide:                 var(--theme-tracking-wide);
-  --tracking-label:                var(--theme-tracking-label);
+  /*
+     DISPLAY FONT bridge
+     The core now emits --theme-font-display from theme.json, so this keeps
+     the tenant on the stable semantic alias rather than depending on the
+     flattened internal variable path.
+  */
+  --font-display: var(--theme-font-display);
 }
 
+/* 
+   🌍 TENANT BRAND TOKENS (JSP 1.5)
+*/
+:root {
+  --background: var(--theme-background);
+  --foreground: var(--theme-text);
+  --card: var(--theme-surface);
+  --card-foreground: var(--theme-text);
+  --primary: var(--theme-primary);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: var(--theme-secondary);
+  --secondary-foreground: var(--theme-text);
+  --muted: var(--theme-surface-alt);
+  --muted-foreground: var(--theme-text-muted);
+  --border: var(--theme-border);
+  --radius: var(--theme-radius-lg);
 
-/* ─────────────────────────────────────────────────────────────
-   3. BASE LAYER
-───────────────────────────────────────────────────────────── */
+  /* 
+     🔧 ACCENT CHAIN — Forward-compatible workaround
+     theme-manager.ts already injects --theme-accent on :root,
+     but the original index.css never bridged it into the semantic layer.
+     This closes the gap: --theme-accent → --accent → --color-accent.
+     Falls back to --theme-primary if accent is undefined.
+  */
+  --accent: var(--theme-accent, var(--theme-primary));
+
+  /* Olon brand primitives — consumed by OlonMark SVG gradients */
+  --olon-ring-top:    #84ABFF;
+  --olon-ring-bottom: #0F52E0;
+  --olon-ground:      #080808;
+  --olon-figure:      #e8f0f8;
+  --olon-nucleus:     var(--olon-figure);
+
+  /*
+     Shared demo/mockup helpers
+     These are still theme-derived, but give the tenant a stable semantic
+     palette for browser/terminal/inspector style surfaces.
+  */
+  --demo-surface: color-mix(in oklch, var(--card) 86%, var(--background));
+  --demo-surface-soft: color-mix(in oklch, var(--card) 72%, var(--background));
+  --demo-surface-strong: color-mix(in oklch, var(--background) 82%, black);
+  --demo-surface-deep: color-mix(in oklch, var(--background) 70%, black);
+  --demo-border-soft: color-mix(in oklch, var(--foreground) 8%, transparent);
+  --demo-border-strong: color-mix(in oklch, var(--primary) 24%, transparent);
+  --demo-accent-soft: color-mix(in oklch, var(--primary) 10%, transparent);
+  --demo-accent-strong: color-mix(in oklch, var(--primary) 18%, transparent);
+  --demo-text-soft: color-mix(in oklch, var(--foreground) 88%, var(--muted-foreground));
+  --demo-text-faint: color-mix(in oklch, var(--muted-foreground) 72%, transparent);
+}
+
 @layer base {
-  *, *::before, *::after {
-    box-sizing: border-box;
-  }
-
-  html {
-    scroll-behavior: smooth;
-    text-size-adjust: 100%;
-  }
-
+  * { border-color: var(--border); }
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: var(--theme-font-primary);
-    font-size: var(--theme-text-base);
-    line-height: var(--theme-leading-normal);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--theme-font-primary);
-    font-weight: 500;
-    line-height: var(--theme-leading-tight);
-    color: var(--foreground);
-  }
-
-  h1 {
-    font-size: var(--theme-text-5xl);
-  }
-  h2 {
-    font-size: var(--theme-text-4xl);
-  }
-  h3 {
-    font-size: var(--theme-text-3xl);
-  }
-  h4 {
-    font-size: var(--theme-text-2xl);
-  }
-  h5 {
-    font-size: var(--theme-text-xl);
-  }
-  h6 {
-    font-size: var(--theme-text-lg);
-  }
-
-  @media (min-width: 768px) {
-    h1 { font-size: var(--theme-text-6xl); }
-    h2 { font-size: var(--theme-text-5xl); }
-    h3 { font-size: var(--theme-text-4xl); }
-    h4 { font-size: var(--theme-text-3xl); }
-    h5 { font-size: var(--theme-text-2xl); }
-    h6 { font-size: var(--theme-text-xl);  }
-  }
-
-  @media (min-width: 1024px) {
-    h1 { font-size: var(--theme-text-7xl); }
-    h2 { font-size: var(--theme-text-6xl); }
-    h3 { font-size: var(--theme-text-5xl); }
-    h4 { font-size: var(--theme-text-4xl); }
-    h5 { font-size: var(--theme-text-3xl); }
-    h6 { font-size: var(--theme-text-2xl); }
-  }
-
-  p {
-    line-height: var(--theme-leading-normal);
-  }
-
-  code, pre, kbd, samp {
-    font-family: var(--theme-font-mono);
-  }
-
-  a {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  button {
-    cursor: pointer;
-  }
-
-  input, textarea, select {
-    font-family: var(--theme-font-primary);
-    font-size: var(--theme-text-sm);
-  }
-
-  ::selection {
-    background-color: var(--primary);
-    color: var(--primary-foreground);
-  }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar           { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track     { background: var(--background); }
-  ::-webkit-scrollbar-thumb     { background: var(--border); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
-}
-
-
-/* ─────────────────────────────────────────────────────────────
-   4. UTILITIES LAYER
-───────────────────────────────────────────────────────────── */
-@layer utilities {
-
-  /* ── Typography helpers ─────────────────────────────────── */
-  .font-display   { font-family: var(--theme-font-display); }
-  .font-mono-olon { font-family: var(--theme-font-mono); }
-
-  .tracking-label { letter-spacing: var(--theme-tracking-label); }
-  .tracking-display { letter-spacing: var(--theme-tracking-display); }
-
-  /* ── Layout ─────────────────────────────────────────────── */
-  .container-olon {
-    width: 100%;
-    max-width: var(--theme-container-max);
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-  }
-
-  .section-anchor {
-    scroll-margin-top: calc(var(--theme-header-h) + 24px);
-  }
-
-  /* TOCC — required overlay visuals for Studio stage */
-  [data-section-id] {
-    position: relative;
-  }
-
-  [data-jp-section-overlay] {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    border: 1px dashed transparent;
-    background: transparent;
-    z-index: 9999;
-    transition: border-color 0.15s ease, background-color 0.15s ease;
-  }
-
-  [data-section-id]:hover [data-jp-section-overlay] {
-    border-color: color-mix(in srgb, var(--primary-light) 75%, transparent);
-    background-color: color-mix(in srgb, var(--primary-900) 12%, transparent);
-  }
-
-  [data-section-id][data-jp-selected] [data-jp-section-overlay] {
-    border-color: var(--primary-light);
-    background-color: color-mix(in srgb, var(--primary-900) 20%, transparent);
-  }
-
-  [data-jp-section-overlay] > div {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    font-family: var(--theme-font-mono);
-    font-size: var(--theme-text-xs);
-    letter-spacing: var(--theme-tracking-label);
-    text-transform: uppercase;
-    color: var(--primary-light);
-    background: color-mix(in srgb, var(--background) 82%, transparent);
-    border: 1px solid color-mix(in srgb, var(--primary-light) 50%, transparent);
-    border-radius: var(--theme-radius-sm);
-    padding: 2px 8px;
-    opacity: 0;
-    transform: translateY(-2px);
-    transition: opacity 0.15s ease, transform 0.15s ease;
-  }
-
-  [data-section-id]:hover [data-jp-section-overlay] > div,
-  [data-section-id][data-jp-selected] [data-jp-section-overlay] > div {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  /* ── DS-specific ────────────────────────────────────────── */
-  .ds-divider {
-    border: none;
-    border-top: 0.5px solid var(--border);
-    margin: 0;
-  }
-
-  .token-label {
-    font-family: var(--theme-font-mono);
-    font-size: var(--theme-text-xs);
-    color: var(--muted-foreground);
-  }
-
-  /* ── DS Sidebar nav link ────────────────────────────────── */
-  .nav-link {
-    display: block;
-    font-size: var(--theme-text-sm);
-    color: var(--muted-foreground);
-    padding: 5px 12px;
-    border-radius: var(--theme-radius-sm);
-    transition: color 0.15s, background-color 0.15s;
-    cursor: pointer;
-    text-decoration: none;
-  }
-  .nav-link:hover {
-    color: var(--foreground);
-    background-color: var(--elevated);
-  }
-  .nav-link.active {
-    color: var(--primary-light);
-    background-color: var(--elevated);
-  }
-
-  /* ── Focus ring ─────────────────────────────────────────── */
-  .focus-ring {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--ring);
-  }
-
-  /* ── Inline code ────────────────────────────────────────── */
-  .code-inline {
-    font-family: var(--theme-font-mono);
-    font-size: 0.85em;
-    background-color: var(--primary-900);
-    color: var(--primary-light);
-    padding: 1px 6px;
-    border-radius: var(--theme-radius-sm);
-  }
-
-  /* ── Surface elevations ─────────────────────────────────── */
-  .surface-base     { background-color: var(--background); }
-  .surface-card     { background-color: var(--card); }
-  .surface-elevated { background-color: var(--elevated); }
-  .surface-overlay  { background-color: var(--overlay); }
-
-  /* ── Feedback surfaces ──────────────────────────────────── */
-  .surface-destructive {
-    background-color: var(--destructive);
-    color: var(--destructive-foreground);
-    border-color: var(--destructive-border);
-  }
-  .surface-success {
-    background-color: var(--success);
-    color: var(--success-foreground);
-    border-color: var(--success-border);
-  }
-  .surface-warning {
-    background-color: var(--warning);
-    color: var(--warning-foreground);
-    border-color: var(--warning-border);
-  }
-  .surface-info {
-    background-color: var(--info);
-    color: var(--info-foreground);
-    border-color: var(--info-border);
-  }
-
-  /* ── Syntax highlight roles (code blocks) ───────────────── */
-  .syntax-keyword   { color: var(--primary-400); }
-  .syntax-string    { color: var(--primary-200); }
-  .syntax-property  { color: var(--accent); }
-  .syntax-variable  { color: var(--primary-light); }
-  .syntax-comment   { color: var(--muted-foreground); }
-  .syntax-value     { color: var(--primary-light); }
-
-  /* Hero image blend overlay */
-  .hero-media-overlay {
-    background:
-      linear-gradient(
-        to right,
-        color-mix(in srgb, var(--background) 100%, transparent) 0%,
-        color-mix(in srgb, var(--background) 82%, transparent) 16%,
-        color-mix(in srgb, var(--background) 56%, transparent) 34%,
-        color-mix(in srgb, var(--background) 22%, transparent) 54%,
-        color-mix(in srgb, var(--background) 6%, transparent) 74%,
-        color-mix(in srgb, var(--background) 0%, transparent) 100%
-      ),
-      linear-gradient(
-        to top,
-        color-mix(in srgb, var(--background) 24%, transparent) 0%,
-        color-mix(in srgb, var(--background) 8%, transparent) 28%,
-        color-mix(in srgb, var(--background) 0%, transparent) 56%
-      );
-  }
-
-  .hero-media-portrait {
-    aspect-ratio: 3 / 4;
-    min-height: 26rem;
-  }
-
-  @media (min-width: 768px) {
-    .hero-media-portrait {
-      min-height: 34rem;
-    }
+    font-family: var(--font-primary);
+    line-height: 1.7;
+    overflow-x: hidden;
+    @apply antialiased;
   }
 }
 
+/* ==========================================================================
+   FONT DISPLAY UTILITY
+   Maps .font-display class to the display font family (Playfair Display)
+   ========================================================================== */
+.font-display {
+  font-family: var(--font-display, var(--font-primary));
+}
 
-/* ─────────────────────────────────────────────────────────────
-   4b. TIPTAP — visitor markdown (.jp-tiptap-content) + Studio ProseMirror
-   Typography, color, radius: :root bridge only (theme.json → engine).
-───────────────────────────────────────────────────────────── */
+/* ==========================================================================
+   LANDING ANIMATIONS
+   ========================================================================== */
+@keyframes jp-fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
+@keyframes jp-pulseDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.jp-animate-in {
+  opacity: 0;
+  animation: jp-fadeUp 0.7s ease forwards;
+}
+.jp-d1 { animation-delay: 0.1s; }
+.jp-d2 { animation-delay: 0.2s; }
+.jp-d3 { animation-delay: 0.3s; }
+.jp-d4 { animation-delay: 0.4s; }
+.jp-d5 { animation-delay: 0.5s; }
+
+.jp-pulse-dot {
+  animation: jp-pulseDot 2s ease infinite;
+}
+
+/* ==========================================================================
+   SMOOTH SCROLL
+   ========================================================================== */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ==========================================================================
+   ICE ADMIN — Section highlight in preview iframe
+   The preview iframe only receives tenant CSS; core's overlay classes
+   (z-[50], absolute, etc.) are not in this build. Define them here so
+   the section highlight is always visible in /admin.
+   ========================================================================== */
+[data-jp-section-overlay] {
+  position: absolute;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  transition: border-color 0.2s, background-color 0.2s;
+  border: 2px solid transparent;
+}
+
+[data-section-id]:hover [data-jp-section-overlay] {
+  border-color: rgba(96, 165, 250, 0.5);
+  border-style: dashed;
+}
+
+[data-section-id][data-jp-selected] [data-jp-section-overlay] {
+  border-color: rgb(37, 99, 235);
+  border-style: solid;
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+[data-jp-section-overlay] > div {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.25rem 0.5rem;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: rgb(37, 99, 235);
+  color: white;
+  transition: opacity 0.2s;
+}
+
+[data-section-id]:hover [data-jp-section-overlay] > div,
+[data-section-id][data-jp-selected] [data-jp-section-overlay] > div {
+  opacity: 1;
+}
+
+[data-section-id] [data-jp-section-overlay] > div {
+  opacity: 0;
+}
+
+/* Editorial focus lock: avoid section reselection while selecting text in inline editor. */
+[data-section-id].jp-editorial-focus [data-jp-section-overlay] {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+[data-section-id].jp-editorial-focus [data-jp-section-overlay] > div {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   TIPTAP — Public content typography (visitor view)
+   ReactMarkdown renders plain HTML; preflight resets it. Re-apply here.
+   ========================================================================== */
+.jp-tiptap-content > * + * { margin-top: 0.75em; }
+
+.jp-tiptap-content h1 { font-size: 2em;    font-weight: 700; line-height: 1.2; margin-top: 1.25em; margin-bottom: 0.25em; }
+.jp-tiptap-content h2 { font-size: 1.5em;  font-weight: 700; line-height: 1.3; margin-top: 1.25em; margin-bottom: 0.25em; }
+.jp-tiptap-content h3 { font-size: 1.25em; font-weight: 600; line-height: 1.4; margin-top: 1.25em; margin-bottom: 0.25em; }
+.jp-tiptap-content h4 { font-size: 1em;    font-weight: 600; line-height: 1.5; margin-top: 1em;    margin-bottom: 0.25em; }
+
+.jp-tiptap-content p  { line-height: 1.7; }
+
+.jp-tiptap-content strong { font-weight: 700; }
+.jp-tiptap-content em     { font-style: italic; }
+.jp-tiptap-content s      { text-decoration: line-through; }
+
+.jp-tiptap-content a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+.jp-tiptap-content a:hover { opacity: 0.8; }
+
+.jp-tiptap-content code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.875em;
+  background: color-mix(in oklch, var(--foreground) 8%, transparent);
+  border-radius: var(--theme-radius-sm);
+  padding: 0.1em 0.35em;
+}
+.jp-tiptap-content pre {
+  background: color-mix(in oklch, var(--background) 60%, black);
+  border-radius: var(--theme-radius-lg);
+  padding: 1em 1.25em;
+  overflow-x: auto;
+}
+.jp-tiptap-content pre code { background: none; padding: 0; }
+
+.jp-tiptap-content ul { list-style-type: disc;    padding-left: 1.625em; }
+.jp-tiptap-content ol { list-style-type: decimal; padding-left: 1.625em; }
+.jp-tiptap-content li { line-height: 1.7; margin-top: 0.25em; }
+.jp-tiptap-content li + li { margin-top: 0.25em; }
+
+.jp-tiptap-content blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1em;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.jp-tiptap-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5em 0;
+}
+
+.jp-tiptap-content img { max-width: 100%; height: auto; border-radius: var(--theme-radius-lg); }
+
+/* ==========================================================================
+   TIPTAP / PROSEMIRROR — Editor typography
+   Tailwind preflight resets all heading/list styles. Re-apply here using
+   tenant theme tokens so the editor is WYSIWYG.
+   ========================================================================== */
 .jp-simple-editor .ProseMirror {
   outline: none;
   word-break: break-word;
 }
+.jp-simple-editor .ProseMirror > * + * { margin-top: 0.75em; }
 
-.jp-tiptap-content,
-.jp-simple-editor .ProseMirror {
-  color: var(--foreground);
-  font-family: var(--theme-font-primary);
-  font-size: var(--theme-text-md);
-  line-height: var(--theme-leading-relaxed);
-}
+.jp-simple-editor .ProseMirror h1 { font-size: 2em;    font-weight: 700; line-height: 1.2; margin-top: 1.25em; margin-bottom: 0.25em; }
+.jp-simple-editor .ProseMirror h2 { font-size: 1.5em;  font-weight: 700; line-height: 1.3; margin-top: 1.25em; margin-bottom: 0.25em; }
+.jp-simple-editor .ProseMirror h3 { font-size: 1.25em; font-weight: 600; line-height: 1.4; margin-top: 1.25em; margin-bottom: 0.25em; }
+.jp-simple-editor .ProseMirror h4 { font-size: 1em;    font-weight: 600; line-height: 1.5; margin-top: 1em;    margin-bottom: 0.25em; }
 
-.jp-tiptap-content > * + *,
-.jp-simple-editor .ProseMirror > * + * {
-  margin-top: 0.75em;
-}
+.jp-simple-editor .ProseMirror p  { line-height: 1.7; }
 
-.jp-tiptap-content h1,
-.jp-simple-editor .ProseMirror h1 {
-  font-family: var(--theme-font-display, var(--theme-font-primary));
-  font-size: var(--theme-text-4xl);
-  font-weight: 700;
-  line-height: var(--theme-leading-tight);
-  letter-spacing: var(--theme-tracking-display);
-  color: var(--foreground);
-  margin-top: 1.25em;
-  margin-bottom: 0.25em;
-}
+.jp-simple-editor .ProseMirror strong { font-weight: 700; }
+.jp-simple-editor .ProseMirror em     { font-style: italic; }
+.jp-simple-editor .ProseMirror s      { text-decoration: line-through; }
 
-@media (min-width: 768px) {
-  .jp-tiptap-content h1,
-  .jp-simple-editor .ProseMirror h1 {
-    font-size: var(--theme-text-5xl);
-  }
-}
+.jp-simple-editor .ProseMirror a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+.jp-simple-editor .ProseMirror a:hover { opacity: 0.8; }
 
-.jp-tiptap-content h2,
-.jp-simple-editor .ProseMirror h2 {
-  font-family: var(--theme-font-display, var(--theme-font-primary));
-  font-size: var(--theme-text-3xl);
-  font-weight: 700;
-  line-height: var(--theme-leading-tight);
-  letter-spacing: var(--theme-tracking-tight);
-  color: var(--foreground);
-  margin-top: 1.25em;
-  margin-bottom: 0.25em;
-}
-
-.jp-tiptap-content h3,
-.jp-simple-editor .ProseMirror h3 {
-  font-size: var(--theme-text-2xl);
-  font-weight: 600;
-  line-height: var(--theme-leading-snug);
-  color: var(--foreground);
-  margin-top: 1.25em;
-  margin-bottom: 0.25em;
-}
-
-.jp-tiptap-content h4,
-.jp-simple-editor .ProseMirror h4 {
-  font-size: var(--theme-text-xl);
-  font-weight: 600;
-  line-height: var(--theme-leading-snug);
-  color: var(--foreground);
-  margin-top: 1em;
-  margin-bottom: 0.25em;
-}
-
-.jp-tiptap-content h5,
-.jp-simple-editor .ProseMirror h5 {
-  font-size: var(--theme-text-lg);
-  font-weight: 600;
-  line-height: var(--theme-leading-snug);
-  color: var(--foreground);
-  margin-top: 1em;
-  margin-bottom: 0.25em;
-}
-
-.jp-tiptap-content h6,
-.jp-simple-editor .ProseMirror h6 {
-  font-size: var(--theme-text-md);
-  font-weight: 600;
-  line-height: var(--theme-leading-normal);
-  letter-spacing: var(--theme-tracking-wide);
-  color: var(--muted-foreground);
-  margin-top: 1em;
-  margin-bottom: 0.25em;
-}
-
-.jp-tiptap-content p,
-.jp-simple-editor .ProseMirror p {
-  line-height: var(--theme-leading-relaxed);
-}
-
-.jp-tiptap-content strong,
-.jp-simple-editor .ProseMirror strong {
-  font-weight: 700;
-}
-
-.jp-tiptap-content em,
-.jp-simple-editor .ProseMirror em {
-  font-style: italic;
-}
-
-.jp-tiptap-content s,
-.jp-simple-editor .ProseMirror s {
-  text-decoration: line-through;
-}
-
-.jp-tiptap-content a,
-.jp-simple-editor .ProseMirror a {
-  color: var(--primary);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.jp-tiptap-content a:hover,
-.jp-simple-editor .ProseMirror a:hover {
-  opacity: 0.88;
-}
-
-.jp-tiptap-content code,
 .jp-simple-editor .ProseMirror code {
-  font-family: var(--theme-font-mono);
-  font-size: var(--theme-text-sm);
-  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.875em;
+  background: color-mix(in oklch, var(--foreground) 8%, transparent);
   border-radius: var(--theme-radius-sm);
   padding: 0.1em 0.35em;
 }
-
-.jp-tiptap-content pre,
 .jp-simple-editor .ProseMirror pre {
-  background: var(--elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--theme-radius-md);
+  background: color-mix(in oklch, var(--background) 60%, black);
+  border-radius: var(--theme-radius-lg);
   padding: 1em 1.25em;
   overflow-x: auto;
-  font-size: var(--theme-text-sm);
-  line-height: var(--theme-leading-relaxed);
 }
-
-.jp-tiptap-content pre code,
 .jp-simple-editor .ProseMirror pre code {
   background: none;
   padding: 0;
-  font-size: inherit;
 }
 
-.jp-tiptap-content ul,
-.jp-simple-editor .ProseMirror ul {
-  list-style-type: disc;
-  padding-left: 1.625em;
-}
+.jp-simple-editor .ProseMirror ul { list-style-type: disc;    padding-left: 1.625em; }
+.jp-simple-editor .ProseMirror ol { list-style-type: decimal; padding-left: 1.625em; }
+.jp-simple-editor .ProseMirror li { line-height: 1.7; margin-top: 0.25em; }
+.jp-simple-editor .ProseMirror li + li { margin-top: 0.25em; }
 
-.jp-tiptap-content ol,
-.jp-simple-editor .ProseMirror ol {
-  list-style-type: decimal;
-  padding-left: 1.625em;
-}
-
-.jp-tiptap-content li,
-.jp-simple-editor .ProseMirror li {
-  line-height: var(--theme-leading-relaxed);
-  margin-top: 0.25em;
-}
-
-.jp-tiptap-content li + li,
-.jp-simple-editor .ProseMirror li + li {
-  margin-top: 0.25em;
-}
-
-.jp-tiptap-content blockquote,
 .jp-simple-editor .ProseMirror blockquote {
   border-left: 3px solid var(--border);
   padding-left: 1em;
@@ -11870,32 +7941,31 @@ cat << 'END_OF_FILE_CONTENT' > "src/index.css"
   font-style: italic;
 }
 
-.jp-tiptap-content hr,
 .jp-simple-editor .ProseMirror hr {
   border: none;
   border-top: 1px solid var(--border);
   margin: 1.5em 0;
 }
 
-.jp-tiptap-content img,
 .jp-simple-editor .ProseMirror img {
   max-width: 100%;
   height: auto;
-  border-radius: var(--theme-radius-md);
+  border-radius: var(--theme-radius-lg);
 }
 
 .jp-simple-editor .ProseMirror img[data-uploading="true"] {
   opacity: 0.6;
   filter: grayscale(0.25);
-  outline: 2px dashed color-mix(in srgb, var(--primary) 70%, transparent);
+  outline: 2px dashed color-mix(in oklch, var(--primary) 70%, transparent);
   outline-offset: 2px;
 }
 
 .jp-simple-editor .ProseMirror img[data-upload-error="true"] {
-  outline: 2px solid color-mix(in srgb, var(--destructive) 85%, transparent);
+  outline: 2px solid color-mix(in oklch, var(--accent) 70%, transparent);
   outline-offset: 2px;
 }
 
+/* Placeholder when editor is empty */
 .jp-simple-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: var(--muted-foreground);
@@ -11905,163 +7975,38 @@ cat << 'END_OF_FILE_CONTENT' > "src/index.css"
   height: 0;
 }
 
-/* Tiptap docs — scrollable TOC rail */
-.jp-docs-toc-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
 
-.jp-docs-toc-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.jp-docs-toc-scroll::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: var(--theme-radius-sm);
-}
-
-.jp-docs-toc-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--border-strong);
-}
-
-
-/* ─────────────────────────────────────────────────────────────
-   5. CLOUD-AI-NATIVE-GRID — ported from platform-frontend
-   Classes used by cloud-ai-native-grid component.
-───────────────────────────────────────────────────────────── */
-.animate-fadeInUp {
-  animation: fadeInUp 0.6s ease forwards;
-}
-
-.card-hover:hover {
-  transform: translateY(-2px);
-}
-
-.jp-feature-card {
-  border-radius: 1rem;
-  border-width: 1px;
-  border-style: solid;
-  transition: all 0.2s;
-  background-color: var(--card);
-  border-color: var(--border);
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-
-/* ─────────────────────────────────────────────────────────────
-   6. LIGHT MODE
-   Applied when <html data-theme="light">.
-   Overrides the bridge vars directly.
-   SOT future: move to theme.json when engine supports modes.
-───────────────────────────────────────────────────────────── */
-[data-theme="light"] {
-
-  /* Backgrounds — warm whites */
-  --background:                 var(--theme-modes-light-colors-background);
-  --card:                       var(--theme-modes-light-colors-card);
-  --elevated:                   var(--theme-modes-light-colors-elevated);
-  --overlay:                    var(--theme-modes-light-colors-overlay);
-  --popover:                    var(--theme-modes-light-colors-popover);
-  --popover-foreground:         var(--theme-modes-light-colors-popover-foreground);
-
-  /* Foregrounds */
-  --foreground:                 var(--theme-modes-light-colors-foreground);
-  --card-foreground:            var(--theme-modes-light-colors-card-foreground);
-  --muted-foreground:           var(--theme-modes-light-colors-muted-foreground);
-  --placeholder:                var(--theme-modes-light-colors-placeholder);
-
-  /* Brand — Labradorite (same hues, adjusted for light bg) */
-  --primary:                    var(--theme-modes-light-colors-primary);
-  --primary-foreground:         var(--theme-modes-light-colors-primary-foreground);
-  --primary-light:              var(--theme-modes-light-colors-primary-light);
-  --primary-dark:               var(--theme-modes-light-colors-primary-dark);
-  --primary-50:                 var(--theme-modes-light-colors-primary-50);
-  --primary-100:                var(--theme-modes-light-colors-primary-100);
-  --primary-200:                var(--theme-modes-light-colors-primary-200);
-  --primary-300:                var(--theme-modes-light-colors-primary-300);
-  --primary-400:                var(--theme-modes-light-colors-primary-400);
-  --primary-500:                var(--theme-modes-light-colors-primary-500);
-  --primary-600:                var(--theme-modes-light-colors-primary-600);
-  --primary-700:                var(--theme-modes-light-colors-primary-700);
-  --primary-800:                var(--theme-modes-light-colors-primary-800);
-  --primary-900:                var(--theme-modes-light-colors-primary-900);
-
-  /* Accent — Parchment darker for light bg contrast */
-  --accent:                     var(--theme-modes-light-colors-accent);
-  --accent-foreground:          var(--theme-modes-light-colors-accent-foreground);
-
-  /* Secondary */
-  --secondary:                  var(--theme-modes-light-colors-secondary);
-  --secondary-foreground:       var(--theme-modes-light-colors-secondary-foreground);
-
-  /* Muted */
-  --muted:                      var(--theme-modes-light-colors-muted);
-
-  /* Border */
-  --border:                     var(--theme-modes-light-colors-border);
-  --border-strong:              var(--theme-modes-light-colors-border-strong);
-
-  /* Form */
-  --input:                      var(--theme-modes-light-colors-input);
-  --ring:                       var(--theme-modes-light-colors-ring);
-
-  /* Feedback */
-  --destructive:                var(--theme-modes-light-colors-destructive);
-  --destructive-foreground:     var(--theme-modes-light-colors-destructive-foreground);
-  --destructive-border:         var(--theme-modes-light-colors-destructive-border);
-  --destructive-ring:           var(--theme-modes-light-colors-destructive-ring);
-  --success:                    var(--theme-modes-light-colors-success);
-  --success-foreground:         var(--theme-modes-light-colors-success-foreground);
-  --success-border:             var(--theme-modes-light-colors-success-border);
-  --success-indicator:          var(--theme-modes-light-colors-success-indicator);
-  --warning:                    var(--theme-modes-light-colors-warning);
-  --warning-foreground:         var(--theme-modes-light-colors-warning-foreground);
-  --warning-border:             var(--theme-modes-light-colors-warning-border);
-  --info:                       var(--theme-modes-light-colors-info);
-  --info-foreground:            var(--theme-modes-light-colors-info-foreground);
-  --info-border:                var(--theme-modes-light-colors-info-border);
-}
 
 END_OF_FILE_CONTENT
 mkdir -p "src/lib"
 echo "Creating src/lib/ComponentRegistry.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/ComponentRegistry.tsx"
-import type { SectionType } from '@/types';
-import type { SectionComponentPropsMap } from '@/types';
+import React from 'react';
 import { Header }           from '@/components/header';
 import { Footer }           from '@/components/footer';
 import { Hero }             from '@/components/hero';
 import { FeatureGrid }      from '@/components/feature-grid';
-import { Contact }          from '@/components/contact';
-import { Login }            from '@/components/login';
-import { DesignSystemView }       from '@/components/design-system';
-import { CloudAiNativeGridView } from '@/components/cloud-ai-native-grid';
-import { PageHero }             from '@/components/page-hero';
+import { ProblemStatement } from '@/components/problem-statement';
+import { CtaBanner }        from '@/components/cta-banner';
+import { GitSection }       from '@/components/git-section';
+import { Devex }            from '@/components/devex';
 import { Tiptap }           from '@/components/tiptap';
+
+import type { SectionType }              from '@olonjs/core';
+import type { SectionComponentPropsMap } from '@/types';
 
 export const ComponentRegistry: {
   [K in SectionType]: React.FC<SectionComponentPropsMap[K]>;
 } = {
-  'header':                Header               as React.FC<SectionComponentPropsMap['header']>,
-  'footer':                Footer               as React.FC<SectionComponentPropsMap['footer']>,
-  'hero':                  Hero                 as React.FC<SectionComponentPropsMap['hero']>,
-  'feature-grid':          FeatureGrid          as React.FC<SectionComponentPropsMap['feature-grid']>,
-  'contact':               Contact              as React.FC<SectionComponentPropsMap['contact']>,
-  'login':                 Login                as React.FC<SectionComponentPropsMap['login']>,
-  'design-system':         DesignSystemView     as React.FC<SectionComponentPropsMap['design-system']>,
-  'cloud-ai-native-grid':  CloudAiNativeGridView as React.FC<SectionComponentPropsMap['cloud-ai-native-grid']>,
-  'page-hero':             PageHero             as React.FC<SectionComponentPropsMap['page-hero']>,
-  'tiptap':                Tiptap               as React.FC<SectionComponentPropsMap['tiptap']>,
+  'header':            Header,
+  'footer':            Footer,
+  'hero':              Hero,
+  'feature-grid':      FeatureGrid,
+  'problem-statement': ProblemStatement,
+  'cta-banner':        CtaBanner,
+  'git-section':       GitSection,
+  'devex':             Devex,
+  'tiptap':            Tiptap,
 };
 
 END_OF_FILE_CONTENT
@@ -12452,39 +8397,31 @@ export function getFilePages(): Record<string, PageConfig> {
 END_OF_FILE_CONTENT
 echo "Creating src/lib/schemas.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/schemas.ts"
-import { HeaderSchema }        from '@/components/header';
-import { FooterSchema }        from '@/components/footer';
-import { HeroSchema }          from '@/components/hero';
-import { FeatureGridSchema }   from '@/components/feature-grid';
-import { ContactSchema }       from '@/components/contact';
-import { LoginSchema }         from '@/components/login';
-import { DesignSystemSchema }         from '@/components/design-system';
-import { CloudAiNativeGridSchema }    from '@/components/cloud-ai-native-grid';
-import { PageHeroSchema }             from '@/components/page-hero';
+export { BaseSectionData, BaseArrayItem, BaseSectionSettingsSchema, CtaSchema } from './base-schemas';
+
+import { HeaderSchema }           from '@/components/header';
+import { FooterSchema }           from '@/components/footer';
+import { HeroSchema }             from '@/components/hero';
+import { FeatureGridSchema }      from '@/components/feature-grid';
+import { ProblemStatementSchema } from '@/components/problem-statement';
+import { CtaBannerSchema }        from '@/components/cta-banner';
+import { GitSectionSchema }       from '@/components/git-section';
+import { DevexSchema }            from '@/components/devex';
 import { TiptapSchema }           from '@/components/tiptap';
 
 export const SECTION_SCHEMAS = {
-  'header':                HeaderSchema,
-  'footer':                FooterSchema,
-  'hero':                  HeroSchema,
-  'feature-grid':          FeatureGridSchema,
-  'contact':               ContactSchema,
-  'login':                 LoginSchema,
-  'design-system':         DesignSystemSchema,
-  'cloud-ai-native-grid':  CloudAiNativeGridSchema,
-  'page-hero':             PageHeroSchema,
+  'header':            HeaderSchema,
+  'footer':            FooterSchema,
+  'hero':              HeroSchema,
+  'feature-grid':      FeatureGridSchema,
+  'problem-statement': ProblemStatementSchema,
+  'cta-banner':        CtaBannerSchema,
+  'git-section':       GitSectionSchema,
+  'devex':             DevexSchema,
   'tiptap':            TiptapSchema,
 } as const;
 
 export type SectionType = keyof typeof SECTION_SCHEMAS;
-
-export {
-  BaseSectionData,
-  BaseArrayItem,
-  BaseSectionSettingsSchema,
-  CtaSchema,
-  ImageSelectionSchema,
-} from '@/lib/base-schemas';
 
 END_OF_FILE_CONTENT
 echo "Creating src/lib/useFormSubmit.ts..."
@@ -12592,7 +8529,6 @@ import '@/types'; // TBP: load type augmentation from capsule-driven types
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-// ... resto del file
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -12604,59 +8540,54 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 
 END_OF_FILE_CONTENT
-# SKIP: src/registry-types.ts is binary and cannot be embedded as text.
 mkdir -p "src/types"
 echo "Creating src/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/types.ts"
 import type { MenuItem } from '@olonjs/core';
-import type { HeaderData,        HeaderSettings        } from '@/components/header';
-import type { FooterData,        FooterSettings        } from '@/components/footer';
-import type { HeroData,          HeroSettings          } from '@/components/hero';
-import type { FeatureGridData,   FeatureGridSettings   } from '@/components/feature-grid';
-import type { ContactData,       ContactSettings       } from '@/components/contact';
-import type { LoginData,         LoginSettings         } from '@/components/login';
-import type { DesignSystemData,        DesignSystemSettings        } from '@/components/design-system';
-import type { CloudAiNativeGridData,   CloudAiNativeGridSettings   } from '@/components/cloud-ai-native-grid';
-import type { PageHeroData,            PageHeroSettings            } from '@/components/page-hero';
-import type { TiptapData,              TiptapSettings              } from '@/components/tiptap';
+import type { HeaderData,           HeaderSettings }           from '@/components/header';
+import type { FooterData,           FooterSettings }           from '@/components/footer';
+import type { HeroData,             HeroSettings }             from '@/components/hero';
+import type { FeatureGridData,      FeatureGridSettings }      from '@/components/feature-grid';
+import type { ProblemStatementData, ProblemStatementSettings } from '@/components/problem-statement';
+import type { CtaBannerData,        CtaBannerSettings }        from '@/components/cta-banner';
+import type { GitSectionData,       GitSectionSettings }       from '@/components/git-section';
+import type { DevexData,            DevexSettings }            from '@/components/devex';
+import type { TiptapData,           TiptapSettings }           from '@/components/tiptap';
 
 export type SectionComponentPropsMap = {
-  'header':                { data: HeaderData;              settings?: HeaderSettings;              menu: MenuItem[] };
-  'footer':                { data: FooterData;              settings?: FooterSettings               };
-  'hero':                  { data: HeroData;                settings?: HeroSettings                 };
-  'feature-grid':          { data: FeatureGridData;         settings?: FeatureGridSettings          };
-  'contact':               { data: ContactData;             settings?: ContactSettings              };
-  'login':                 { data: LoginData;               settings?: LoginSettings                };
-  'design-system':         { data: DesignSystemData;        settings?: DesignSystemSettings         };
-  'cloud-ai-native-grid':  { data: CloudAiNativeGridData;   settings?: CloudAiNativeGridSettings    };
-  'page-hero':             { data: PageHeroData;            settings?: PageHeroSettings             };
-  'tiptap':                { data: TiptapData;               settings?: TiptapSettings                };
+  'header':            { data: HeaderData;           settings?: HeaderSettings;           menu: MenuItem[] };
+  'footer':            { data: FooterData;            settings?: FooterSettings            };
+  'hero':              { data: HeroData;              settings?: HeroSettings              };
+  'feature-grid':      { data: FeatureGridData;       settings?: FeatureGridSettings       };
+  'problem-statement': { data: ProblemStatementData;  settings?: ProblemStatementSettings  };
+  'cta-banner':        { data: CtaBannerData;         settings?: CtaBannerSettings         };
+  'git-section':       { data: GitSectionData;        settings?: GitSectionSettings        };
+  'devex':             { data: DevexData;             settings?: DevexSettings             };
+  'tiptap':            { data: TiptapData;            settings?: TiptapSettings            };
 };
 
 declare module '@olonjs/core' {
   export interface SectionDataRegistry {
-    'header':                HeaderData;
-    'footer':                FooterData;
-    'hero':                  HeroData;
-    'feature-grid':          FeatureGridData;
-    'contact':               ContactData;
-    'login':                 LoginData;
-    'design-system':         DesignSystemData;
-    'cloud-ai-native-grid':  CloudAiNativeGridData;
-    'page-hero':             PageHeroData;
-    'tiptap':                TiptapData;
+    'header':            HeaderData;
+    'footer':            FooterData;
+    'hero':              HeroData;
+    'feature-grid':      FeatureGridData;
+    'problem-statement': ProblemStatementData;
+    'cta-banner':        CtaBannerData;
+    'git-section':       GitSectionData;
+    'devex':             DevexData;
+    'tiptap':            TiptapData;
   }
   export interface SectionSettingsRegistry {
-    'header':                HeaderSettings;
-    'footer':                FooterSettings;
-    'hero':                  HeroSettings;
-    'feature-grid':          FeatureGridSettings;
-    'contact':               ContactSettings;
-    'login':                 LoginSettings;
-    'design-system':         DesignSystemSettings;
-    'cloud-ai-native-grid':  CloudAiNativeGridSettings;
-    'page-hero':             PageHeroSettings;
-    'tiptap':                TiptapSettings;
+    'header':            HeaderSettings;
+    'footer':            FooterSettings;
+    'hero':              HeroSettings;
+    'feature-grid':      FeatureGridSettings;
+    'problem-statement': ProblemStatementSettings;
+    'cta-banner':        CtaBannerSettings;
+    'git-section':       GitSectionSettings;
+    'devex':             DevexSettings;
+    'tiptap':            TiptapSettings;
   }
 }
 
@@ -12691,325 +8622,6 @@ declare module '*?inline' {
   const content: string;
   export default content;
 }
-
-
-
-END_OF_FILE_CONTENT
-echo "Creating tsconfig.json..."
-cat << 'END_OF_FILE_CONTENT' > "tsconfig.json"
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "esModuleInterop": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  },
-  "include": ["src"],
-  "exclude": ["src/emails"],
-  "references": [{ "path": "./tsconfig.node.json" }]
-}
-
-END_OF_FILE_CONTENT
-echo "Creating tsconfig.node.json..."
-cat << 'END_OF_FILE_CONTENT' > "tsconfig.node.json"
-{
-  "compilerOptions": {
-    "composite": true,
-    "skipLibCheck": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "allowSyntheticDefaultImports": true,
-    "strict": true
-  },
-  "include": ["vite.config.ts"]
-}
-
-
-
-
-END_OF_FILE_CONTENT
-echo "Creating vercel.json..."
-cat << 'END_OF_FILE_CONTENT' > "vercel.json"
-{
-    "rewrites":  [
-                     {
-                         "source":  "/:pagePath*.json",
-                         "destination":  "/pages/:pagePath*.json"
-                     },
-                     {
-                         "source":  "/(.*)",
-                         "destination":  "/index.html"
-                     }
-                 ],
-    "headers":  [
-                    {
-                        "source":  "/assets/(.*)",
-                        "headers":  [
-                                        {
-                                            "key":  "Cache-Control",
-                                            "value":  "public, max-age=31536000, immutable"
-                                        }
-                                    ]
-                    }
-                ]
-}
-
-END_OF_FILE_CONTENT
-echo "Creating vite.config.ts..."
-cat << 'END_OF_FILE_CONTENT' > "vite.config.ts"
-/**
- * Generated by @jsonpages/cli. Dev server API: /api/save-to-file, /api/upload-asset, /api/list-assets.
- */
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath, pathToFileURL } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const ASSETS_IMAGES_DIR = path.resolve(__dirname, 'public', 'assets', 'images');
-const DATA_CONFIG_DIR = path.resolve(__dirname, 'src', 'data', 'config');
-const DATA_PAGES_DIR = path.resolve(__dirname, 'src', 'data', 'pages');
-const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif']);
-const IMAGE_MIMES = new Set([
-  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml', 'image/avif',
-]);
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-
-function safeFilename(original, mimeType) {
-  const base = (original.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 128)) || 'image';
-  const ext = original.includes('.') ? path.extname(original).toLowerCase() : (mimeType?.startsWith('image/') ? `.${(mimeType.split('/')[1] || 'png').replace('jpeg', 'jpg')}` : '.png');
-  return `${Date.now()}-${base}${IMAGE_EXT.has(ext) ? ext : '.png'}`;
-}
-
-function listImagesInDir(dir, urlPrefix) {
-  const list = [];
-  if (!fs.existsSync(dir)) return list;
-  for (const name of fs.readdirSync(dir)) {
-    if (IMAGE_EXT.has(path.extname(name).toLowerCase())) list.push({ id: name, url: `${urlPrefix}/${name}`, alt: name, tags: [] });
-  }
-  return list;
-}
-
-function sendJson(res, status, body) {
-  res.writeHead(status, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify(body));
-}
-
-function sendJsonFile(res, filePath) {
-  try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(content);
-  } catch (e) {
-    sendJson(res, 500, { error: e?.message || 'Read failed' });
-  }
-}
-
-function isTenantPageJsonRequest(req, pathname) {
-  if (req.method !== 'GET' || !pathname.endsWith('.json')) return false;
-  const viteOrStaticPrefixes = ['/api/', '/assets/', '/src/', '/node_modules/', '/public/', '/@'];
-  return !viteOrStaticPrefixes.some((prefix) => pathname.startsWith(prefix));
-}
-
-function normalizeManifestSlug(raw) {
-  return decodeURIComponent(raw || '')
-    .replace(/^\/+|\/+$/g, '')
-    .replace(/\\/g, '/')
-    .replace(/(\.schema)?\.json$/i, '');
-}
-
-async function loadWebMcpBuilders() {
-  const corePkgPath = path.dirname(fileURLToPath(import.meta.resolve('@olonjs/core/package.json')));
-  const moduleUrl = pathToFileURL(path.resolve(corePkgPath, 'src', 'lib', 'webmcp-contracts.mjs')).href;
-  return import(moduleUrl);
-}
-export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-    {
-      name: 'upload-asset-api',
-      configureServer(server) {
-        server.middlewares.use((req, res, next) => {
-          const pathname = (req.url || '').split('?')[0];
-          const isPageJsonRequest = isTenantPageJsonRequest(req, pathname);
-
-          const handleManifestRequest = async () => {
-            const { buildPageContract, buildPageManifest, buildSiteManifest } = await loadWebMcpBuilders();
-            const ssrEntry = await server.ssrLoadModule('/src/entry-ssg.tsx');
-            const buildState = ssrEntry.getWebMcpBuildState();
-
-            if (req.method === 'GET' && pathname === '/mcp-manifest.json') {
-              sendJson(res, 200, buildSiteManifest({
-                pages: buildState.pages,
-                schemas: buildState.schemas,
-                siteConfig: buildState.siteConfig,
-              }));
-              return true;
-            }
-
-            const pageManifestMatch = pathname.match(/^\/mcp-manifests\/(.+)\.json$/i);
-            if (pageManifestMatch && req.method === 'GET') {
-              const slug = normalizeManifestSlug(pageManifestMatch[1]);
-              const pageConfig = buildState.pages[slug];
-              if (!pageConfig) {
-                sendJson(res, 404, { error: 'Page manifest not found' });
-                return true;
-              }
-
-              sendJson(res, 200, buildPageManifest({
-                slug,
-                pageConfig,
-                schemas: buildState.schemas,
-                siteConfig: buildState.siteConfig,
-              }));
-              return true;
-            }
-
-            const schemaMatch = pathname.match(/^\/schemas\/(.+)\.schema\.json$/i);
-            if (!schemaMatch || req.method !== 'GET') return false;
-
-            const slug = normalizeManifestSlug(schemaMatch[1]);
-            const pageConfig = buildState.pages[slug];
-            if (!pageConfig) {
-              sendJson(res, 404, { error: 'Schema contract not found' });
-              return true;
-            }
-
-            sendJson(res, 200, buildPageContract({
-              slug,
-              pageConfig,
-              schemas: buildState.schemas,
-              siteConfig: buildState.siteConfig,
-            }));
-            return true;
-          };
-
-          if (
-            req.method === 'GET' &&
-            (
-              pathname === '/mcp-manifest.json'
-              || /^\/mcp-manifests\/.+\.json$/i.test(pathname)
-              || /^\/schemas\/.+\.schema\.json$/i.test(pathname)
-            )
-          ) {
-            void handleManifestRequest()
-              .then((handled) => {
-                if (!handled) next();
-              })
-              .catch((error) => {
-                sendJson(res, 500, { error: error?.message || 'Manifest generation failed' });
-              });
-            return;
-          }
-
-          if (isPageJsonRequest) {
-            const normalizedPath = decodeURIComponent(pathname).replace(/\\/g, '/');
-            // Rimuoviamo la root folder opzionale "/pages/" introdotta per matchare la prod e il file extension
-            const slug = normalizedPath
-              .replace(/^\/+/, '')
-              .replace(/^pages\//i, '')
-              .replace(/\.json$/i, '')
-              .replace(/^\/+|\/+$/g, '');
-            const candidate = path.resolve(DATA_PAGES_DIR, `${slug}.json`);
-            const isInsidePagesDir = candidate.startsWith(`${DATA_PAGES_DIR}${path.sep}`) || candidate === DATA_PAGES_DIR;
-            if (!slug || !isInsidePagesDir || !fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) {
-              sendJson(res, 404, { error: 'Page JSON not found' });
-              return;
-            }
-            sendJsonFile(res, candidate);
-            return;
-          }
-          if (req.method === 'GET' && req.url === '/api/list-assets') {
-            try { sendJson(res, 200, listImagesInDir(ASSETS_IMAGES_DIR, '/assets/images')); } catch (e) { sendJson(res, 500, { error: e?.message || 'List failed' }); }
-            return;
-          }
-          if (req.method === 'POST' && pathname === '/api/save-to-file') {
-            const chunks = [];
-            req.on('data', (chunk) => chunks.push(chunk));
-            req.on('end', () => {
-              try {
-                const raw = Buffer.concat(chunks).toString('utf8');
-                if (!raw.trim()) { sendJson(res, 400, { error: 'Empty body' }); return; }
-                const body = JSON.parse(raw);
-                const { projectState, slug } = body;
-                if (!projectState || typeof slug !== 'string') { sendJson(res, 400, { error: 'Missing projectState or slug' }); return; }
-                if (!fs.existsSync(DATA_CONFIG_DIR)) fs.mkdirSync(DATA_CONFIG_DIR, { recursive: true });
-                if (!fs.existsSync(DATA_PAGES_DIR)) fs.mkdirSync(DATA_PAGES_DIR, { recursive: true });
-                if (projectState.site != null) fs.writeFileSync(path.join(DATA_CONFIG_DIR, 'site.json'), JSON.stringify(projectState.site, null, 2), 'utf8');
-                if (projectState.theme != null) fs.writeFileSync(path.join(DATA_CONFIG_DIR, 'theme.json'), JSON.stringify(projectState.theme, null, 2), 'utf8');
-                if (projectState.page != null) {
-                  const safeSlug = (slug.replace(/[^a-zA-Z0-9-_]/g, '_') || 'page');
-                  fs.writeFileSync(path.join(DATA_PAGES_DIR, `${safeSlug}.json`), JSON.stringify(projectState.page, null, 2), 'utf8');
-                }
-                sendJson(res, 200, { ok: true });
-              } catch (e) { sendJson(res, 500, { error: e?.message || 'Save to file failed' }); }
-            });
-            req.on('error', () => sendJson(res, 500, { error: 'Request error' }));
-            return;
-          }
-          if (req.method !== 'POST' || req.url !== '/api/upload-asset') return next();
-          const chunks = [];
-          req.on('data', (chunk) => chunks.push(chunk));
-          req.on('end', () => {
-            try {
-              const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-              const { filename, mimeType, data } = body;
-              if (!filename || typeof data !== 'string') { sendJson(res, 400, { error: 'Missing filename or data' }); return; }
-              const buf = Buffer.from(data, 'base64');
-              if (buf.length > MAX_FILE_SIZE_BYTES) { sendJson(res, 413, { error: 'File too large. Max 5MB.' }); return; }
-              if (mimeType && !IMAGE_MIMES.has(mimeType)) { sendJson(res, 400, { error: 'Invalid file type' }); return; }
-              const name = safeFilename(filename, mimeType);
-              if (!fs.existsSync(ASSETS_IMAGES_DIR)) fs.mkdirSync(ASSETS_IMAGES_DIR, { recursive: true });
-              fs.writeFileSync(path.join(ASSETS_IMAGES_DIR, name), buf);
-              sendJson(res, 200, { url: `/assets/images/${name}` });
-            } catch (e) { sendJson(res, 500, { error: e?.message || 'Upload failed' }); }
-          });
-          req.on('error', () => sendJson(res, 500, { error: 'Request error' }));
-        });
-      },
-    },
-  ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      'next/link': path.resolve(__dirname, './src/shims/next-link.tsx'),
-    },
-  },
-  server: {
-    fs: {
-      allow: [
-        path.resolve(__dirname, '..', '..'),
-      ],
-    },
-    watch: {
-      usePolling: true,
-      interval: 300,
-    },
-  },
-});
-
-
 
 
 

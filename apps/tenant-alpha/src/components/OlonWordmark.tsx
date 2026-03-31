@@ -17,7 +17,7 @@ export function OlonMark({ size = 32, className }: OlonMarkProps) {
 
   // Dark:  nucleus = Parchment #E2D5B0 (warm, human)
   // Light: nucleus = Primary   #1E1814 (brand, on white bg)
-  const nucleusFill = theme === 'dark' ? '#E2D5B0' : '#1E1814'
+  const nucleusFill = theme === 'dark' ? '#F4F3EF' : '#080808'
 
   return (
     <svg
@@ -29,8 +29,8 @@ export function OlonMark({ size = 32, className }: OlonMarkProps) {
     >
       <defs>
         <linearGradient id="olon-ring" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#B8A4E0" />
-          <stop offset="100%" stopColor="#5B3F9A" />
+          <stop offset="0%" stopColor="#84ABFF" />
+          <stop offset="100%" stopColor="#0F52E0" />
         </linearGradient>
       </defs>
       <circle cx="50" cy="50" r="38" stroke="url(#olon-ring)" strokeWidth="20" />

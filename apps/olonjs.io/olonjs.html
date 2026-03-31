@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OlonJS — Contract Layer for the Agentic Web</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:           #0C1116;
+    --bg-card:      #0C1421;
+    --bg-elevated:  #141B24;
+    --fg:           #C8D4E3;
+    --fg-muted:     #788DAA;
+    --fg-dim:       #4A5C78;
+    --primary:      #1763FF;
+    --primary-300:  #84ABFF;
+    --primary-400:  #5B8EFF;
+    --primary-500:  #1763FF;
+    --primary-600:  #0F52E0;
+    --primary-50:   #EEF3FF;
+    --border:       #273244;
+    --border-strong:#2F3D55;
+    --radius-sm:    4px;
+    --radius-md:    8px;
+    --radius-lg:    12px;
+    --radius-xl:    16px;
+    --font-sans:    'Instrument Sans', Helvetica, Arial, sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  /* ── NAV ─────────────────────────────────────────── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    border-bottom: 1px solid var(--border);
+    background: rgba(12,17,22,0.9);
+    backdrop-filter: blur(12px);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 1rem; letter-spacing: -0.02em;
+  }
+  .nav-links {
+    display: flex; align-items: center; gap: 1.5rem;
+    font-size: 0.875rem; color: var(--fg-muted);
+  }
+  .nav-links a:hover { color: var(--fg); transition: color 0.15s; }
+  .nav-badge {
+    font-size: 0.75rem; font-weight: 600;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px; padding: 2px 10px;
+    color: var(--fg-muted);
+  }
+  .nav-cta {
+    background: var(--primary);
+    color: #fff; font-weight: 600; font-size: 0.875rem;
+    border-radius: var(--radius-md);
+    padding: 6px 16px;
+    transition: background 0.15s;
+  }
+  .nav-cta:hover { background: var(--primary-600); }
+
+  /* ── LAYOUT ──────────────────────────────────────── */
+  .container { max-width: 1152px; margin: 0 auto; padding: 0 2rem; }
+  section { padding: 6rem 0; }
+
+  /* ── HERO ────────────────────────────────────────── */
+  #hero {
+    padding-top: 9rem;
+    padding-bottom: 6rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .hero-eyebrow {
+    font-size: 0.75rem; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--fg-dim); margin-bottom: 1.5rem;
+  }
+  .hero-eyebrow span { color: var(--primary-400); }
+  h1 {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    color: #fff;
+    margin-bottom: 0.25rem;
+  }
+  .hero-sub {
+    font-size: clamp(2rem, 4vw, 3.25rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--primary-300);
+    font-style: italic;
+    margin-bottom: 1.75rem;
+  }
+  .hero-body {
+    font-size: 1.0625rem;
+    color: var(--fg-muted);
+    line-height: 1.7;
+    max-width: 480px;
+    margin-bottom: 2.5rem;
+  }
+  .hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+  .btn-primary {
+    background: var(--primary);
+    color: #fff; font-weight: 600; font-size: 0.9375rem;
+    border-radius: var(--radius-md);
+    padding: 10px 24px;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-primary:hover { background: var(--primary-600); transform: translateY(-1px); }
+  .btn-secondary {
+    border: 1px solid var(--border-strong);
+    color: var(--fg); font-weight: 600; font-size: 0.9375rem;
+    border-radius: var(--radius-md);
+    padding: 10px 20px;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--bg-elevated);
+    transition: border-color 0.15s, transform 0.1s;
+  }
+  .btn-secondary:hover { border-color: var(--primary-400); transform: translateY(-1px); }
+  .btn-ghost {
+    color: var(--fg-muted); font-size: 0.875rem;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: color 0.15s;
+  }
+  .btn-ghost:hover { color: var(--fg); }
+
+  /* Hero SVG illustration */
+  .hero-visual {
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .hero-visual svg { width: 100%; max-width: 480px; height: auto; }
+
+  /* ── SECTION HEADER ──────────────────────────────── */
+  .section-label {
+    font-size: 0.75rem; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--fg-dim); margin-bottom: 0.75rem;
+  }
+  .section-title {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-weight: 700; letter-spacing: -0.03em;
+    line-height: 1.15; color: #fff;
+    margin-bottom: 0.5rem;
+  }
+  .section-title-accent { color: var(--primary-300); }
+  .section-body {
+    font-size: 1rem; color: var(--fg-muted);
+    line-height: 1.7; max-width: 620px;
+    margin-bottom: 3rem;
+  }
+  .divider {
+    height: 1px; background: var(--border);
+    margin-bottom: 3rem;
+  }
+
+  /* ── WHY OLON ────────────────────────────────────── */
+  #why { border-top: 1px solid var(--border); }
+
+  /* ── ARCHITECTURE ────────────────────────────────── */
+  #architecture { border-top: 1px solid var(--border); }
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+  }
+  .arch-card {
+    background: var(--bg-card);
+    padding: 1.75rem 1.5rem;
+    display: flex; flex-direction: column; gap: 0.75rem;
+    transition: background 0.15s;
+  }
+  .arch-card:hover { background: var(--bg-elevated); }
+  .arch-version {
+    font-size: 0.6875rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--primary-400);
+    font-family: var(--font-mono);
+  }
+  .arch-name {
+    font-size: 1rem; font-weight: 700;
+    color: #fff; letter-spacing: -0.01em;
+  }
+  .arch-desc {
+    font-size: 0.875rem; color: var(--fg-muted);
+    line-height: 1.6; flex: 1;
+  }
+  .arch-link {
+    font-size: 0.8125rem; color: var(--primary-400);
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: auto;
+    transition: color 0.15s;
+  }
+  .arch-link:hover { color: var(--primary-300); }
+  .arch-icon { margin-bottom: 0.25rem; }
+
+  /* ── QUICK EXAMPLE ───────────────────────────────── */
+  #example { border-top: 1px solid var(--border); }
+  .example-steps {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  .example-step {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+  }
+  .step-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .step-number {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--primary);
+    color: #fff; font-size: 0.75rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-title { font-size: 0.9375rem; font-weight: 600; color: #fff; }
+  .step-desc { font-size: 0.8125rem; color: var(--fg-muted); margin-left: auto; }
+  .code-block {
+    padding: 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    color: var(--fg);
+    background: #080E14;
+    min-height: 200px;
+  }
+  .code-comment { color: var(--fg-dim); }
+  .code-cmd { color: var(--primary-300); }
+  .code-string { color: #84ABFF; }
+  .code-key { color: #5B8EFF; }
+  .code-val { color: #C8D4E3; }
+  .code-accent { color: #EEF3FF; }
+  .code-output { color: var(--fg-muted); padding-left: 1rem; border-left: 2px solid var(--border-strong); margin-top: 0.5rem; }
+
+  /* ── GET STARTED ─────────────────────────────────── */
+  #getstarted { border-top: 1px solid var(--border); }
+  .start-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl); overflow: hidden;
+  }
+  .start-card {
+    background: var(--bg-card);
+    padding: 2rem 1.75rem;
+    display: flex; flex-direction: column; gap: 1rem;
+    transition: background 0.15s;
+  }
+  .start-card:hover { background: var(--bg-elevated); }
+  .start-badge {
+    font-size: 0.6875rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px;
+    display: inline-flex; width: fit-content;
+  }
+  .badge-oss { background: rgba(23,99,255,0.15); color: var(--primary-400); border: 1px solid rgba(23,99,255,0.3); }
+  .badge-cli { background: rgba(132,171,255,0.1); color: var(--primary-300); border: 1px solid rgba(132,171,255,0.25); }
+  .badge-deploy { background: rgba(200,212,227,0.08); color: var(--fg-muted); border: 1px solid var(--border-strong); }
+  .start-title { font-size: 1rem; font-weight: 700; color: #fff; }
+  .start-body { font-size: 0.875rem; color: var(--fg-muted); line-height: 1.6; flex: 1; }
+  .start-code {
+    font-family: var(--font-mono); font-size: 0.8125rem;
+    background: #080E14; border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 0.75rem 1rem;
+    color: var(--primary-300);
+  }
+  .start-link {
+    font-size: 0.875rem; color: var(--primary-400);
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: auto; transition: color 0.15s;
+  }
+  .start-link:hover { color: var(--primary-300); }
+
+  /* ── FOOTER ──────────────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 3rem 0;
+  }
+  .footer-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1.5rem;
+  }
+  .footer-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 0.9375rem; letter-spacing: -0.02em;
+    color: var(--fg-muted);
+  }
+  .footer-links {
+    display: flex; gap: 1.5rem;
+    font-size: 0.875rem; color: var(--fg-dim);
+  }
+  .footer-links a:hover { color: var(--fg-muted); transition: color 0.15s; }
+  .footer-meta {
+    font-size: 0.8125rem; color: var(--fg-dim);
+    font-family: var(--font-mono);
+  }
+
+  /* ── ANIMATIONS ──────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse-ring {
+    0%, 100% { opacity: 0.4; }
+    50%       { opacity: 0.8; }
+  }
+  .fade-up { animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) both; }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+
+  /* ── RESPONSIVE ──────────────────────────────────── */
+  @media (max-width: 900px) {
+    #hero { grid-template-columns: 1fr; padding-top: 7rem; }
+    .hero-visual { display: none; }
+    .arch-grid { grid-template-columns: repeat(2,1fr); }
+    .example-steps { grid-template-columns: 1fr; }
+    .start-grid { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+      <defs>
+        <linearGradient id="nav-ring" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#84ABFF"/>
+          <stop offset="100%" stop-color="#0F52E0"/>
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="38" stroke="url(#nav-ring)" stroke-width="20"/>
+      <circle cx="50" cy="50" r="15" fill="#84ABFF"/>
+    </svg>
+    Olon
+    <span class="nav-badge">v1.5</span>
+  </div>
+  <div class="nav-links">
+    <a href="#why">Why</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#example">Example</a>
+    <a href="#getstarted">Get started</a>
+    <a href="https://github.com/olonjs/core" target="_blank">GitHub</a>
+  </div>
+  <a href="#getstarted" class="nav-cta">Get started →</a>
+</nav>
+
+<!-- HERO -->
+<div class="container">
+  <div id="hero">
+    <div>
+      <p class="hero-eyebrow fade-up">CONTRACT LAYER · <span>V1.5</span> · OPEN SOURCE</p>
+      <h1 class="fade-up delay-1">Contract Layer</h1>
+      <p class="hero-sub fade-up delay-2">for the agentic web.</p>
+      <p class="hero-body fade-up delay-3">
+        AI agents are becoming operational actors in commerce, marketing, and support.
+        They need more than content — they need a contract. OlonJS is the deterministic
+        machine contract for websites: every site typed, structured, and addressable by design.
+        No custom glue. No fragile integrations. Just a contract any agent can read and operate.
+      </p>
+      <div class="hero-actions fade-up delay-4">
+        <a href="#getstarted" class="btn-primary">Get started →</a>
+        <a href="https://github.com/olonjs/core" target="_blank" class="btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          GitHub
+        </a>
+        <a href="#architecture" class="btn-ghost">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          Explore platform
+        </a>
+      </div>
+    </div>
+    <div class="hero-visual fade-up delay-2">
+      <!-- Hero illustration: the chip/contract icon, large -->
+      <svg viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="hero-main" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#84ABFF"/>
+            <stop offset="60%" stop-color="#1763FF"/>
+            <stop offset="100%" stop-color="#0F52E0"/>
+          </linearGradient>
+          <linearGradient id="hero-accent" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#EEF3FF"/>
+            <stop offset="100%" stop-color="#84ABFF"/>
+          </linearGradient>
+          <linearGradient id="hero-glow" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1763FF" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="#1763FF" stop-opacity="0"/>
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="8" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+        </defs>
+        <!-- Glow background -->
+        <circle cx="200" cy="200" r="160" fill="url(#hero-glow)" opacity="0.4"/>
+        <!-- Chip border -->
+        <rect x="90" y="90" width="220" height="220" rx="28"
+              fill="none" stroke="url(#hero-main)" stroke-width="14"/>
+        <!-- Left pins -->
+        <line x1="16" y1="148" x2="90" y2="148" stroke="url(#hero-main)" stroke-width="10" stroke-linecap="round"/>
+        <line x1="16" y1="200" x2="90" y2="200" stroke="url(#hero-main)" stroke-width="10" stroke-linecap="round"/>
+        <line x1="16" y1="252" x2="90" y2="252" stroke="url(#hero-main)" stroke-width="10" stroke-linecap="round"/>
+        <!-- Right pins -->
+        <line x1="310" y1="148" x2="384" y2="148" stroke="url(#hero-main)" stroke-width="10" stroke-linecap="round"/>
+        <line x1="310" y1="200" x2="384" y2="200" stroke="url(#hero-main)" stroke-width="10" stroke-linecap="round"/>
+        <line x1="310" y1="252" x2="384" y2="252" stroke="url(#hero-main)" stroke-width="10" stroke-linecap="round"/>
+        <!-- Top pins -->
+        <line x1="148" y1="16" x2="148" y2="90" stroke="url(#hero-main)" stroke-width="10" stroke-linecap="round"/>
+        <line x1="200" y1="16" x2="200" y2="90" stroke="url(#hero-main)" stroke-width="10" stroke-linecap="round"/>
+        <line x1="252" y1="16" x2="252" y2="90" stroke="url(#hero-main)" stroke-width="10" stroke-linecap="round"/>
+        <!-- Bottom pins -->
+        <line x1="148" y1="310" x2="148" y2="384" stroke="url(#hero-main)" stroke-width="10" stroke-linecap="round"/>
+        <line x1="200" y1="310" x2="200" y2="384" stroke="url(#hero-main)" stroke-width="10" stroke-linecap="round"/>
+        <line x1="252" y1="310" x2="252" y2="384" stroke="url(#hero-main)" stroke-width="10" stroke-linecap="round"/>
+        <!-- Corner nodes -->
+        <circle cx="148" cy="148" r="13" fill="url(#hero-main)"/>
+        <circle cx="252" cy="148" r="13" fill="url(#hero-main)"/>
+        <circle cx="148" cy="252" r="13" fill="url(#hero-main)"/>
+        <circle cx="252" cy="252" r="13" fill="url(#hero-main)"/>
+        <!-- Connection lines -->
+        <line x1="148" y1="148" x2="200" y2="200" stroke="#84ABFF" stroke-width="2.5" opacity="0.35"/>
+        <line x1="252" y1="148" x2="200" y2="200" stroke="#84ABFF" stroke-width="2.5" opacity="0.35"/>
+        <line x1="148" y1="252" x2="200" y2="200" stroke="#84ABFF" stroke-width="2.5" opacity="0.35"/>
+        <line x1="252" y1="252" x2="200" y2="200" stroke="#84ABFF" stroke-width="2.5" opacity="0.35"/>
+        <!-- Center node -->
+        <circle cx="200" cy="200" r="18" fill="url(#hero-accent)" filter="url(#glow)"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- WHY OLON -->
+<section id="why">
+  <div class="container">
+    <p class="section-label">Why OlonJS</p>
+    <h2 class="section-title">
+      A Meaningful Web<br/>
+      <span class="section-title-accent">Whole in itself, part of something greater.</span>
+    </h2>
+    <p class="section-body">
+      Most web frameworks separate concerns across layers — data, UI, validation, metadata —
+      with no shared contract between them. OlonJS inverts this: the JSON data structure
+      is the contract. Every layer — rendering, editing, validation, machine access — is a
+      deterministic projection of the same typed source. The result is a site that is
+      structurally coherent by construction, not by convention. Every site built with OlonJS
+      is a holon: complete in itself, intelligible to the network around it.
+      The meaningful web doesn't happen all at once. It grows one site at a time.
+    </p>
+    <!-- Why grid: 3 pillars -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-xl);overflow:hidden;">
+      <div style="background:var(--bg-card);padding:2rem 1.75rem;">
+        <svg width="36" height="36" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:1rem;">
+          <defs><linearGradient id="w1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#84ABFF"/><stop offset="1" stop-color="#0F52E0"/></linearGradient></defs>
+          <rect x="20" y="20" width="160" height="160" rx="16" fill="none" stroke="url(#w1)" stroke-width="10"/>
+          <line x1="20" y1="70" x2="180" y2="70" stroke="url(#w1)" stroke-width="7"/>
+          <rect x="40" y="100" width="60" height="8" rx="4" fill="url(#w1)" opacity="0.4"/>
+          <rect x="40" y="118" width="90" height="8" rx="4" fill="url(#w1)" opacity="0.7"/>
+          <rect x="40" y="136" width="72" height="8" rx="4" fill="url(#w1)" opacity="0.5"/>
+        </svg>
+        <div style="font-weight:700;color:#fff;margin-bottom:0.5rem;">The data is the contract</div>
+        <div style="font-size:0.875rem;color:var(--fg-muted);line-height:1.6;">One typed JSON source. Every layer — UI, editor, agent, SEO — is a projection. No translation, no drift.</div>
+      </div>
+      <div style="background:var(--bg-card);padding:2rem 1.75rem;">
+        <svg width="36" height="36" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:1rem;">
+          <defs><linearGradient id="w2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#84ABFF"/><stop offset="1" stop-color="#0F52E0"/></linearGradient><linearGradient id="w2a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF3FF"/><stop offset="1" stop-color="#84ABFF"/></linearGradient></defs>
+          <circle cx="100" cy="100" r="75" fill="none" stroke="url(#w2)" stroke-width="10"/>
+          <circle cx="100" cy="100" r="28" fill="url(#w2a)"/>
+        </svg>
+        <div style="font-weight:700;color:#fff;margin-bottom:0.5rem;">Every site is a holon</div>
+        <div style="font-size:0.875rem;color:var(--fg-muted);line-height:1.6;">Autonomous, complete, structurally intelligible. Each site is whole in itself and part of a network that understands it.</div>
+      </div>
+      <div style="background:var(--bg-card);padding:2rem 1.75rem;">
+        <svg width="36" height="36" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:1rem;">
+          <defs><linearGradient id="w3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#84ABFF"/><stop offset="1" stop-color="#0F52E0"/></linearGradient></defs>
+          <circle cx="100" cy="40" r="14" fill="url(#w3)"/>
+          <circle cx="50" cy="110" r="12" fill="url(#w3)" opacity="0.6"/>
+          <circle cx="150" cy="110" r="12" fill="url(#w3)" opacity="0.6"/>
+          <circle cx="80" cy="175" r="10" fill="url(#w3)" opacity="0.35"/>
+          <circle cx="130" cy="175" r="14" fill="url(#w3)"/>
+          <line x1="100" y1="54" x2="54" y2="98" stroke="url(#w3)" stroke-width="5" stroke-linecap="round"/>
+          <line x1="100" y1="54" x2="146" y2="98" stroke="url(#w3)" stroke-width="5" stroke-linecap="round" opacity="0.4"/>
+          <line x1="54" y1="122" x2="82" y2="165" stroke="url(#w3)" stroke-width="4" stroke-linecap="round" opacity="0.35"/>
+          <line x1="146" y1="122" x2="128" y2="165" stroke="url(#w3)" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+        <div style="font-weight:700;color:#fff;margin-bottom:0.5rem;">Built to be generated</div>
+        <div style="font-size:0.875rem;color:var(--fg-muted);line-height:1.6;">Every constraint is also an instruction. The spec is precise enough for AI agents to scaffold a fully compliant tenant from scratch.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="container">
+    <p class="section-label">Architecture</p>
+    <h2 class="section-title">Six governing protocols.</h2>
+    <p class="section-body">
+      OlonJS is specified as a versioned set of architectural protocols.
+      Each protocol is independently versioned and mandatory for compliant tenants.
+      Full specification: <a href="https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md" style="color:var(--primary-400);" target="_blank">olonjsSpecs_V_1_5.md ↗</a>
+    </p>
+    <div class="arch-grid">
+
+      <div class="arch-card">
+        <div class="arch-icon">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="a1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#84ABFF"/><stop offset="1" stop-color="#0F52E0"/></linearGradient><linearGradient id="a1c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF3FF"/><stop offset="1" stop-color="#84ABFF"/></linearGradient></defs>
+            <rect x="25" y="30" width="130" height="140" rx="10" fill="none" stroke="url(#a1)" stroke-width="7"/>
+            <line x1="25" y1="60" x2="155" y2="60" stroke="url(#a1)" stroke-width="5"/>
+            <path fill="none" stroke="url(#a1)" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.5" d="M72,42 c-5,0 -8,2 -8,6v2c0,4 -3,5 -6,5 3,0 6,1 6,5v2c0,4 3,6 8,6"/>
+            <path fill="none" stroke="url(#a1)" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.5" d="M108,42 c5,0 8,2 8,6v2c0,4 3,5 6,5 -3,0 -6,1 -6,5v2c0,4 -3,6 -8,6"/>
+            <circle fill="url(#a1)" opacity="0.35" cx="46" cy="90" r="4.5"/>
+            <rect fill="url(#a1)" opacity="0.35" x="59" y="86.5" width="68" height="7" rx="3.5"/>
+            <circle fill="url(#a1c)" cx="46" cy="117" r="6.5"/>
+            <rect fill="url(#a1c)" x="59" y="113" width="82" height="8" rx="4"/>
+            <circle fill="url(#a1)" opacity="0.55" cx="46" cy="145" r="4.5"/>
+            <rect fill="url(#a1)" opacity="0.55" x="59" y="141.5" width="50" height="7" rx="3.5"/>
+            <path fill="none" stroke="url(#a1c)" stroke-linecap="round" stroke-width="5" d="M192,117 h-35"/>
+            <path fill="none" stroke="url(#a1c)" stroke-linecap="round" stroke-linejoin="round" stroke-width="5" d="M170,108 l17,9 -17,9"/>
+          </svg>
+        </div>
+        <div class="arch-version">MTRP · v1.2</div>
+        <div class="arch-name">Modular Type Registry</div>
+        <div class="arch-desc">Core exports an empty <code style="font-family:var(--font-mono);font-size:0.8em;color:var(--primary-300)">SectionDataRegistry</code>. Tenants extend it via module augmentation. Full TypeScript inference, zero Core changes.</div>
+        <a href="https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md#1--modular-type-registry-pattern-mtrp-v12" target="_blank" class="arch-link">Read spec ↗</a>
+      </div>
+
+      <div class="arch-card">
+        <div class="arch-icon">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="a2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#84ABFF"/><stop offset="1" stop-color="#0F52E0"/></linearGradient><linearGradient id="a2c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF3FF"/><stop offset="1" stop-color="#84ABFF"/></linearGradient></defs>
+            <rect fill="none" stroke="url(#a2)" stroke-width="5.5" stroke-linejoin="round" opacity="0.3" x="65" y="22" width="108" height="74" rx="9"/>
+            <rect fill="none" stroke="url(#a2)" stroke-width="5.5" stroke-linejoin="round" opacity="0.6" x="46" y="50" width="108" height="74" rx="9"/>
+            <rect fill="none" stroke="url(#a2)" stroke-width="6.5" stroke-linejoin="round" x="27" y="78" width="108" height="74" rx="9"/>
+            <rect fill="url(#a2)" opacity="0.6" x="42" y="101" width="52" height="6" rx="3"/>
+            <rect fill="url(#a2c)" x="42" y="116" width="36" height="6" rx="3"/>
+            <circle fill="url(#a2)" opacity="0.3" cx="162" cy="33" r="4"/>
+            <circle fill="url(#a2)" opacity="0.6" cx="143" cy="61" r="4"/>
+            <circle fill="url(#a2c)" cx="124" cy="89" r="5"/>
+          </svg>
+        </div>
+        <div class="arch-version">TBP · v1.0</div>
+        <div class="arch-name">Tenant Block Protocol</div>
+        <div class="arch-desc">Each section type is a self-contained capsule: <code style="font-family:var(--font-mono);font-size:0.8em;color:var(--primary-300)">View.tsx</code>, <code style="font-family:var(--font-mono);font-size:0.8em;color:var(--primary-300)">schema.ts</code>, <code style="font-family:var(--font-mono);font-size:0.8em;color:var(--primary-300)">types.ts</code>, <code style="font-family:var(--font-mono);font-size:0.8em;color:var(--primary-300)">index.ts</code>. Renderable, validatable, ingestible without additional configuration.</div>
+        <a href="https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md#3--tenant-block-protocol-tbp-v10" target="_blank" class="arch-link">Read spec ↗</a>
+      </div>
+
+      <div class="arch-card">
+        <div class="arch-icon">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="a3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#84ABFF"/><stop offset="1" stop-color="#0F52E0"/></linearGradient><linearGradient id="a3c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF3FF"/><stop offset="1" stop-color="#84ABFF"/></linearGradient></defs>
+            <rect fill="none" stroke="url(#a3)" stroke-width="7" stroke-linejoin="round" x="14" y="22" width="172" height="128" rx="12"/>
+            <line x1="14" y1="52" x2="186" y2="52" stroke="url(#a3)" stroke-width="5"/>
+            <circle fill="url(#a3)" opacity="0.4" cx="34" cy="37" r="5"/>
+            <circle fill="url(#a3)" opacity="0.6" cx="52" cy="37" r="5"/>
+            <circle fill="url(#a3c)" cx="70" cy="37" r="5"/>
+            <path fill="none" stroke="url(#a3c)" stroke-linecap="round" stroke-linejoin="round" stroke-width="6" d="M28,75 l12,11 -12,11"/>
+            <rect fill="url(#a3c)" x="48" y="80" width="22" height="7" rx="3.5"/>
+            <rect fill="url(#a3)" opacity="0.7" x="28" y="106" width="88" height="6" rx="3"/>
+            <rect fill="url(#a3)" opacity="0.5" x="28" y="121" width="62" height="6" rx="3"/>
+            <rect fill="url(#a3)" opacity="0.35" x="28" y="136" width="76" height="6" rx="3"/>
+          </svg>
+        </div>
+        <div class="arch-version">JSP · v1.8</div>
+        <div class="arch-name">JsonPages Site Protocol</div>
+        <div class="arch-desc">Deterministic file system ontology and CLI projection engine. <code style="font-family:var(--font-mono);font-size:0.8em;color:var(--primary-300)">config/</code> separates global governance from per-page content. Reproducible across every environment.</div>
+        <a href="https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md#2--jsonpages-site-protocol-jsp-v18" target="_blank" class="arch-link">Read spec ↗</a>
+      </div>
+
+      <div class="arch-card">
+        <div class="arch-icon">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="a4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#84ABFF"/><stop offset="1" stop-color="#0F52E0"/></linearGradient><linearGradient id="a4c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF3FF"/><stop offset="1" stop-color="#84ABFF"/></linearGradient></defs>
+            <rect fill="none" stroke="url(#a4)" stroke-width="6.5" stroke-linejoin="round" x="8" y="36" width="72" height="128" rx="9"/>
+            <rect fill="url(#a4)" opacity="0.5" x="20" y="56" width="48" height="5.5" rx="2.75"/>
+            <rect fill="url(#a4c)" x="20" y="75" width="48" height="8" rx="4"/>
+            <rect fill="url(#a4)" opacity="0.4" x="20" y="98" width="48" height="5.5" rx="2.75"/>
+            <rect fill="url(#a4)" opacity="0.3" x="20" y="112" width="36" height="5.5" rx="2.75"/>
+            <path fill="none" stroke="url(#a4c)" stroke-linecap="round" stroke-width="5.5" d="M80,100 h40"/>
+            <circle fill="url(#a4c)" cx="100" cy="100" r="5.5"/>
+            <path fill="none" stroke="url(#a4)" stroke-linecap="round" stroke-width="4" opacity="0.4" d="M80,75 h40"/>
+            <path fill="none" stroke="url(#a4)" stroke-linecap="round" stroke-width="4" opacity="0.4" d="M80,125 h40"/>
+            <rect fill="none" stroke="url(#a4)" stroke-width="6.5" stroke-linejoin="round" x="120" y="36" width="72" height="128" rx="9"/>
+            <rect fill="url(#a4)" opacity="0.5" x="132" y="56" width="48" height="5.5" rx="2.75"/>
+            <rect fill="url(#a4c)" x="132" y="75" width="48" height="8" rx="4"/>
+            <rect fill="url(#a4)" opacity="0.4" x="132" y="98" width="48" height="5.5" rx="2.75"/>
+            <rect fill="url(#a4)" opacity="0.3" x="132" y="112" width="36" height="5.5" rx="2.75"/>
+            <rect fill="url(#a4)" opacity="0.4" x="132" y="131" width="48" height="5.5" rx="2.75"/>
+          </svg>
+        </div>
+        <div class="arch-version">IDAC · v1.0</div>
+        <div class="arch-name">ICE Data Contract</div>
+        <div class="arch-desc">Mandatory <code style="font-family:var(--font-mono);font-size:0.8em;color:var(--primary-300)">data-jp-*</code> DOM attributes bind every section to its data. Any consumer that can traverse the DOM can identify and operate any content node.</div>
+        <a href="https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md" target="_blank" class="arch-link">Read spec ↗</a>
+      </div>
+
+      <div class="arch-card">
+        <div class="arch-icon">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="a5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#84ABFF"/><stop offset="1" stop-color="#0F52E0"/></linearGradient><linearGradient id="a5c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF3FF"/><stop offset="1" stop-color="#84ABFF"/></linearGradient></defs>
+            <rect fill="none" stroke="url(#a5)" stroke-width="8" stroke-linejoin="round" x="16" y="152" width="168" height="32" rx="8"/>
+            <circle fill="url(#a5c)" cx="100" cy="168" r="7"/>
+            <path fill="none" stroke="url(#a5)" stroke-linecap="round" stroke-width="5" opacity="0.5" d="M54,138 v14"/>
+            <path fill="none" stroke="url(#a5)" stroke-linecap="round" stroke-width="5" opacity="0.5" d="M146,138 v14"/>
+            <rect fill="none" stroke="url(#a5)" stroke-width="6" stroke-linejoin="round" x="16" y="68" width="76" height="70" rx="9"/>
+            <rect fill="url(#a5)" opacity="0.55" x="28" y="84" width="42" height="6" rx="3"/>
+            <rect fill="url(#a5)" opacity="0.4" x="28" y="98" width="54" height="6" rx="3"/>
+            <rect fill="url(#a5c)" x="28" y="112" width="32" height="6" rx="3"/>
+            <rect fill="none" stroke="url(#a5)" stroke-width="6" stroke-linejoin="round" x="108" y="44" width="76" height="94" rx="9"/>
+            <rect fill="url(#a5)" opacity="0.55" x="120" y="60" width="42" height="6" rx="3"/>
+            <rect fill="url(#a5)" opacity="0.4" x="120" y="74" width="54" height="6" rx="3"/>
+            <rect fill="url(#a5c)" x="120" y="88" width="32" height="6" rx="3"/>
+            <rect fill="url(#a5c)" opacity="0.6" x="120" y="102" width="48" height="6" rx="3"/>
+          </svg>
+        </div>
+        <div class="arch-version">BSDS · v1.0</div>
+        <div class="arch-name">Base Schema Fragments</div>
+        <div class="arch-desc"><code style="font-family:var(--font-mono);font-size:0.8em;color:var(--primary-300)">BaseSectionData</code> and <code style="font-family:var(--font-mono);font-size:0.8em;color:var(--primary-300)">BaseArrayItem</code> enforce anchor IDs and stable React keys across all capsules. The foundation that doesn't move.</div>
+        <a href="https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md" target="_blank" class="arch-link">Read spec ↗</a>
+      </div>
+
+      <div class="arch-card">
+        <div class="arch-icon">
+          <svg width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="a6" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#84ABFF"/><stop offset="1" stop-color="#0F52E0"/></linearGradient><linearGradient id="a6c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EEF3FF"/><stop offset="1" stop-color="#84ABFF"/></linearGradient></defs>
+            <path fill="none" stroke="url(#a6c)" stroke-linecap="round" stroke-width="5.5" d="M100,32 L52,90"/>
+            <path fill="none" stroke="url(#a6)" stroke-linecap="round" stroke-width="5" opacity="0.3" d="M100,32 L148,90"/>
+            <path fill="none" stroke="url(#a6)" stroke-linecap="round" stroke-width="4.5" opacity="0.3" d="M52,90 L22,158"/>
+            <path fill="none" stroke="url(#a6c)" stroke-linecap="round" stroke-width="5.5" d="M52,90 L90,158"/>
+            <path fill="none" stroke="url(#a6)" stroke-linecap="round" stroke-width="4" opacity="0.25" d="M148,90 L170,158"/>
+            <circle fill="url(#a6c)" cx="100" cy="22" r="11"/>
+            <circle fill="url(#a6c)" cx="52" cy="90" r="10"/>
+            <circle fill="url(#a6)" opacity="0.3" cx="148" cy="90" r="8"/>
+            <circle fill="url(#a6)" opacity="0.3" cx="22" cy="165" r="7"/>
+            <circle fill="url(#a6c)" cx="90" cy="165" r="11"/>
+            <rect fill="none" stroke="url(#a6c)" stroke-width="4" stroke-linejoin="round" opacity="0.5" x="76" y="151" width="28" height="28" rx="5"/>
+            <circle fill="url(#a6)" opacity="0.25" cx="170" cy="165" r="6"/>
+          </svg>
+        </div>
+        <div class="arch-version">PSS · v1.4</div>
+        <div class="arch-name">Path-Based Selection</div>
+        <div class="arch-desc">Every node has an address. Content selection uses strict root-to-leaf path semantics — unambiguous, stable, operable by any agent that knows the contract.</div>
+        <a href="https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md" target="_blank" class="arch-link">Read spec ↗</a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- QUICK EXAMPLE -->
+<section id="example">
+  <div class="container">
+    <p class="section-label">Quick Example</p>
+    <h2 class="section-title">Two steps. One contract.</h2>
+    <p class="section-body">
+      Scaffold a fully compliant tenant in under three minutes.
+      Then read any page via the OlonJS protocol — from a browser, a script, or an AI agent.
+    </p>
+    <div class="example-steps">
+
+      <div class="example-step">
+        <div class="step-header">
+          <div class="step-number">1</div>
+          <div class="step-title">Scaffold a tenant</div>
+          <div class="step-desc">~3 min</div>
+        </div>
+        <div class="code-block">
+<span class="code-comment"># Install the CLI</span>
+<span class="code-cmd">npm install -g @olonjs/cli</span>
+
+<span class="code-comment"># Scaffold a new tenant</span>
+<span class="code-cmd">npx @olonjs/cli new tenant</span>
+
+<div class="code-output">
+✓ Projecting infrastructure...
+✓ Projecting source (src_tenant_alpha.sh)
+✓ Resolving dependencies
+✓ Tenant scaffolded
+
+<span style="color:var(--primary-300)">src/
+  components/hero/
+    View.tsx
+    schema.ts
+    types.ts
+    index.ts
+  data/config/
+    site.json
+    theme.json
+    menu.json
+  lib/
+    schemas.ts
+    base-schemas.ts</span>
+</div>
+        </div>
+      </div>
+
+      <div class="example-step">
+        <div class="step-header">
+          <div class="step-number">2</div>
+          <div class="step-title">Read via OlonJS protocol</div>
+          <div class="step-desc">Any consumer</div>
+        </div>
+        <div class="code-block">
+<span class="code-comment">// Read any page via the contract</span>
+<span class="code-comment">// Works from browser, script, or AI agent</span>
+
+<span class="code-key">const</span> <span class="code-val">page</span> = <span class="code-key">await</span>
+  navigator.modelContextProtocol
+    .<span class="code-cmd">readResource</span>(
+      <span class="code-string">'olon://pages/home'</span>
+    );
+
+<span class="code-comment">// Returns the full typed contract</span>
+<span class="code-comment">// { slug, meta, sections: Section[] }</span>
+<span class="code-comment">// No DOM scraping. No layout knowledge.</span>
+<span class="code-comment">// Just the contract.</span>
+
+<div class="code-output">
+<span style="color:var(--primary-300)">{
+  "slug": "home",
+  "sections": [
+    { "type": "hero", "data": {...} },
+    { "type": "features", "data": {...} }
+  ]
+}</span>
+</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MCP manifest note -->
+    <div style="margin-top:1.5rem;padding:1.25rem 1.5rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;align-items:center;gap:1rem;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-400)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span style="font-size:0.875rem;color:var(--fg-muted);">Every OlonJS tenant exposes a machine-readable manifest at <code style="font-family:var(--font-mono);color:var(--primary-300);font-size:0.8em;">http://localhost:5173/mcp-manifest.json</code> — discoverable by any agent without configuration.</span>
+    </div>
+  </div>
+</section>
+
+<!-- GET STARTED -->
+<section id="getstarted">
+  <div class="container">
+    <p class="section-label">Get Started</p>
+    <h2 class="section-title">Three paths in.</h2>
+    <p class="section-body">
+      Start with the Core package, scaffold a full tenant with the CLI,
+      or deploy a working example in one click.
+    </p>
+    <div class="start-grid">
+
+      <div class="start-card">
+        <span class="start-badge badge-oss">Open Source</span>
+        <div class="start-title">Install Core</div>
+        <div class="start-body">
+          The Core package is open source — forever. Install it, read the spec,
+          build on it. No account required.
+        </div>
+        <div class="start-code">npm install @olonjs/core</div>
+        <a href="https://github.com/olonjs/core" target="_blank" class="start-link">
+          View on GitHub ↗
+        </a>
+      </div>
+
+      <div class="start-card">
+        <span class="start-badge badge-cli">CLI</span>
+        <div class="start-title">Scaffold a tenant</div>
+        <div class="start-body">
+          The CLI scaffolds a fully compliant tenant from a canonical script.
+          Same result on every machine, every run.
+        </div>
+        <div class="start-code">npx @olonjs/cli new tenant</div>
+        <a href="https://www.npmjs.com/package/@olonjs/cli" target="_blank" class="start-link">
+          View on npm ↗
+        </a>
+      </div>
+
+      <div class="start-card">
+        <span class="start-badge badge-deploy">Deploy</span>
+        <div class="start-title">Deploy a template</div>
+        <div class="start-body">
+          Clone a working OlonJS tenant and deploy it with one click.
+          Explore the full capsule structure in a real project.
+        </div>
+        <a href="https://github.com/olonjs/core" target="_blank"
+           style="display:inline-flex;align-items:center;gap:8px;background:var(--bg-elevated);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:10px 16px;font-size:0.875rem;font-weight:600;color:var(--fg);transition:border-color 0.15s;"
+           onmouseover="this.style.borderColor='var(--primary-400)'"
+           onmouseout="this.style.borderColor='var(--border-strong)'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          Deploy template →
+        </a>
+        <a href="https://www.npmjs.com/package/@olonjs/core" target="_blank" class="start-link">
+          View on npm ↗
+        </a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+          <defs>
+            <linearGradient id="foot-ring" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#84ABFF"/>
+              <stop offset="100%" stop-color="#0F52E0"/>
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="38" stroke="url(#foot-ring)" stroke-width="20"/>
+          <circle cx="50" cy="50" r="15" fill="#84ABFF"/>
+        </svg>
+        OlonJS
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/olonjs/core" target="_blank">GitHub</a>
+        <a href="https://www.npmjs.com/package/@olonjs/core" target="_blank">npm</a>
+        <a href="https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md" target="_blank">Spec v1.5</a>
+        <a href="https://www.olonjs.io/docs" target="_blank">Docs</a>
+        <a href="https://github.com/olonjs/core/blob/main/LICENSE" target="_blank">License</a>
+      </div>
+      <div class="footer-meta">v1.5.0 · Open Core · MIT</div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

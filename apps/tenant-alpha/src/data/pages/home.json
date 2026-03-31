@@ -11,9 +11,9 @@
       "type": "hero",
       "data": {
         "eyebrow": "Contract layer · v1.4 · Open Core",
-        "title": "Start Building",
+        "title": "Contract Layer",
         "titleHighlight": "for the agentic web.",
-        "description": "AI agents are becoming operational actors in commerce, marketing, and support. But websites are still built for humans first: HTML-heavy, CMS-fragmented, and inconsistent across properties. That makes agent integration slow, brittle, and expensive. Olon introduces a deterministic machine contract for websites OlonJS. This makes content reliably readable and operable by agents while preserving normal human UI.",
+        "description": "OlonJS is a TypeScript framework for building JSON-driven websites with a deterministic data contract. Every section is typed, validated, and structurally addressable. Designed for reproducible tenant generation and machine-readable output.",
         "ctas": [
           {
             "id": "cta-started",
@@ -31,8 +31,8 @@
         "docsLabel": "Explore platform",
         "docsHref": "/platform/overview",
         "heroImage": {
-          "url": "https://bat5elmxofxdroan.public.blob.vercel-storage.com/tenant-assets/511f18d7-d8ac-4292-ad8a-b0efa99401a3/1774286598548-adac7c36-9001-451d-9b16-c3787ac27f57-signup-hero-olon-graded_1_.png",
-          "alt": ""
+          "url": "data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZy1tYWluIiB4Mj0iMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoMTEwLjc5NSwxMTAuNzk1LC0xMTAuNzk1LDExMC43OTUsNDQuNjAzLDQ0LjYwMykiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM1QjhFRkYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIwLjUiIHN0b3AtY29sb3I9IiMwRjUyRTAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDYzMDkwIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnLWFjY2VudCIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNBREM4RkYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNUI4RUZGIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8IS0tIENoaXAgYm9yZGVyIC0tPgogIDxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnLW1haW4pIiBzdHJva2Utd2lkdGg9IjgiCiAgICBkPSJtNTkuMzggNDQuNmg4MS4yNGM4LjE2IDAgMTQuNzggNi42MiAxNC43OCAxNC43OHY4MS4yNGMwIDguMTYtNi42MiAxNC43OC0xNC43OCAxNC43OGgtODEuMjRjLTguMTYgMC0xNC43OC02LjYyLTE0Ljc4LTE0Ljc4di04MS4yNGMwLTguMTYgNi42Mi0xNC43OCAxNC43OC0xNC43OHoiLz4KICA8IS0tIExlZnQgcGlucyAtLT4KICA8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZy1tYWluKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjYiIGQ9Im03LjY3IDcyLjNoMzYuOTMiLz4KICA8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZy1tYWluKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjYiIGQ9Im03LjY3IDEwMGgzNi45MyIvPgogIDxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnLW1haW4pIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNiIgZD0ibTcuNjcgMTI3LjdoMzYuOTMiLz4KICA8IS0tIFJpZ2h0IHBpbnMgLS0+CiAgPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSJ1cmwoI2ctbWFpbikiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSI2IiBkPSJtMTU1LjQgNzIuM2gzNi45MyIvPgogIDxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnLW1haW4pIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNiIgZD0ibTE1NS40IDEwMGgzNi45MyIvPgogIDxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnLW1haW4pIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNiIgZD0ibTE1NS40IDEyNy43aDM2LjkzIi8+CiAgPCEtLSBUb3AgcGlucyAtLT4KICA8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZy1tYWluKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjYiIGQ9Im03Mi4zIDcuNjd2MzYuOTMiLz4KICA8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZy1tYWluKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjYiIGQ9Im0xMDAgNy42N3YzNi45MyIvPgogIDxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnLW1haW4pIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNiIgZD0ibTEyNy43IDcuNjd2MzYuOTMiLz4KICA8IS0tIEJvdHRvbSBwaW5zIC0tPgogIDxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnLW1haW4pIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNiIgZD0ibTcyLjMgMTU1LjR2MzYuOTMiLz4KICA8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZy1tYWluKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjYiIGQ9Im0xMDAgMTU1LjR2MzYuOTMiLz4KICA8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZy1tYWluKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjYiIGQ9Im0xMjcuNyAxNTUuNHYzNi45MyIvPgogIDwhLS0gQ29ybmVyIG5vZGVzIC0tPgogIDxjaXJjbGUgZmlsbD0idXJsKCNnLW1haW4pIiBjeD0iNzIuMyIgY3k9IjcyLjMiIHI9IjcuMzkiLz4KICA8Y2lyY2xlIGZpbGw9InVybCgjZy1tYWluKSIgY3g9IjEyNy43IiBjeT0iNzIuMyIgcj0iNy4zOSIvPgogIDxjaXJjbGUgZmlsbD0idXJsKCNnLW1haW4pIiBjeD0iNzIuMyIgY3k9IjEyNy43IiByPSI3LjM5Ii8+CiAgPGNpcmNsZSBmaWxsPSJ1cmwoI2ctbWFpbikiIGN4PSIxMjcuNyIgY3k9IjEyNy43IiByPSI3LjM5Ii8+CiAgPCEtLSBDZW50ZXIgbm9kZSDigJQgYWNjZW50IC0tPgogIDxjaXJjbGUgZmlsbD0idXJsKCNnLWFjY2VudCkiIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjkuMjMiLz4KICA8IS0tIENvbm5lY3Rpb24gbGluZXMgLS0+CiAgPHBhdGggb3BhY2l0eT0iMC4zIiBmaWxsPSJub25lIiBzdHJva2U9IiM1QjhFRkYiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTcyLjMgNzIuM2wyNy43IDI3LjciLz4KICA8cGF0aCBvcGFjaXR5PSIwLjMiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzVCOEVGRiIgc3Ryb2tlLXdpZHRoPSIyIiBkPSJtMTI3LjcgNzIuM2wtMjcuNyAyNy43Ii8+CiAgPHBhdGggb3BhY2l0eT0iMC4zIiBmaWxsPSJub25lIiBzdHJva2U9IiM1QjhFRkYiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTcyLjMgMTI3LjdsMjcuNy0yNy43Ii8+CiAgPHBhdGggb3BhY2l0eT0iMC4zIiBmaWxsPSJub25lIiBzdHJva2U9IiM1QjhFRkYiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTEyNy43IDEyNy43bC0yNy43LTI3LjciLz4KPC9zdmc+Cg==",
+          "alt": "icon-ai-specs.svg"
         }
       },
       "settings": {
@@ -44,9 +44,9 @@
       "type": "feature-grid",
       "data": {
         "label": "Why OlonJS",
-        "sectionTitle": "A whole in itself,",
-        "sectionTitleItalic": "part of something greater.",
-        "sectionLead": "Built on the concept of the holon — every component autonomous yet part of the larger contract. Governance and developer experience, unified.",
+        "sectionTitle": "A Meaningful Web",
+        "sectionTitleItalic": "Whole in itself, part of something greater.",
+        "sectionLead": "Most web frameworks separate concerns across layers — data, UI, validation, metadata — with no shared contract between them. OlonJS inverts this: the JSON data structure is the contract. Every layer — rendering, editing, validation, machine access — is a deterministic projection of the same typed source. The result is a site that is structurally coherent by construction, not by convention.",
         "cards": [
           {
             "id": "card-endpoints",
@@ -54,8 +54,8 @@
               "url": "/icons/features/icon-json-files.svg",
               "alt": "JSON files icon"
             },
-            "title": "Canonical JSON endpoints",
-            "description": "Every page available at /{slug}.json — deterministic, typed, agent-readable. No custom integration per tenant."
+            "title": "Modular Type Registry",
+            "description": "Core exports an empty SectionDataRegistry. Tenants extend it via module augmentation — no Core changes required. Full TypeScript inference across all section types at compile-time."
           },
           {
             "id": "card-schema",
@@ -63,8 +63,8 @@
               "url": "/icons/features/icon-zod-schemas.svg",
               "alt": "Zod schemas icon"
             },
-            "title": "Schema-driven contracts",
-            "description": "Typed components validated against your schema. Shared conventions eliminate prompt ambiguity across teams."
+            "title": "Tenant Block Protocol",
+            "description": "Each section type lives in a self-contained capsule: View.tsx, schema.ts, types.ts, index.ts. The capsule is the unit of extension — renderable, validatable, and ingestible by the engine without additional configuration."
           },
           {
             "id": "card-ai",
@@ -72,8 +72,8 @@
               "url": "/icons/features/icon-ai-specs.svg",
               "alt": "AI specs icon"
             },
-            "title": "AI-native velocity",
-            "description": "Structure is deterministic, so AI can scaffold and evolve tenants faster. Ship new experiences in hours, not weeks."
+            "title": "Deterministic CLI",
+            "description": "@olonjs/cli scaffolds new tenants from a canonical script. Infrastructure, source structure, and dependencies are projected deterministically. Output is reproducible across environments"
           },
           {
             "id": "card-multitenant",
@@ -81,8 +81,8 @@
               "url": "/icons/features/icon-own-data.svg",
               "alt": "Own data icon"
             },
-            "title": "Multi-tenant at scale",
-            "description": "One convention across many tenants enables reusable automations. No per-tenant custom integration work."
+            "title": "ICE Data Contract",
+            "description": "Mandatory data-jp-* DOM attributes bind rendered sections to their data contract. The binding is structural, not UI-dependent — any consumer that can traverse the DOM can identify and address any content node."
           },
           {
             "id": "card-governance",
@@ -90,8 +90,8 @@
               "url": "/icons/features/icon-governance.svg",
               "alt": "Governance icon"
             },
-            "title": "Enterprise governance",
-            "description": "Audit trails, compliance controls, and private cloud deployment via NX monorepo. SOC2-ready by design."
+            "title": "Base Schema Fragments",
+            "description": "BaseSectionData and BaseArrayItem are the required base types for all section data schemas and array items. They enforce anchor IDs and stable React keys across all capsules."
           },
           {
             "id": "card-deploy",
@@ -99,8 +99,8 @@
               "url": "/icons/features/icon-clean-commits.svg",
               "alt": "Clean commits icon"
             },
-            "title": "Deployment flexibility",
-            "description": "OSS core you can trust. Vercel-native cloud for speed. Private cloud for governance-heavy orgs."
+            "title": "Path-Based Selection",
+            "description": "Content selection uses strict root-to-leaf path semantics. Each segment identifies a node unambiguously. The flat itemField/itemId protocol is removed in v1.3+."
           }
         ],
         "proofStatement": "Working end-to-end with production routing parity.",
