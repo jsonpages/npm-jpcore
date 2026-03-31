@@ -149,7 +149,12 @@ export default defineConfig({
 
           if (isPageJsonRequest) {
             const normalizedPath = decodeURIComponent(pathname).replace(/\\/g, '/');
-            const slug = normalizedPath.replace(/^\/+/, '').replace(/\.json$/i, '').replace(/^\/+|\/+$/g, '');
+            // Rimuoviamo la root folder opzionale "/pages/" introdotta per matchare la prod e il file extension
+            const slug = normalizedPath
+              .replace(/^\/+/, '')
+              .replace(/^pages\//i, '')
+              .replace(/\.json$/i, '')
+              .replace(/^\/+|\/+$/g, '');
             const candidate = path.resolve(DATA_PAGES_DIR, `${slug}.json`);
             const isInsidePagesDir = candidate.startsWith(`${DATA_PAGES_DIR}${path.sep}`) || candidate === DATA_PAGES_DIR;
             if (!slug || !isInsidePagesDir || !fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) {

@@ -183,8 +183,10 @@ async function resolveResource(uri: string): Promise<unknown> {
       .replace(/\/admin(\/.*)?$/, '')
       .replace(/\/$/, '');
     
-    const response = await fetch(`${baseUrl}/${slug}.json`);
-    if (!response.ok) throw new Error(`Resource not found: ${uri} (at ${baseUrl}/${slug}.json)`);
+    const response = await fetch(`${baseUrl}/pages/${slug}.json`);
+    if (!response.ok) {
+      throw new Error(`Resource not found: ${uri} (at ${baseUrl}/pages/${slug}.json)`);
+    }
     return await response.json();
   }
   throw new Error(`Unsupported URI scheme: ${uri}`);

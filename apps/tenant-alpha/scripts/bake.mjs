@@ -130,6 +130,10 @@ const webMcpBuildState = getWebMcpBuildState();
 for (const { slug } of targets) {
   const pageConfig = webMcpBuildState.pages[slug];
   if (!pageConfig) continue;
+  
+  // Export the raw JSON data for the agentic web (so readResource works on SSG)
+  await writeJsonTargets(`pages/${slug}.json`, pageConfig);
+
   const contract = buildPageContract({
     slug,
     pageConfig,
@@ -145,6 +149,9 @@ for (const { slug } of targets) {
   });
   await writeJsonTargets(buildPageManifestHref(slug).replace(/^\//, ''), pageManifest);
 }
+
+// Export the site config for the agentic web
+await writeJsonTargets('config/site.json', webMcpBuildState.siteConfig);
 
 const mcpManifest = buildSiteManifest({
   pages: webMcpBuildState.pages,

@@ -1,0 +1,56 @@
+{
+  "identity": {
+    "title": "OlonJS",
+    "logoUrl": "/brand/mark/olon-mark-dark.svg"
+  },
+  "pages": [
+    {
+      "slug": "home",
+      "label": "Home"
+    },
+    {
+      "slug": "design-system",
+      "label": "Design System"
+    }
+  ],
+  "header": {
+    "id": "global-header",
+    "type": "header",
+    "data": {
+      "logoText": "Olon",
+      "badge": "",
+      "links": {
+        "$ref": "../config/menu.json#/main"
+      },
+      "ctaLabel": "Get started →",
+      "ctaHref": "#contact",
+      "signinHref": "#login"
+    }
+  },
+  "footer": {
+    "id": "global-footer",
+    "type": "footer",
+    "data": {
+      "brandText": "Olon",
+      "copyright": "© 2025 OlonJS · v1.4 · Holon",
+      "links": [
+        {
+          "label": "GitHub",
+          "href": "#"
+        },
+        {
+          "label": "Privacy",
+          "href": "#"
+        },
+        {
+          "label": "Terms",
+          "href": "#"
+        }
+      ],
+      "designSystemHref": "/design-system"
+    },
+    "settings": {
+      "showLogo": true
+    }
+  }
+}
