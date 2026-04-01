@@ -25,7 +25,7 @@ type ModelContextLike = {
   readResource?: (uri: string) => Promise<unknown>;
 };
 
-type ModelContextTestingLike = {
+type ModelContextProtocolLike = {
   listTools?: () => WebMcpToolInfo[];
   executeTool?: (toolName: string, inputArgsJson: string) => Promise<string>;
   readResource?: (uri: string) => Promise<string>;
@@ -200,7 +200,7 @@ export function ensureWebMcpRuntime(): void {
 
   const currentNavigator = navigator as Navigator & {
     modelContext?: ModelContextLike;
-    modelContextTesting?: ModelContextTestingLike;
+    modelContextProtocol?: ModelContextProtocolLike;
   };
 
   if (!currentNavigator.modelContext) {
@@ -214,13 +214,13 @@ export function ensureWebMcpRuntime(): void {
   };
   currentNavigator.modelContext.readResource = resolveResource;
 
-  if (!currentNavigator.modelContextTesting) {
-    currentNavigator.modelContextTesting = {};
+  if (!currentNavigator.modelContextProtocol) {
+    currentNavigator.modelContextProtocol = {};
   }
-  currentNavigator.modelContextTesting.listTools = function () {
+  currentNavigator.modelContextProtocol.listTools = function () {
     return Array.from(registry.values()).map(({ execute: _execute, ...toolInfo }) => toolInfo);
   };
-  currentNavigator.modelContextTesting.executeTool = async function (toolName: string, inputArgsJson: string) {
+  currentNavigator.modelContextProtocol.executeTool = async function (toolName: string, inputArgsJson: string) {
     const tool = registry.get(toolName);
     if (!tool) {
       throw new Error(`Unknown WebMCP tool: ${toolName}`);
@@ -229,7 +229,7 @@ export function ensureWebMcpRuntime(): void {
     const result = await tool.execute(parsedArgs);
     return JSON.stringify(result);
   };
-  currentNavigator.modelContextTesting.readResource = async function (uri: string) {
+  currentNavigator.modelContextProtocol.readResource = async function (uri: string) {
     const data = await resolveResource(uri);
     return JSON.stringify(data);
   };

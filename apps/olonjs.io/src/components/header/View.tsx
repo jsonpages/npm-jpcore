@@ -49,7 +49,7 @@ export const Header: React.FC<{
           {data.badge && (
             <>
               <span className="w-px h-4 bg-border" aria-hidden />
-              <Badge variant="pill" data-jp-field="badge">
+              <Badge variant="outline" className="rounded-full" data-jp-field="badge">
                 {data.badge}
               </Badge>
             </>

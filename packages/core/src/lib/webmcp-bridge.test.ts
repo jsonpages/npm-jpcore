@@ -86,10 +86,10 @@ describe('webmcp-bridge', () => {
         }),
       });
 
-      const tools = navigator.modelContextTesting?.listTools?.() ?? [];
+      const tools = navigator.modelContextProtocol?.listTools?.() ?? [];
       expect(tools.map((tool) => tool.name)).toContain('update-hero');
 
-      const result = await navigator.modelContextTesting?.executeTool?.('update-hero', '{}');
+      const result = await navigator.modelContextProtocol?.executeTool?.('update-hero', '{}');
       expect(JSON.parse(result ?? '{}')).toMatchObject({
         content: [{ type: 'text', text: 'ok' }],
         isError: false,

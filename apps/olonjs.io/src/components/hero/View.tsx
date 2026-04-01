@@ -65,8 +65,8 @@ export const Hero: React.FC<{ data: HeroData; settings?: HeroSettings }> = ({ da
         {data.badge && (
           <div className="inline-flex items-center gap-2 mb-8">
             <Badge
-              variant="pill"
-              className="gap-2 py-1.5 px-4 text-[12px] tracking-[.05em] font-mono"
+              variant="outline"
+              className="rounded-full gap-2 py-1.5 px-4 text-[12px] tracking-[.05em] font-mono"
               data-jp-field="badge"
             >
               <span
