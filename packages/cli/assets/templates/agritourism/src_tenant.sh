@@ -576,7 +576,7 @@ echo "Creating package.json..."
 cat << 'END_OF_FILE_CONTENT' > "package.json"
 {
   "name": "tenant-agritourism",
-  "version": "1.0.0",
+  "version": "1.0.104",
   "private": true,
   "type": "module",
   "scripts": {
@@ -596,7 +596,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "@tiptap/extension-link": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.97",
+    "@olonjs/core": "^1.0.105",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
     "react": "^19.0.0",

@@ -1624,7 +1624,7 @@ echo "Creating package.json..."
 cat << 'END_OF_FILE_CONTENT' > "package.json"
 {
   "name": "tenant-alpha",
-  "version": "1.0.0",
+  "version": "1.0.104",
   "private": true,
   "type": "module",
   "scripts": {
@@ -1633,7 +1633,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "verify:webmcp": "node scripts/webmcp-feature-check.mjs",
     "prebuild": "node scripts/sync-pages-to-public.mjs",
     "build": "tsc && vite build",
-    "dist": "bash ./src2Code.sh --template alpha src .cursor vercel.json index.html tsconfig.json tsconfig.node.json vite.config.ts scripts specs package.json",
+    "dist": "bash ./src2Code.sh --template alpha src .cursor vercel.json index.html tsconfig.json tsconfig.node.json vite.config.ts scripts specs package.json public/assets/images/plug-graded-square.jpg",
     "preview": "vite preview",
     "bake:email": "tsx scripts/bake-email.tsx",
     "bakemail": "npm run bake:email --",
@@ -1644,7 +1644,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "@tiptap/extension-link": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.97",
+    "@olonjs/core": "^1.0.105",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
@@ -1673,6 +1673,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
 }
 
 END_OF_FILE_CONTENT
+# SKIP: public/assets/images/plug-graded-square.jpg is binary and cannot be embedded as text.
 mkdir -p "scripts"
 echo "Creating scripts/bake-email.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "scripts/bake-email.tsx"
@@ -5968,7 +5969,7 @@ mkdir -p "src/components/header"
 echo "Creating src/components/header/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/View.tsx"
 import { useState, useRef, useEffect } from 'react';
-import { Menu, X, ChevronDown } from 'lucide-react';
+import { Menu, X, ChevronDown, Zap } from 'lucide-react';
 import { OlonMark } from '@/components/OlonWordmark';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -6050,7 +6051,7 @@ export function Header({ data, settings, menu }: HeaderViewProps) {
     >
       <div className="max-w-6xl mx-auto px-6 h-18 flex items-center gap-8">
 
-        {/* Logo */}
+        {/* Logo da homepage  */}
         <a href="/" className="flex items-center gap-2 shrink-0" aria-label="OlonJS home">
           <OlonMark size={26} className="mb-0.5" />
           <div className="flex items-center gap-1"><span
@@ -6160,7 +6161,7 @@ export function Header({ data, settings, menu }: HeaderViewProps) {
             );
           })}
         </nav>
-
+       
         {/* Actions */}
         <div className="hidden md:flex items-center gap-1 ml-auto shrink-0">
           <ThemeToggle />
@@ -6188,6 +6189,15 @@ export function Header({ data, settings, menu }: HeaderViewProps) {
           {mobileOpen ? <X size={16} /> : <Menu size={16} />}
         </button>
       </div>
+
+        {/* Banner Sotto il Menu */}
+        <div className="border-t border-border/60 py-1 px-4 text-center text-[10px] uppercase font-semibold tracking-wider text-muted-foreground flex justify-center items-center gap-1.5 bg-background/50">
+          <Zap className="w-2.5 h-2.5 text-primary-light" />
+          <span>Built with</span>
+          <a href="https://github.com/olonjs/npm-jpcore" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary-light transition-colors font-bold">
+            OlonJS
+          </a>
+        </div>
 
       {/* Mobile drawer */}
       <div className={cn(
@@ -6293,48 +6303,204 @@ export function Header({ data, settings, menu }: HeaderViewProps) {
 }
 
 END_OF_FILE_CONTENT
+# SKIP: src/components/header/View.tsx:Zone.Identifier is binary and cannot be embedded as text.
+echo "Creating src/components/header/View_.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/header/View_.tsx"
+import React, { useState } from 'react';
+import { cn } from '@/lib/utils';
+import { OlonMark } from '@/components/ui/OlonMark';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react';
+import type { MenuItem } from '@olonjs/core';
+import type { HeaderData, HeaderSettings } from './types';
+
+export const Header: React.FC<{
+  data: HeaderData;
+  settings?: HeaderSettings;
+  menu: MenuItem[];
+}> = ({ data, menu }) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  return (
+    <>
+      <div style={{ height: '80px' }} aria-hidden />
+      <header
+        className={cn(
+          'fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300',
+          'flex flex-col',
+          'bg-background/88 backdrop-blur-[16px] border-b border-border/60'
+        )}
+      >
+        <div className="max-w-[1040px] w-full h-14 mx-auto px-8 flex items-center gap-3">
+
+
+          {/* Logo */}
+        <a href="/" className="flex items-center gap-2 shrink-0" aria-label="OlonJS home">
+          <OlonMark size={26} className="mb-0.5" />
+          <div className="flex items-center gap-1"><span
+            className="text-2xl text-foreground leading-none"
+            style={{
+              fontFamily:           'var(--wordmark-font)',
+              letterSpacing:        'var(--wordmark-tracking)',
+              fontWeight:           'var(--wordmark-weight)',
+              fontVariationSettings: '"wdth" var(--wordmark-width)',
+            }}
+          >
+            {data.logoText}
+            </span> 
+            <span className="text-primary-light font-mono">{data.badge}</span>
+            </div>
+        </a>
+
+          {data.badge && (
+            <>
+              <span className="w-px h-4 bg-border" aria-hidden />
+              <Badge variant="outline" className="rounded-full" data-jp-field="badge">
+                {data.badge}
+              </Badge>
+            </>
+          )}
+
+          <div className="flex-1" />
+
+          <nav className="hidden md:flex items-center gap-0.5" aria-label="Site">
+            {menu.map((item, idx) => (
+              <Button
+                key={(item as { id?: string }).id ?? idx}
+                asChild
+                variant={item.isCta ? 'default' : 'ghost'}
+                size="sm"
+                className={cn(
+                  'text-[13px]',
+                  !item.isCta && 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <a
+                  href={item.href}
+                  data-jp-item-id={(item as { id?: string }).id ?? `legacy-${idx}`}
+                  data-jp-item-field="links"
+                  target={item.external ? '_blank' : undefined}
+                  rel={item.external ? 'noopener noreferrer' : undefined}
+                >
+                  {item.label}
+                </a>
+              </Button>
+            ))}
+          </nav>
+
+          <button
+            type="button"
+            className="md:hidden p-2 rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {mobileMenuOpen ? (
+                <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>
+              ) : (
+                <><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></>
+              )}
+            </svg>
+          </button>
+        </div>
+
+        {/* Banner Sotto il Menu */}
+        <div className="border-t border-border/60 py-1 px-4 text-center text-[10px] uppercase font-semibold tracking-wider text-muted-foreground flex justify-center items-center gap-1.5 bg-background/50">
+          <Sparkles className="w-2.5 h-2.5 text-primary-light" />
+          <span>Built with</span>
+          <a href="https://github.com/olonjs/npm-jpcore" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary-light transition-colors font-bold">
+            OlonJS
+          </a>
+        </div>
+
+        {mobileMenuOpen && (
+          <nav
+            className="absolute top-[82px] left-0 right-0 md:hidden border-b border-border bg-background/95 backdrop-blur-[16px]"
+            aria-label="Mobile menu"
+          >
+            <div className="max-w-[1040px] mx-auto px-8 py-4 flex flex-col gap-1">
+              {menu.map((item, idx) => (
+                <a
+                  key={(item as { id?: string }).id ?? idx}
+                  href={item.href}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2.5 no-underline"
+                  onClick={() => setMobileMenuOpen(false)}
+                  data-jp-item-id={(item as { id?: string }).id ?? `legacy-${idx}`}
+                  data-jp-item-field="links"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </nav>
+        )}
+      </header>
+    </>
+  );
+};
+
+END_OF_FILE_CONTENT
 echo "Creating src/components/header/index.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/index.ts"
 export * from './View';
 export * from './schema';
 export * from './types';
-
 END_OF_FILE_CONTENT
+# SKIP: src/components/header/index.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/header/schema.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/schema.ts"
 import { z } from 'zod';
 
+/**
+ * 📝 HEADER SCHEMA (Contract)
+ * Definisce la struttura dati che l'Admin userà per generare la form.
+ */
 export const HeaderSchema = z.object({
-  logoText:         z.string().describe('ui:text'),
-  badge:            z.string().optional().describe('ui:text'),
+  logoText: z.string().describe('ui:text'),
+  logoHighlight: z.string().optional().describe('ui:text'),
+  logoIconText: z.string().optional().describe('ui:text'),
+  badge: z.string().optional().describe('ui:text'),
+  signinHref: z.string().optional().describe('ui:text'),
+  ctaHref: z.string().optional().describe('ui:text'),
+  ctaLabel: z.string().optional().describe('ui:text'),
   links: z.array(z.object({
-    label:    z.string().describe('ui:text'),
-    href:     z.string().describe('ui:text'),
-    variant:  z.string().optional().describe('ui:text'),
-    children: z.array(z.object({
-      label: z.string().describe('ui:text'),
-      href:  z.string().describe('ui:text'),
-    })).optional().describe('ui:list'),
+    label: z.string().describe('ui:text'),
+    href: z.string().describe('ui:text'),
+    isCta: z.boolean().default(false).describe('ui:checkbox'),
+    external: z.boolean().default(false).optional().describe('ui:checkbox'),
   })).describe('ui:list'),
-  ctaLabel:         z.string().optional().describe('ui:text'),
-  ctaHref:          z.string().optional().describe('ui:text'),
-  signinHref:       z.string().optional().describe('ui:text'),
 });
 
+/**
+ * ⚙️ HEADER SETTINGS
+ * Definisce i parametri tecnici (non di contenuto).
+ */
 export const HeaderSettingsSchema = z.object({
   sticky: z.boolean().default(true).describe('ui:checkbox'),
 });
-
 END_OF_FILE_CONTENT
+# SKIP: src/components/header/schema.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/header/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/header/types.ts"
 import { z } from 'zod';
 import { HeaderSchema, HeaderSettingsSchema } from './schema';
 
-export type HeaderData     = z.infer<typeof HeaderSchema>;
-export type HeaderSettings = z.infer<typeof HeaderSettingsSchema>;
+/**
+ * 🧩 HEADER DATA
+ * Tipo inferito dallo schema Zod del contenuto.
+ * Utilizzato dalla View per renderizzare logo e links.
+ */
+export type HeaderData = z.infer<typeof HeaderSchema>;
 
+/**
+ * ⚙️ HEADER SETTINGS
+ * Tipo inferito dallo schema Zod dei settings.
+ * Gestisce comportamenti tecnici come lo 'sticky'.
+ */
+export type HeaderSettings = z.infer<typeof HeaderSettingsSchema>;
 END_OF_FILE_CONTENT
+# SKIP: src/components/header/types.ts:Zone.Identifier is binary and cannot be embedded as text.
 mkdir -p "src/components/hero"
 # SKIP: src/components/hero/RadialBackground - Copy.tsx:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/components/hero/RadialBackground.tsx..."
@@ -7012,7 +7178,7 @@ export function OlonArchitectureView({ data }: Props) {
       <div className="max-w-6xl mx-auto px-8">
         <p className="text-xs font-semibold tracking-[0.12em] uppercase text-[var(--local-muted)] mb-3"
            data-jp-field="label">{data.label}</p>
-        <h2 className="text-4xl font-bold tracking-[-0.03em] text-white mb-3"
+        <h2 className="text-4xl font-bold tracking-[-0.03em] text-foreground mb-3"
             data-jp-field="headline">{data.headline}</h2>
         <p className="text-base text-[var(--local-muted)] leading-relaxed max-w-2xl mb-3"
            data-jp-field="body">{data.body}</p>
@@ -7035,11 +7201,11 @@ export function OlonArchitectureView({ data }: Props) {
               <div>{ICONS[p.icon]}</div>
               <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-[var(--local-p400)] font-mono"
                  data-jp-field="version">{p.acronym} · {p.version}</p>
-              <p className="font-bold text-white text-base" data-jp-field="name">{p.name}</p>
+              <p className="font-bold text-foreground text-base" data-jp-field="name">{p.name}</p>
               <p className="text-sm text-[var(--local-muted)] leading-relaxed flex-1"
                  data-jp-field="desc">{p.desc}</p>
               <a href={p.specHref} target="_blank" rel="noopener noreferrer"
-                 className="text-xs text-[var(--local-p400)] hover:text-white transition-colors mt-auto"
+                 className="text-xs text-[var(--local-p400)] hover:text-foreground transition-colors mt-auto"
                  data-jp-field="specHref">Read spec ↗</a>
             </div>
           ))}
@@ -7113,7 +7279,7 @@ export function OlonExampleView({ data }: Props) {
       <div className="max-w-6xl mx-auto px-8">
         <p className="text-xs font-semibold tracking-[0.12em] uppercase text-[var(--local-muted)] mb-3"
            data-jp-field="label">{data.label}</p>
-        <h2 className="text-4xl font-bold tracking-[-0.03em] text-white mb-3"
+        <h2 className="text-4xl font-bold tracking-[-0.03em] text-foreground mb-3"
             data-jp-field="headline">{data.headline}</h2>
         <p className="text-base text-[var(--local-muted)] leading-relaxed max-w-2xl mb-12"
            data-jp-field="body">{data.body}</p>
@@ -7124,14 +7290,14 @@ export function OlonExampleView({ data }: Props) {
                  className="bg-[var(--local-card)] border border-[var(--local-border)] rounded-2xl overflow-hidden">
               {/* Step header */}
               <div className="px-6 py-4 border-b border-[var(--local-border)] flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-[var(--local-p400)] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                <span className="w-6 h-6 rounded-full bg-[var(--local-p400)] text-foreground text-xs font-bold flex items-center justify-center flex-shrink-0">
                   {step.number}
                 </span>
-                <span className="font-semibold text-white text-sm">{step.title}</span>
+                <span className="font-semibold text-foreground text-sm">{step.title}</span>
                 <span className="ml-auto text-xs text-[var(--local-muted)]">{step.meta}</span>
               </div>
               {/* Code block */}
-              <pre className="p-6 font-mono text-xs leading-relaxed bg-[#080E14] text-[var(--local-fg)] overflow-x-auto whitespace-pre-wrap min-h-[200px]">
+              <pre className="p-6 font-mono text-xs leading-relaxed bg-[#080E14] text-gray-300 overflow-x-auto whitespace-pre-wrap min-h-[200px]">
                 {step.code}
               </pre>
             </div>
@@ -7231,7 +7397,7 @@ export function OlonGetStartedView({ data }: Props) {
       <div className="max-w-6xl mx-auto px-8">
         <p className="text-xs font-semibold tracking-[0.12em] uppercase text-[var(--local-muted)] mb-3"
            data-jp-field="label">{data.label}</p>
-        <h2 className="text-4xl font-bold tracking-[-0.03em] text-white mb-3"
+        <h2 className="text-4xl font-bold tracking-[-0.03em] text-foreground mb-3"
             data-jp-field="headline">{data.headline}</h2>
         <p className="text-base text-[var(--local-muted)] leading-relaxed max-w-2xl mb-12"
            data-jp-field="body">{data.body}</p>
@@ -7246,7 +7412,7 @@ export function OlonGetStartedView({ data }: Props) {
                     data-jp-field="badge">
                 {card.badge}
               </span>
-              <p className="font-bold text-white text-base" data-jp-field="title">{card.title}</p>
+              <p className="font-bold text-foreground text-base" data-jp-field="title">{card.title}</p>
               <p className="text-sm text-[var(--local-muted)] leading-relaxed flex-1"
                  data-jp-field="body">{card.body}</p>
               {card.code && (
@@ -7449,11 +7615,14 @@ echo "Creating src/components/olon-hero/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/olon-hero/View.tsx"
 import type { OlonHeroData } from './types';
 import { Button } from '@/components/ui/button';
-import { DawnBackground } from './DawnBackground';
+import { Github, Terminal } from 'lucide-react';
+
 
 interface Props {
   data: OlonHeroData;
 }
+
+const heroPlugImage = '/assets/images/plug-graded-square.jpg';
 
 export function OlonHeroView({ data }: Props) {
   return (
@@ -7470,22 +7639,32 @@ export function OlonHeroView({ data }: Props) {
       data-jp-section-type="olon-hero"
     >
       {/* Dawn background — absolute, behind content */}
-      <DawnBackground />
+    
 
       {/* Content — relative, above background */}
       <div className="relative z-10 max-w-6xl mx-auto px-8 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
         {/* Left: copy */}
         <div className="flex flex-col gap-6">
-          <p
-            className="text-xs font-semibold tracking-[0.12em] uppercase text-[var(--local-muted)]"
-            data-jp-field="eyebrow"
-          >
-            {data.eyebrow}
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p
+              className="text-xs font-semibold tracking-[0.12em] uppercase text-[var(--local-muted)]"
+              data-jp-field="eyebrow"
+            >
+              {data.eyebrow}
+            </p>
+            <div className="flex items-center gap-2">
+              <a href="https://www.npmjs.com/package/@olonjs/core">
+                <img src="https://img.shields.io/npm/v/@olonjs/core?color=blue&style=flat-square" alt="npm version"/>
+              </a>
+              <a href="https://github.com/olonjs/npm-jpcore/blob/main/LICENSE">
+                <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"/>
+              </a>
+            </div>
+          </div>
 
           <div>
             <h1
-              className="text-5xl md:text-6xl font-bold tracking-[-0.03em] leading-[1.05] text-white"
+              className="text-6xl md:text-7xl font-bold tracking-[-0.03em] leading-[1.05] text-foreground"
               data-jp-field="headline"
             >
               {data.headline}
@@ -7507,78 +7686,41 @@ export function OlonHeroView({ data }: Props) {
 
           <div className="flex flex-wrap gap-3 items-center">
             <Button asChild size="lg" className="font-semibold">
-              <a href={data.cta.primary.href}>{data.cta.primary.label} →</a>
+              <a href={data.cta.primary.href}>
+                {data.cta.primary.label} →
+              </a>
             </Button>
-            <Button asChild variant="outline" size="lg" className="font-semibold">
-              <a href={data.cta.secondary.href}>{data.cta.secondary.label}</a>
+            <Button asChild variant="outline" size="lg" className="font-semibold gap-2">
+              <a href={data.cta.secondary.href}>
+                <Github className="w-4 h-4" />
+                {data.cta.secondary.label}
+              </a>
             </Button>
             <a
               href={data.cta.ghost.href}
               className="text-sm text-[var(--local-muted)] hover:text-[var(--local-fg)] transition-colors flex items-center gap-1.5"
             >
               {data.cta.ghost.label}
+              <Terminal className="w-4 h-4" />
             </a>
           </div>
         </div>
 
-        {/* Right: SVG illustration */}
+        {/* Right: branded product photo */}
         <div className="hidden md:flex items-center justify-center">
-          <svg
-            viewBox="0 0 400 400"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-full max-w-md"
-          >
-            <defs>
-              <linearGradient id="hero-main" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%"   stopColor="#84ABFF"/>
-                <stop offset="60%"  stopColor="#1763FF"/>
-                <stop offset="100%" stopColor="#0F52E0"/>
-              </linearGradient>
-              <linearGradient id="hero-accent" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="#EEF3FF"/>
-                <stop offset="100%" stopColor="#84ABFF"/>
-              </linearGradient>
-              <linearGradient id="hero-glow" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="#1763FF" stopOpacity="0.3"/>
-                <stop offset="100%" stopColor="#1763FF" stopOpacity="0"/>
-              </linearGradient>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="8" result="blur"/>
-                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-              </filter>
-            </defs>
-            <circle cx="200" cy="200" r="160" fill="url(#hero-glow)" opacity="0.4"/>
-            <rect x="90" y="90" width="220" height="220" rx="28" fill="none" stroke="url(#hero-main)" strokeWidth="14"/>
-            {/* Left pins */}
-            <line x1="16"  y1="148" x2="90"  y2="148" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="16"  y1="200" x2="90"  y2="200" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="16"  y1="252" x2="90"  y2="252" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            {/* Right pins */}
-            <line x1="310" y1="148" x2="384" y2="148" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="310" y1="200" x2="384" y2="200" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="310" y1="252" x2="384" y2="252" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            {/* Top pins */}
-            <line x1="148" y1="16"  x2="148" y2="90"  stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="200" y1="16"  x2="200" y2="90"  stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="252" y1="16"  x2="252" y2="90"  stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            {/* Bottom pins */}
-            <line x1="148" y1="310" x2="148" y2="384" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="200" y1="310" x2="200" y2="384" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="252" y1="310" x2="252" y2="384" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            {/* Corner nodes */}
-            <circle cx="148" cy="148" r="13" fill="url(#hero-main)"/>
-            <circle cx="252" cy="148" r="13" fill="url(#hero-main)"/>
-            <circle cx="148" cy="252" r="13" fill="url(#hero-main)"/>
-            <circle cx="252" cy="252" r="13" fill="url(#hero-main)"/>
-            {/* Connection lines */}
-            <line x1="148" y1="148" x2="200" y2="200" stroke="#84ABFF" strokeWidth="2.5" opacity="0.35"/>
-            <line x1="252" y1="148" x2="200" y2="200" stroke="#84ABFF" strokeWidth="2.5" opacity="0.35"/>
-            <line x1="148" y1="252" x2="200" y2="200" stroke="#84ABFF" strokeWidth="2.5" opacity="0.35"/>
-            <line x1="252" y1="252" x2="200" y2="200" stroke="#84ABFF" strokeWidth="2.5" opacity="0.35"/>
-            {/* Center node */}
-            <circle cx="200" cy="200" r="18" fill="url(#hero-accent)" filter="url(#glow)"/>
-          </svg>
+          <div className="relative w-full max-w-lg">
+            <div className="absolute inset-[-8%] bg-[radial-gradient(circle_at_50%_50%,rgba(52,109,255,0.22),rgba(12,17,22,0)_70%)] blur-2xl" />
+            <div className="relative aspect-[1/1.03] overflow-hidden rounded-none border border-white/14 bg-[#0d1219] shadow-[0_22px_56px_rgba(4,8,20,0.42)]">
+              <img
+                src={heroPlugImage}
+                alt="Olon interface port engraved into a dark stone surface"
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ objectPosition: '50% 50%' }}
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,11,21,0.02)_0%,rgba(7,11,21,0.14)_24%,rgba(7,11,21,0.44)_100%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_62%_44%,rgba(122,163,255,0.18),rgba(29,78,216,0.08)_24%,rgba(12,17,22,0)_54%)] mix-blend-screen" />
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -7618,7 +7760,7 @@ export function OlonHeroView({ data }: Props) {
           </p>
 
           <div>
-            <h1 className="text-5xl md:text-6xl font-bold tracking-[-0.03em] leading-[1.05] text-white"
+            <h1 className="text-5xl md:text-6xl font-bold tracking-[-0.03em] leading-[1.05] text-foreground"
                 data-jp-field="headline">
               {data.headline}
             </h1>
@@ -7795,7 +7937,7 @@ export function OlonWhyView({ data }: Props) {
       <div className="max-w-6xl mx-auto px-8">
         <p className="text-xs font-semibold tracking-[0.12em] uppercase text-[var(--local-muted)] mb-3"
            data-jp-field="label">{data.label}</p>
-        <h2 className="text-4xl font-bold tracking-[-0.03em] text-white leading-tight"
+        <h2 className="text-4xl font-bold tracking-[-0.03em] text-foreground leading-tight"
             data-jp-field="headline">{data.headline}</h2>
         <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--local-p300)] leading-tight mb-4"
            data-jp-field="subline">{data.subline}</p>
@@ -7809,7 +7951,7 @@ export function OlonWhyView({ data }: Props) {
                  className="bg-[var(--local-card)] p-8 flex flex-col gap-4 border-r last:border-r-0 border-[var(--local-border)]"
                  data-jp-item-id={pillar.id}>
               <div>{ICONS[pillar.icon]}</div>
-              <div className="font-bold text-white" data-jp-field="title">{pillar.title}</div>
+              <div className="font-bold text-foreground" data-jp-field="title">{pillar.title}</div>
               <div className="text-sm text-[var(--local-muted)] leading-relaxed" data-jp-field="body">{pillar.body}</div>
             </div>
           ))}
@@ -10118,7 +10260,7 @@ const StudioTiptapEditor: React.FC<{ data: TiptapData }> = ({ data }) => {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={applyLink}
-                className="shrink-0 rounded-[var(--local-radius-sm)] px-2 py-0.5 text-xs bg-[var(--local-primary)] hover:brightness-110 text-white transition-colors"
+                className="shrink-0 rounded-[var(--local-radius-sm)] px-2 py-0.5 text-xs bg-[var(--local-primary)] hover:brightness-110 text-foreground transition-colors"
               >
                 Set
               </button>
@@ -11354,7 +11496,8 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/theme.json"
       },
       "wordmark": {
         "fontFamily": "\"Instrument Sans\", Helvetica, Arial, sans-serif",
-        "weight": "700"
+        "weight": "700",
+        "tracking": "-0.05em"
       },
       "scale": {
         "xs": "0.75rem",
@@ -11466,14 +11609,14 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
       "type": "olon-hero",
       "data": {
         "id": "hero-main",
-        "eyebrow": "CONTRACT LAYER · V1.5 · OPEN CORE",
+        "eyebrow": "CONTRACT LAYER · V1.5 · OPEN SOURCE",
         "headline": "Contract Layer",
         "subline": "for the agentic web.",
         "body": "AI agents are becoming operational actors in commerce, marketing, and support. They need more than content — they need a contract. OlonJS is the deterministic machine contract for websites: every site typed, structured, and addressable by design. No custom glue. No fragile integrations. Just a contract any agent can read and operate.",
         "cta": {
           "primary": {
             "label": "Get started",
-            "href": "#Getstarted"
+            "href": "#getstarted"
           },
           "secondary": {
             "label": "GitHub",
@@ -11666,178 +11809,203 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home_.json"
   "id": "home-page",
   "slug": "home",
   "meta": {
-    "title": "OlonJS — The Contract Layer for the Agentic Web",
-    "description": "OlonJS standardizes machine-readable web content across tenants. Predictable page endpoints for agents, typed schema contracts, repeatable governance."
+    "title": "OlonJS — Contract Layer for the Agentic Web",
+    "description": "OlonJS is a TypeScript framework for building JSON-driven websites with a deterministic data contract. Every section is typed, validated, and structurally addressable."
   },
   "sections": [
     {
       "id": "hero-main",
-      "type": "hero",
+      "type": "olon-hero",
       "data": {
-        "eyebrow": "Contract layer · v1.4 · Open Core",
-        "title": "Contract Layer",
-        "titleHighlight": "for the agentic web.",
-        "description": "OlonJS is a TypeScript framework for building JSON-driven websites with a deterministic data contract. Every section is typed, validated, and structurally addressable. Designed for reproducible tenant generation and machine-readable output.",
-        "ctas": [
-          {
-            "id": "cta-started",
-            "label": "Get started",
-            "href": "#contact",
-            "variant": "accent"
+        "eyebrow": "AI GENERATED 🤖",
+        "headline": "Contract Layer",
+        "subline": "for the agentic web.",
+        "body": "AI agents are becoming operational actors in commerce, marketing, and support. They need more than content — they need a contract. OlonJS is the deterministic machine contract for websites: every site typed, structured, and addressable by design. No custom glue. No fragile integrations. Just a contract any agent can read and operate.",
+        "cta": {
+          "primary": {
+            "label": "Inizia Ora",
+            "href": "/docs"
           },
-          {
-            "id": "cta-github",
+          "secondary": {
             "label": "GitHub",
-            "href": "#",
-            "variant": "secondary"
+            "href": "https://github.com"
+          },
+          "ghost": {
+            "label": "Contatti",
+            "href": "/contact"
           }
-        ],
-        "docsLabel": "Explore platform",
-        "docsHref": "/platform/overview",
-        "heroImage": {
-          "url": "data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZy1tYWluIiB4Mj0iMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiIGdyYWRpZW50VHJhbnNmb3JtPSJtYXRyaXgoMTEwLjc5NSwxMTAuNzk1LC0xMTAuNzk1LDExMC43OTUsNDQuNjAzLDQ0LjYwMykiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM1QjhFRkYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIwLjUiIHN0b3AtY29sb3I9IiMwRjUyRTAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMDYzMDkwIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnLWFjY2VudCIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNBREM4RkYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNUI4RUZGIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8IS0tIENoaXAgYm9yZGVyIC0tPgogIDxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnLW1haW4pIiBzdHJva2Utd2lkdGg9IjgiCiAgICBkPSJtNTkuMzggNDQuNmg4MS4yNGM4LjE2IDAgMTQuNzggNi42MiAxNC43OCAxNC43OHY4MS4yNGMwIDguMTYtNi42MiAxNC43OC0xNC43OCAxNC43OGgtODEuMjRjLTguMTYgMC0xNC43OC02LjYyLTE0Ljc4LTE0Ljc4di04MS4yNGMwLTguMTYgNi42Mi0xNC43OCAxNC43OC0xNC43OHoiLz4KICA8IS0tIExlZnQgcGlucyAtLT4KICA8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZy1tYWluKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjYiIGQ9Im03LjY3IDcyLjNoMzYuOTMiLz4KICA8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZy1tYWluKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjYiIGQ9Im03LjY3IDEwMGgzNi45MyIvPgogIDxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnLW1haW4pIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNiIgZD0ibTcuNjcgMTI3LjdoMzYuOTMiLz4KICA8IS0tIFJpZ2h0IHBpbnMgLS0+CiAgPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSJ1cmwoI2ctbWFpbikiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSI2IiBkPSJtMTU1LjQgNzIuM2gzNi45MyIvPgogIDxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnLW1haW4pIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNiIgZD0ibTE1NS40IDEwMGgzNi45MyIvPgogIDxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnLW1haW4pIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNiIgZD0ibTE1NS40IDEyNy43aDM2LjkzIi8+CiAgPCEtLSBUb3AgcGlucyAtLT4KICA8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZy1tYWluKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjYiIGQ9Im03Mi4zIDcuNjd2MzYuOTMiLz4KICA8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZy1tYWluKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjYiIGQ9Im0xMDAgNy42N3YzNi45MyIvPgogIDxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnLW1haW4pIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNiIgZD0ibTEyNy43IDcuNjd2MzYuOTMiLz4KICA8IS0tIEJvdHRvbSBwaW5zIC0tPgogIDxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnLW1haW4pIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNiIgZD0ibTcyLjMgMTU1LjR2MzYuOTMiLz4KICA8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZy1tYWluKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjYiIGQ9Im0xMDAgMTU1LjR2MzYuOTMiLz4KICA8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9InVybCgjZy1tYWluKSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2Utd2lkdGg9IjYiIGQ9Im0xMjcuNyAxNTUuNHYzNi45MyIvPgogIDwhLS0gQ29ybmVyIG5vZGVzIC0tPgogIDxjaXJjbGUgZmlsbD0idXJsKCNnLW1haW4pIiBjeD0iNzIuMyIgY3k9IjcyLjMiIHI9IjcuMzkiLz4KICA8Y2lyY2xlIGZpbGw9InVybCgjZy1tYWluKSIgY3g9IjEyNy43IiBjeT0iNzIuMyIgcj0iNy4zOSIvPgogIDxjaXJjbGUgZmlsbD0idXJsKCNnLW1haW4pIiBjeD0iNzIuMyIgY3k9IjEyNy43IiByPSI3LjM5Ii8+CiAgPGNpcmNsZSBmaWxsPSJ1cmwoI2ctbWFpbikiIGN4PSIxMjcuNyIgY3k9IjEyNy43IiByPSI3LjM5Ii8+CiAgPCEtLSBDZW50ZXIgbm9kZSDigJQgYWNjZW50IC0tPgogIDxjaXJjbGUgZmlsbD0idXJsKCNnLWFjY2VudCkiIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjkuMjMiLz4KICA8IS0tIENvbm5lY3Rpb24gbGluZXMgLS0+CiAgPHBhdGggb3BhY2l0eT0iMC4zIiBmaWxsPSJub25lIiBzdHJva2U9IiM1QjhFRkYiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTcyLjMgNzIuM2wyNy43IDI3LjciLz4KICA8cGF0aCBvcGFjaXR5PSIwLjMiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzVCOEVGRiIgc3Ryb2tlLXdpZHRoPSIyIiBkPSJtMTI3LjcgNzIuM2wtMjcuNyAyNy43Ii8+CiAgPHBhdGggb3BhY2l0eT0iMC4zIiBmaWxsPSJub25lIiBzdHJva2U9IiM1QjhFRkYiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTcyLjMgMTI3LjdsMjcuNy0yNy43Ii8+CiAgPHBhdGggb3BhY2l0eT0iMC4zIiBmaWxsPSJub25lIiBzdHJva2U9IiM1QjhFRkYiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTEyNy43IDEyNy43bC0yNy43LTI3LjciLz4KPC9zdmc+Cg==",
-          "alt": "icon-ai-specs.svg"
         }
-      },
-      "settings": {
-        "showCode": false
       }
     },
     {
-      "id": "features-section",
-      "type": "feature-grid",
+      "id": "why-olon",
+      "type": "olon-why",
       "data": {
+        "id": "why-olon",
         "label": "Why OlonJS",
-        "sectionTitle": "A Meaningful Web",
-        "sectionTitleItalic": "Whole in itself, part of something greater.",
-        "sectionLead": "Most web frameworks separate concerns across layers — data, UI, validation, metadata — with no shared contract between them. OlonJS inverts this: the JSON data structure is the contract. Every layer — rendering, editing, validation, machine access — is a deterministic projection of the same typed source. The result is a site that is structurally coherent by construction, not by convention.",
+        "headline": "A Meaningful Web",
+        "subline": "Whole in itself, part of something greater.",
+        "body": "Most web frameworks separate concerns across layers — data, UI, validation, metadata — with no shared contract between them. OlonJS inverts this: the JSON data structure is the contract. Every layer — rendering, editing, validation, machine access — is a deterministic projection of the same typed source. The result is a site that is structurally coherent by construction, not by convention. Every site built with OlonJS is a holon: complete in itself, intelligible to the network around it. The meaningful web doesn't happen all at once. It grows one site at a time.",
+        "pillars": [
+          {
+            "id": "pillar-contract",
+            "icon": "contract",
+            "title": "The data is the contract",
+            "body": "One typed JSON source. Every layer — UI, editor, agent, SEO — is a projection. No translation, no drift."
+          },
+          {
+            "id": "pillar-holon",
+            "icon": "holon",
+            "title": "Every site is a holon",
+            "body": "Autonomous, complete, structurally intelligible. Each site is whole in itself and part of a network that understands it."
+          },
+          {
+            "id": "pillar-generated",
+            "icon": "generated",
+            "title": "Built to be generated",
+            "body": "Every constraint is also an instruction. The spec is precise enough for AI agents to scaffold a fully compliant tenant from scratch."
+          }
+        ],
+        "anchorId": "Why"
+      }
+    },
+    {
+      "id": "architecture-protocols",
+      "type": "olon-architecture",
+      "data": {
+        "id": "architecture-protocols",
+        "label": "Architecture",
+        "headline": "Six governing protocols.",
+        "body": "OlonJS is specified as a versioned set of architectural protocols. Each protocol is independently versioned and mandatory for compliant tenants.",
+        "specHref": "https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md",
+        "protocols": [
+          {
+            "id": "proto-mtrp",
+            "icon": "mtrp",
+            "acronym": "MTRP",
+            "version": "v1.2",
+            "name": "Modular Type Registry",
+            "desc": "Core exports an empty SectionDataRegistry. Tenants extend it via module augmentation. Full TypeScript inference across all section types at compile-time, zero Core changes.",
+            "specHref": "https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md#1--modular-type-registry-pattern-mtrp-v12"
+          },
+          {
+            "id": "proto-tbp",
+            "icon": "tbp",
+            "acronym": "TBP",
+            "version": "v1.0",
+            "name": "Tenant Block Protocol",
+            "desc": "Each section type is a self-contained capsule: View.tsx, schema.ts, types.ts, index.ts. Renderable, validatable, and ingestible by the engine without additional configuration.",
+            "specHref": "https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md#3--tenant-block-protocol-tbp-v10"
+          },
+          {
+            "id": "proto-jsp",
+            "icon": "jsp",
+            "acronym": "JSP",
+            "version": "v1.8",
+            "name": "JsonPages Site Protocol",
+            "desc": "Deterministic file system ontology and CLI projection engine. config/ separates global governance from per-page content. Reproducible across every environment.",
+            "specHref": "https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md#2--jsonpages-site-protocol-jsp-v18"
+          },
+          {
+            "id": "proto-idac",
+            "icon": "idac",
+            "acronym": "IDAC",
+            "version": "v1.0",
+            "name": "ICE Data Contract",
+            "desc": "Mandatory data-jp-* DOM attributes bind every section to its data. Any consumer that can traverse the DOM can identify and operate any content node — human or agent.",
+            "specHref": "https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md"
+          },
+          {
+            "id": "proto-bsds",
+            "icon": "bsds",
+            "acronym": "BSDS",
+            "version": "v1.0",
+            "name": "Base Schema Fragments",
+            "desc": "BaseSectionData and BaseArrayItem enforce anchor IDs and stable React keys across all capsules. The foundation that doesn't move so your content never drifts.",
+            "specHref": "https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md"
+          },
+          {
+            "id": "proto-pss",
+            "icon": "pss",
+            "acronym": "PSS",
+            "version": "v1.4",
+            "name": "Path-Based Selection",
+            "desc": "Every node has an address. Content selection uses strict root-to-leaf path semantics — unambiguous, stable, operable by any consumer that knows the contract.",
+            "specHref": "https://github.com/olonjs/core/blob/main/specs/olonjsSpecs_V_1_5.md"
+          }
+        ],
+        "anchorId": "Architecture"
+      }
+    },
+    {
+      "id": "example-steps",
+      "type": "olon-example",
+      "data": {
+        "id": "example-steps",
+        "label": "Quick Example",
+        "headline": "Two steps. One contract.",
+        "body": "Scaffold a fully compliant tenant in under three minutes. Then read any page via the OlonJS protocol — from a browser, a script, or an AI agent.",
+        "note": "Every OlonJS tenant exposes a machine-readable manifest at",
+        "noteHref": "http://localhost:5173/mcp-manifest.json",
+        "steps": [
+          {
+            "number": 1,
+            "title": "Scaffold a tenant",
+            "meta": "~3 min",
+            "code": "# Install the CLI\nnpm install -g @olonjs/cli\n\n# Scaffold a new tenant\nnpx @olonjs/cli new tenant\n\n✓ Projecting infrastructure...\n✓ Projecting source (src_tenant_alpha.sh)\n✓ Resolving dependencies\n✓ Tenant scaffolded\n\nsrc/\n  components/hero/\n    View.tsx\n    schema.ts\n    types.ts\n    index.ts\n  data/config/\n    site.json\n    theme.json\n    menu.json\n  lib/\n    schemas.ts\n    base-schemas.ts"
+          },
+          {
+            "number": 2,
+            "title": "Read via OlonJS protocol",
+            "meta": "Any consumer",
+            "code": "// Read any page via the contract\n// Works from browser, script, or AI agent\n\nconst page = await\n  navigator.modelContextProtocol\n    .readResource(\n      'olon://pages/home'\n    );\n\n// Returns the full typed contract\n// { slug, meta, sections: Section[] }\n// No DOM scraping. No layout knowledge.\n// Just the contract.\n\n// {\n//   \"slug\": \"home\",\n//   \"sections\": [\n//     { \"type\": \"hero\", \"data\": {...} },\n//     { \"type\": \"features\", \"data\": {...} }\n//   ]\n// }"
+          }
+        ],
+        "anchorId": "Example"
+      }
+    },
+    {
+      "id": "getstarted-cards",
+      "type": "olon-getstarted",
+      "data": {
+        "id": "getstarted-cards",
+        "label": "Get Started",
+        "headline": "Three paths in.",
+        "body": "Start with the Core package, scaffold a full tenant with the CLI, or deploy a working example in one click.",
         "cards": [
           {
-            "id": "card-endpoints",
-            "icon": {
-              "url": "/icons/features/icon-json-files.svg",
-              "alt": "JSON files icon"
-            },
-            "title": "Modular Type Registry",
-            "description": "Core exports an empty SectionDataRegistry. Tenants extend it via module augmentation — no Core changes required. Full TypeScript inference across all section types at compile-time."
+            "id": "card-core",
+            "badge": "Open Core",
+            "badgeStyle": "oss",
+            "title": "Install Core",
+            "body": "The Core package is free and open — forever. The contract, the protocols, the CLI. No lock-in on the foundation.",
+            "code": "npm install @olonjs/core",
+            "linkLabel": "View on GitHub",
+            "linkHref": "https://github.com/olonjs/core"
           },
           {
-            "id": "card-schema",
-            "icon": {
-              "url": "/icons/features/icon-zod-schemas.svg",
-              "alt": "Zod schemas icon"
-            },
-            "title": "Tenant Block Protocol",
-            "description": "Each section type lives in a self-contained capsule: View.tsx, schema.ts, types.ts, index.ts. The capsule is the unit of extension — renderable, validatable, and ingestible by the engine without additional configuration."
-          },
-          {
-            "id": "card-ai",
-            "icon": {
-              "url": "/icons/features/icon-ai-specs.svg",
-              "alt": "AI specs icon"
-            },
-            "title": "Deterministic CLI",
-            "description": "@olonjs/cli scaffolds new tenants from a canonical script. Infrastructure, source structure, and dependencies are projected deterministically. Output is reproducible across environments"
-          },
-          {
-            "id": "card-multitenant",
-            "icon": {
-              "url": "/icons/features/icon-own-data.svg",
-              "alt": "Own data icon"
-            },
-            "title": "ICE Data Contract",
-            "description": "Mandatory data-jp-* DOM attributes bind rendered sections to their data contract. The binding is structural, not UI-dependent — any consumer that can traverse the DOM can identify and address any content node."
-          },
-          {
-            "id": "card-governance",
-            "icon": {
-              "url": "/icons/features/icon-governance.svg",
-              "alt": "Governance icon"
-            },
-            "title": "Base Schema Fragments",
-            "description": "BaseSectionData and BaseArrayItem are the required base types for all section data schemas and array items. They enforce anchor IDs and stable React keys across all capsules."
+            "id": "card-cli",
+            "badge": "CLI",
+            "badgeStyle": "cli",
+            "title": "Scaffold a tenant",
+            "body": "The CLI scaffolds a fully compliant tenant from a canonical script. Same result on every machine, every run.",
+            "code": "npx @olonjs/cli new tenant",
+            "linkLabel": "View on npm",
+            "linkHref": "https://www.npmjs.com/package/@olonjs/cli"
           },
           {
             "id": "card-deploy",
-            "icon": {
-              "url": "/icons/features/icon-clean-commits.svg",
-              "alt": "Clean commits icon"
-            },
-            "title": "Path-Based Selection",
-            "description": "Content selection uses strict root-to-leaf path semantics. Each segment identifies a node unambiguously. The flat itemField/itemId protocol is removed in v1.3+."
+            "badge": "Deploy",
+            "badgeStyle": "deploy",
+            "title": "Deploy a template",
+            "body": "Clone a working OlonJS tenant and deploy it with one click. Explore the full capsule structure in a real project.",
+            "deployLabel": "Deploy template →",
+            "deployHref": "https://github.com/olonjs/core",
+            "linkLabel": "View on npm",
+            "linkHref": "https://www.npmjs.com/package/@olonjs/core"
           }
         ],
-        "proofStatement": "Working end-to-end with production routing parity.",
-        "proofSub": "Early customer usage across real tenant deployments · Clear hardening path to enterprise-grade governance.",
-        "tiers": [
-          {
-            "id": "tier-oss",
-            "label": "OSS"
-          },
-          {
-            "id": "tier-cloud",
-            "label": "Cloud"
-          },
-          {
-            "id": "tier-enterprise",
-            "label": "Enterprise"
-          }
-        ]
-      },
-      "settings": {
-        "columns": 3
-      }
-    },
-    {
-      "id": "contact-section",
-      "type": "contact",
-      "data": {
-        "label": "Contact",
-        "title": "Ready to define",
-        "titleHighlight": "your contract?",
-        "description": "Whether you're running a single tenant or deploying enterprise-grade governance across dozens of properties — let's talk.",
-        "tiers": [
-          {
-            "id": "tier-oss",
-            "label": "OSS",
-            "desc": "Open source core — free forever",
-            "sub": "Adoption, trust, ecosystem growth"
-          },
-          {
-            "id": "tier-cloud",
-            "label": "Cloud",
-            "desc": "Vercel-native self-serve workflow",
-            "sub": "Fast for modern dev teams"
-          },
-          {
-            "id": "tier-enterprise",
-            "label": "Enterprise",
-            "desc": "Private cloud + NX monorepo",
-            "sub": "Security, compliance, controlled deployment"
-          }
-        ],
-        "formTitle": "Get in touch",
-        "successTitle": "Message received",
-        "successBody": "We'll respond within one business day.",
-        "disclaimer": "No spam. Unsubscribe at any time."
-      },
-      "settings": {
-        "showTiers": true
-      }
-    },
-    {
-      "id": "login-section",
-      "type": "login",
-      "data": {
-        "title": "Start your journey",
-        "subtitle": "Enter your credentials to continue",
-        "forgotHref": "#",
-        "signupHref": "#contact",
-        "termsHref": "#",
-        "privacyHref": "#"
-      },
-      "settings": {
-        "showOauth": true
+        "anchorId": "Getstarted"
       }
     }
   ]
@@ -14187,9 +14355,19 @@ export default defineConfig({
           const isPageJsonRequest = isTenantPageJsonRequest(req, pathname);
 
           const handleManifestRequest = async () => {
-            const { buildPageContract, buildPageManifest, buildSiteManifest } = await loadWebMcpBuilders();
+            const { buildPageContract, buildPageManifest, buildSiteManifest, buildLlmsTxt } = await loadWebMcpBuilders();
             const ssrEntry = await server.ssrLoadModule('/src/entry-ssg.tsx');
             const buildState = ssrEntry.getWebMcpBuildState();
+
+            if (req.method === 'GET' && pathname === '/llms.txt') {
+              res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+              res.end(buildLlmsTxt({
+                pages: buildState.pages,
+                schemas: buildState.schemas,
+                siteConfig: buildState.siteConfig,
+              }));
+              return true;
+            }
 
             if (req.method === 'GET' && pathname === '/mcp-manifest.json') {
               sendJson(res, 200, buildSiteManifest({
@@ -14219,35 +14397,41 @@ export default defineConfig({
             }
 
             const schemaMatch = pathname.match(/^\/schemas\/(.+)\.schema\.json$/i);
-            if (!schemaMatch || req.method !== 'GET') return false;
+            if (schemaMatch && req.method === 'GET') {
+              const slug = normalizeManifestSlug(schemaMatch[1]);
+              const pageConfig = buildState.pages[slug];
+              if (!pageConfig) {
+                sendJson(res, 404, { error: 'Schema contract not found' });
+                return true;
+              }
 
-            const slug = normalizeManifestSlug(schemaMatch[1]);
-            const pageConfig = buildState.pages[slug];
-            if (!pageConfig) {
-              sendJson(res, 404, { error: 'Schema contract not found' });
+              sendJson(res, 200, buildPageContract({
+                slug,
+                pageConfig,
+                schemas: buildState.schemas,
+                siteConfig: buildState.siteConfig,
+              }));
               return true;
             }
-
-            sendJson(res, 200, buildPageContract({
-              slug,
-              pageConfig,
-              schemas: buildState.schemas,
-              siteConfig: buildState.siteConfig,
-            }));
-            return true;
+            return false;
           };
 
           if (
             req.method === 'GET' &&
             (
               pathname === '/mcp-manifest.json'
+              || pathname === '/llms.txt'
               || /^\/mcp-manifests\/.+\.json$/i.test(pathname)
               || /^\/schemas\/.+\.schema\.json$/i.test(pathname)
             )
           ) {
             void handleManifestRequest()
               .then((handled) => {
-                if (!handled) next();
+                if (!handled) {
+                  // Se handleManifestRequest fallisce a trovare qualcosa ma l'URL era giusto, 
+                  // forziamo un 404 JSON per evitare che Vite serva l'index.html
+                  sendJson(res, 404, { error: 'Manifest or schema not found' });
+                }
               })
               .catch((error) => {
                 sendJson(res, 500, { error: error?.message || 'Manifest generation failed' });
