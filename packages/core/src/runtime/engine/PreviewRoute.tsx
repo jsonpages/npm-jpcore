@@ -1,5 +1,5 @@
 import React from 'react';
-import { PreviewEntry } from '../../admin/PreviewEntry';
+import { PreviewEntry } from '../../studio/admin/PreviewEntry';
 import { ThemeLoader } from '../../lib/ThemeLoader';
 
 export interface PreviewRouteProps {

@@ -17,7 +17,7 @@ import {
 import { ensureWebMcpRuntime } from './webmcp-bridge';
 import { themeManager } from '../utils/theme-manager';
 
-import defaultAdminCss from '../admin/admin-skin.css?inline';
+import defaultAdminCss from '../studio/admin/admin-skin.css?inline';
 
 export interface JsonPagesEngineProps {
   config: JsonPagesConfig;

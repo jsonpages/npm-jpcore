@@ -6,6 +6,7 @@
 export * as contract from './contract';
 export * as kernel from './kernel';
 export * as runtime from './runtime';
+export * as studio from './studio';
 export * as webmcp from './webmcp';
 
 // Flat legacy surface kept intact for current tenants.
@@ -29,8 +30,8 @@ export { resolveAssetUrl } from './utils/asset-resolver';
 
 // Admin
 export { AdminSidebar, type LayerItem, type OnUpdateSection } from './admin/AdminSidebar';
-export { StudioStage } from './admin/StudioStage';
-export { PreviewEntry } from './admin/PreviewEntry';
-export { AddSectionLibrary } from './admin/AddSectionLibrary';
-export { FormFactory } from './admin/FormFactory';
+export { StudioStage } from './studio/admin/StudioStage';
+export { PreviewEntry } from './studio/admin/PreviewEntry';
+export { AddSectionLibrary } from './studio/admin/AddSectionLibrary';
+export { FormFactory } from './studio/admin/FormFactory';
 export { InputWidgets, type WidgetType } from './admin/InputRegistry';

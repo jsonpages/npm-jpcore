@@ -1,14 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AddSectionLibrary } from '../../admin/AddSectionLibrary';
-import { AdminSidebar, type LayerItem } from '../../admin/AdminSidebar';
-import { StudioStage } from '../../admin/StudioStage';
+import { AddSectionLibrary } from '../../studio/admin/AddSectionLibrary';
+import { AdminSidebar, type LayerItem } from '../../studio/admin/AdminSidebar';
+import { StudioStage } from '../../studio/admin/StudioStage';
+import { appendDraftSection, reorderPageSections } from '../../studio/orchestration/section-ops';
+import { useStudioPersistence } from '../../studio/orchestration/useStudioPersistence';
+import { useStudioSelectionState } from '../../studio/orchestration/useStudioSelectionState';
 import { resolveRuntimeConfig } from '../../contract/config-resolver';
 import type { JsonPagesConfig, SelectionPath } from '../../contract/types-engine';
 import type { MenuItem, PageConfig, ProjectState, Section, SiteConfig } from '../../contract/kernel';
-import { StudioProvider } from '../../lib/StudioContext';
+import { StudioProvider } from '../../studio/StudioContext';
 import { ThemeLoader } from '../../lib/ThemeLoader';
-import { STUDIO_EVENTS } from '../../lib/events';
+import { STUDIO_EVENTS } from '../../studio/events';
 import {
   buildWebMcpToolName,
   createWebMcpToolInputSchema,
@@ -26,7 +29,6 @@ import {
 import {
   isRecord,
   normalizeSlugSegments,
-  resolveMenuMainFromHeaderData,
   resolvePageFromRegistry,
   resolveSlugFromPathname,
 } from './route-utils';
@@ -74,9 +76,6 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
   );
   const [draft, setDraft] = useState<PageConfig | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
-  const [saveSuccessFeedback, setSaveSuccessFeedback] = useState(false);
-  const [hotSaveSuccessFeedback, setHotSaveSuccessFeedback] = useState(false);
-  const [hotSaveInProgress, setHotSaveInProgress] = useState(false);
   const [globalDraft, setGlobalDraft] = useState<SiteConfig>(() => {
     try {
       const base = JSON.parse(JSON.stringify(siteConfig ?? {})) as SiteConfig;
@@ -90,12 +89,19 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
       } as SiteConfig;
     }
   });
-  const [selected, setSelected] = useState<{ id: string; type: string; scope: string } | null>(null);
-  const [expandedItemPath, setExpandedItemPath] = useState<Array<{ fieldKey: string; itemId?: string }> | null>(null);
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
-  const [scrollToSectionId, setScrollToSectionId] = useState<string | null>(null);
   const [addSectionLibraryOpen, setAddSectionLibraryOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(400);
+  const {
+    activeSectionId,
+    clearSelection,
+    expandedItemPath,
+    scrollToSectionId,
+    selected,
+    setActiveSectionId,
+    setExpandedItemPath,
+    setScrollToSectionId,
+    setSelected,
+  } = useStudioSelectionState();
   const resolvedRuntime = useMemo(
     () =>
       resolveRuntimeConfig({
@@ -112,6 +118,21 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
   const globalDraftRef = useRef<SiteConfig>(globalDraft);
   const sidebarMin = 360;
   const sidebarMax = 920;
+  const {
+    hotSaveInProgress,
+    hotSaveSuccessFeedback,
+    persistProjectState,
+    requestInlineFlush,
+    runHotSave,
+    saveSuccessFeedback,
+  } = useStudioPersistence({
+    slug,
+    saveToFile,
+    hotSave,
+    themeConfig,
+    menuConfig,
+    refDocuments,
+  });
 
   useEffect(() => {
     draftRef.current = draft;
@@ -163,86 +184,23 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
   useEffect(() => {
     const data = resolvePageFromRegistry(pageRegistry, slug);
     if (data) setDraft(JSON.parse(JSON.stringify(data)));
-    setSelected(null);
-    setExpandedItemPath(null);
+    clearSelection();
     setHasChanges(false);
-  }, [slug, pageRegistry]);
+  }, [clearSelection, slug, pageRegistry]);
 
   const handleResetToFile = useCallback(() => {
     const data = resolvePageFromRegistry(pageRegistry, slug);
     if (data) setDraft(JSON.parse(JSON.stringify(data)));
-    setSelected(null);
-    setExpandedItemPath(null);
+    clearSelection();
     setHasChanges(false);
-  }, [slug, pageRegistry]);
+  }, [clearSelection, slug, pageRegistry]);
 
   const handleReorderSection = useCallback(
     (sectionId: string, newIndex: number, currentDraft: PageConfig) => {
-      const sections = [...currentDraft.sections];
-      const currentIndex = sections.findIndex((s) => s.id === sectionId);
-      if (currentIndex === -1 || newIndex < 0 || newIndex >= sections.length) return;
-      const [removed] = sections.splice(currentIndex, 1);
-      const insertIndex = newIndex > currentIndex ? newIndex - 1 : newIndex;
-      sections.splice(Math.min(insertIndex, sections.length), 0, removed);
-      setDraft({ ...currentDraft, sections });
+      setDraft(reorderPageSections(currentDraft, sectionId, newIndex));
       setHasChanges(true);
     },
     []
-  );
-
-  const requestInlineFlush = useCallback(async () => {
-    const iframe = document.querySelector('iframe');
-    if (!iframe?.contentWindow) return;
-    const requestId = crypto.randomUUID();
-    await new Promise<void>((resolve) => {
-      let settled = false;
-      const onMessage = (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
-        if (event.data?.type === STUDIO_EVENTS.INLINE_FLUSHED && event.data?.requestId === requestId) {
-          settled = true;
-          window.removeEventListener('message', onMessage);
-          resolve();
-        }
-      };
-      window.addEventListener('message', onMessage);
-      iframe.contentWindow?.postMessage({ type: STUDIO_EVENTS.REQUEST_INLINE_FLUSH, requestId }, '*');
-      window.setTimeout(() => {
-        if (settled) return;
-        window.removeEventListener('message', onMessage);
-        resolve();
-      }, 400);
-    });
-  }, []);
-
-  const persistProjectState = useCallback(
-    async (nextDraft: PageConfig, nextGlobalDraft: SiteConfig) => {
-      if (!saveToFile) {
-        throw new Error('saveToFile is not configured for this tenant.');
-      }
-
-      const resolvedSaveRuntime = resolveRuntimeConfig({
-        pages: { [slug]: nextDraft },
-        siteConfig: nextGlobalDraft,
-        themeConfig,
-        menuConfig,
-        refDocuments,
-      });
-      const headerData = resolvedSaveRuntime.siteConfig.header?.data;
-      const projectState: ProjectState = {
-        page: nextDraft,
-        site: nextGlobalDraft,
-        menu: { main: resolveMenuMainFromHeaderData(headerData, menuConfig.main) },
-        theme: resolvedSaveRuntime.themeConfig,
-      };
-
-      await saveToFile(projectState, slug);
-      setHasChanges(false);
-      setSaveSuccessFeedback(true);
-      if (typeof window !== 'undefined') {
-        window.setTimeout(() => setSaveSuccessFeedback(false), 2500);
-      }
-    },
-    [saveToFile, slug, themeConfig, menuConfig, refDocuments]
   );
 
   const executeWebMcpMutation = useCallback(
@@ -338,7 +296,7 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
       setExpandedItemPath(Array.isArray(args.itemPath) ? args.itemPath : null);
       setHasChanges(true);
 
-      await persistProjectState(nextDraft, nextGlobalDraft);
+      await persistProjectState(nextDraft, nextGlobalDraft, () => setHasChanges(false));
 
       return {
         content: [
@@ -536,27 +494,7 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
     const currentDraft = draftRef.current;
     const currentGlobalDraft = globalDraftRef.current;
     if (!currentDraft) return;
-    const resolvedSaveRuntime = resolveRuntimeConfig({
-      pages: { [slug]: currentDraft },
-      siteConfig: currentGlobalDraft,
-      themeConfig,
-      menuConfig,
-      refDocuments,
-    });
-    const headerData = resolvedSaveRuntime.siteConfig.header?.data;
-    const projectState: ProjectState = {
-      page: currentDraft,
-      site: currentGlobalDraft,
-      menu: { main: resolveMenuMainFromHeaderData(headerData, menuConfig.main) },
-      theme: resolvedSaveRuntime.themeConfig,
-    };
-    saveToFile(projectState, slug).then(() => {
-      setHasChanges(false);
-      setSaveSuccessFeedback(true);
-      if (typeof window !== 'undefined') {
-        window.setTimeout(() => setSaveSuccessFeedback(false), 2500);
-      }
-    }).catch((err) => {
+    persistProjectState(currentDraft, currentGlobalDraft, () => setHasChanges(false)).catch((err) => {
       console.error('[JsonPages] saveToFile failed', err);
       const msg = err instanceof Error ? err.message : String(err);
       alert(`Save to file failed: ${msg}`);
@@ -569,53 +507,20 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
     const currentDraft = draftRef.current;
     const currentGlobalDraft = globalDraftRef.current;
     if (!currentDraft) return;
-    const resolvedHotSaveRuntime = resolveRuntimeConfig({
-      pages: { [slug]: currentDraft },
-      siteConfig: currentGlobalDraft,
-      themeConfig,
-      menuConfig,
-      refDocuments,
-    });
-    const headerData = resolvedHotSaveRuntime.siteConfig.header?.data;
-    const projectState: ProjectState = {
-      page: currentDraft,
-      site: currentGlobalDraft,
-      menu: { main: resolveMenuMainFromHeaderData(headerData, menuConfig.main) },
-      theme: resolvedHotSaveRuntime.themeConfig,
-    };
-
-    setHotSaveInProgress(true);
-    hotSave(projectState, slug).then(() => {
-      setHasChanges(false);
-      setHotSaveSuccessFeedback(true);
-      if (typeof window !== 'undefined') {
-        window.setTimeout(() => setHotSaveSuccessFeedback(false), 2500);
-      }
-    }).catch((err) => {
+    runHotSave(currentDraft, currentGlobalDraft, () => setHasChanges(false)).catch((err) => {
       console.error('[JsonPages] hotSave failed', err);
       const msg = err instanceof Error ? err.message : String(err);
       alert(`Hot save failed: ${msg}`);
-    }).finally(() => {
-      setHotSaveInProgress(false);
     });
   };
 
   const handleAddSection = (sectionType: string) => {
     if (!draft) return;
-    const defaultData =
-      addSectionConfig?.getDefaultSectionData?.(sectionType) ?? {};
-    const newSection = {
-      id: crypto.randomUUID(),
-      type: sectionType,
-      data: defaultData,
-      settings: undefined,
-    } as Section;
-    setDraft({
-      ...draft,
-      sections: [...draft.sections, newSection],
-    });
+    const defaultData = addSectionConfig?.getDefaultSectionData?.(sectionType) ?? {};
+    const { draft: nextDraft, section } = appendDraftSection(draft, sectionType, defaultData);
+    setDraft(nextDraft);
     setHasChanges(true);
-    setSelected({ id: newSection.id, type: sectionType, scope: 'local' });
+    setSelected({ id: section.id, type: sectionType, scope: 'local' });
   };
 
   useEffect(() => {
@@ -678,7 +583,7 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
                 allSectionsData={allSectionsData}
                 onUpdate={handleUpdate}
                 onUpdateSection={handleUpdateSection}
-                onClose={() => { setSelected(null); setExpandedItemPath(null); }}
+                onClose={clearSelection}
                 expandedItemPath={expandedItemPath}
                 onReorderSection={
                   draft
