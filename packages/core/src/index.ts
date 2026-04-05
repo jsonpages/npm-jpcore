@@ -1,20 +1,17 @@
 /**
- * @olonjs/core — Public API (legacy alias: @jsonpages/core)
+ * @olonjs/core - Public API (legacy alias: @jsonpages/core)
  */
 
-// Lib: kernel, types, engine, renderers, context, events, utils, shared-types
-export * from './lib/kernel';
-export * from './lib/types-engine';
+// Conceptual surfaces for the future split.
+export * as kernel from './kernel';
+export * as runtime from './runtime';
+export * as webmcp from './webmcp';
+
+// Flat legacy surface kept intact for current tenants.
+export * from './kernel';
 export * from './lib/events';
 export * from './lib/utils';
-export * from './lib/shared-types';
-export { PageRenderer } from './lib/PageRenderer';
-export { SectionRenderer } from './lib/SectionRenderer';
-export { JsonPagesEngine } from './lib/JsonPagesEngine';
-export { StudioProvider, useStudio } from './lib/StudioContext';
-export { ConfigProvider, useConfig, type ConfigContextValue } from './lib/ConfigContext';
-export { ThemeLoader } from './lib/ThemeLoader';
-export { DefaultNotFound } from './lib/DefaultNotFound';
+export * from './runtime';
 export {
   applyValueAtSelectionPath,
   buildWebMcpToolName,
@@ -24,11 +21,6 @@ export {
   resolveWebMcpMutationData,
   type WebMcpMutationArgs,
 } from './lib/webmcp-bridge';
-export {
-  resolveHeaderMenuItems,
-  resolveRuntimeConfig,
-  resolveSectionMenuItems,
-} from './lib/config-resolver';
 
 // Utils
 export { themeManager } from './utils/theme-manager';

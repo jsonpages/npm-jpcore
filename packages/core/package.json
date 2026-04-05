@@ -15,8 +15,7 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist",
-    "src/lib/webmcp-contracts.mjs"
+    "dist"
   ],
   "description": "The Sovereign Core Engine for OlonJS.",
   "author": "JsonPages Team",

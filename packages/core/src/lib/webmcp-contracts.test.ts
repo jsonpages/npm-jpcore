@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { buildPageContract, buildPageManifest, buildSiteManifest } from './webmcp-contracts.mjs';
+import { buildPageContract, buildPageManifest, buildSiteManifest } from './webmcp-contracts';
 
 describe('webmcp-contracts', () => {
   const HeroSchema = z.object({
