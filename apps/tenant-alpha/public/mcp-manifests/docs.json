@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "kind": "olonjs-page-mcp-manifest",
-  "generatedAt": "2026-04-04T17:22:27.964Z",
+  "generatedAt": "2026-04-07T15:38:41.862Z",
   "slug": "docs",
   "title": "OlonJS Architecture Specifications v1.5",
   "description": "Mandatory Standard — Sovereign Core Edition. Canonical Studio actions, SSG, Save to file, and Hot Save.",
@@ -55,19 +55,8 @@
   ],
   "tools": [
     {
-      "name": "update-header",
-      "sectionType": "header",
-      "description": "Update a header section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-footer",
-      "sectionType": "footer",
-      "description": "Update a footer section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-tiptap",
-      "sectionType": "tiptap",
-      "description": "Update a tiptap section in OlonJS Studio and persist immediately to file."
+      "name": "update-section",
+      "description": "Update any section in OlonJS Studio and persist immediately to file. Use sectionType to select the matching schema from sectionSchemas."
     }
   ]
 }

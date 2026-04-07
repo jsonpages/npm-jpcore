@@ -11,11 +11,7 @@ import { build } from 'vite';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import fs from 'fs/promises';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-const corePkgPath = require.resolve('@olonjs/core/package.json');
-const contractsUrl = pathToFileURL(corePkgPath.replace('package.json', 'src/lib/webmcp-contracts.mjs')).href;
+import { webmcp } from '@olonjs/core';
 
 const {
   buildPageContract,
@@ -23,7 +19,7 @@ const {
   buildPageManifestHref,
   buildSiteManifest,
   buildLlmsTxt,
-} = await import(contractsUrl);
+} = webmcp;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -107,7 +103,9 @@ await build({
     },
   },
   ssr: {
-    noExternal: ['@olonjs/core'],
+    // SSG must be self-contained: the SSR artifact should not depend on
+    // runtime resolution of app/framework packages at bake time.
+    noExternal: true,
   },
 });
 console.log('[bake] SSR build done.');

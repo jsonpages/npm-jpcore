@@ -1,10 +1,10 @@
 {
   "version": "1.0.0",
   "kind": "olonjs-page-mcp-manifest",
-  "generatedAt": "2026-03-30T15:17:57.852Z",
+  "generatedAt": "2026-04-07T16:11:58.718Z",
   "slug": "home",
-  "title": "OlonJS — The Contract Layer for the Agentic Web",
-  "description": "A deterministic machine contract for websites: typed, schema-driven content endpoints that make any site reliably readable and operable by AI agents.",
+  "title": "OlonJS — Contract Layer for the Agentic Web",
+  "description": "OlonJS is a TypeScript framework for building JSON-driven websites with a deterministic data contract. Every section is typed, validated, and structurally addressable.",
   "contractHref": "/schemas/home.schema.json",
   "transport": {
     "kind": "window-message",
@@ -16,21 +16,26 @@
     "resources": [
       {
         "uri": "olon://pages/home",
-        "name": "OlonJS — The Contract Layer for the Agentic Web Data",
+        "name": "OlonJS — Contract Layer for the Agentic Web Data",
         "mimeType": "application/json",
         "description": "Structured content for the home page."
+      },
+      {
+        "uri": "olon://pages",
+        "name": "Site Map",
+        "mimeType": "application/json",
+        "description": "Structured content for the map of this site"
       }
     ]
   },
   "sectionTypes": [
     "header",
     "footer",
-    "hero",
-    "problem-statement",
-    "feature-grid",
-    "git-section",
-    "devex",
-    "cta-banner"
+    "olon-hero",
+    "olon-why",
+    "olon-architecture",
+    "olon-example",
+    "olon-getstarted"
   ],
   "sectionInstances": [
     {
@@ -47,81 +52,39 @@
     },
     {
       "id": "hero-main",
-      "type": "hero",
+      "type": "olon-hero",
       "scope": "local",
-      "label": "The Contract Layer for the"
+      "label": "olon-hero"
     },
     {
-      "id": "problem-section",
-      "type": "problem-statement",
+      "id": "why-olon",
+      "type": "olon-why",
       "scope": "local",
-      "label": "The challenge"
+      "label": "Why OlonJS"
     },
     {
-      "id": "architecture-section",
-      "type": "feature-grid",
+      "id": "architecture-protocols",
+      "type": "olon-architecture",
       "scope": "local",
-      "label": "Built for enterprise scale"
+      "label": "Architecture"
     },
     {
-      "id": "why-now",
-      "type": "git-section",
+      "id": "example-steps",
+      "type": "olon-example",
       "scope": "local",
-      "label": "Why this matters"
+      "label": "Quick Example"
     },
     {
-      "id": "dx-section",
-      "type": "devex",
+      "id": "getstarted-cards",
+      "type": "olon-getstarted",
       "scope": "local",
-      "label": "AI-native advantage,\nfrom day one"
-    },
-    {
-      "id": "cta-final",
-      "type": "cta-banner",
-      "scope": "local",
-      "label": "Ready to give your site\na machine contract?"
+      "label": "Get Started"
     }
   ],
   "tools": [
     {
-      "name": "update-header",
-      "sectionType": "header",
-      "description": "Update a header section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-footer",
-      "sectionType": "footer",
-      "description": "Update a footer section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-hero",
-      "sectionType": "hero",
-      "description": "Update a hero section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-problem-statement",
-      "sectionType": "problem-statement",
-      "description": "Update a problem-statement section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-feature-grid",
-      "sectionType": "feature-grid",
-      "description": "Update a feature-grid section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-git-section",
-      "sectionType": "git-section",
-      "description": "Update a git-section section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-devex",
-      "sectionType": "devex",
-      "description": "Update a devex section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-cta-banner",
-      "sectionType": "cta-banner",
-      "description": "Update a cta-banner section in OlonJS Studio and persist immediately to file."
+      "name": "update-section",
+      "description": "Update any section in OlonJS Studio and persist immediately to file. Use sectionType to select the matching schema from sectionSchemas."
     }
   ]
 }

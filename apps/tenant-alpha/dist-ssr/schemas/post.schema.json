@@ -51,6 +51,18 @@
           "type": "string",
           "description": "ui:text"
         },
+        "signinHref": {
+          "type": "string",
+          "description": "ui:text"
+        },
+        "ctaHref": {
+          "type": "string",
+          "description": "ui:text"
+        },
+        "ctaLabel": {
+          "type": "string",
+          "description": "ui:text"
+        },
         "links": {
           "type": "array",
           "items": {
@@ -155,9 +167,8 @@
   },
   "tools": [
     {
-      "name": "update-header",
-      "sectionType": "header",
-      "description": "Update a header section in OlonJS Studio and persist immediately to file.",
+      "name": "update-section",
+      "description": "Update any section in OlonJS Studio and persist immediately to file. Use sectionType to select the matching schema from sectionSchemas.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -170,6 +181,10 @@
             "type": "string",
             "description": "Concrete section instance id inside the current draft."
           },
+          "sectionType": {
+            "type": "string",
+            "description": "Section type being updated (for example \"hero\" or \"header\"). Used to select the correct validation schema."
+          },
           "scope": {
             "type": "string",
             "enum": [
@@ -180,61 +195,7 @@
           },
           "data": {
             "type": "object",
-            "properties": {
-              "logoText": {
-                "type": "string",
-                "description": "ui:text"
-              },
-              "logoHighlight": {
-                "type": "string",
-                "description": "ui:text"
-              },
-              "logoIconText": {
-                "type": "string",
-                "description": "ui:text"
-              },
-              "badge": {
-                "type": "string",
-                "description": "ui:text"
-              },
-              "links": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "label": {
-                      "type": "string",
-                      "description": "ui:text"
-                    },
-                    "href": {
-                      "type": "string",
-                      "description": "ui:text"
-                    },
-                    "isCta": {
-                      "type": "boolean",
-                      "description": "ui:checkbox",
-                      "default": false
-                    },
-                    "external": {
-                      "type": "boolean",
-                      "description": "ui:checkbox",
-                      "default": false
-                    }
-                  },
-                  "additionalProperties": false,
-                  "required": [
-                    "label",
-                    "href"
-                  ]
-                },
-                "description": "ui:list"
-              }
-            },
-            "additionalProperties": false,
-            "required": [
-              "logoText",
-              "links"
-            ]
+            "description": "Full replacement payload validated against the schema declared for sectionType."
           },
           "itemPath": {
             "type": "array",
@@ -257,6 +218,10 @@
           },
           "value": {
             "description": "Value written to the final field targeted by itemPath."
+          },
+          "fieldKey": {
+            "type": "string",
+            "description": "Shorthand for a top-level scalar field update when itemPath is omitted."
           }
         },
         "required": [
@@ -273,196 +238,10 @@
               "itemPath",
               "value"
             ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "update-footer",
-      "sectionType": "footer",
-      "description": "Update a footer section in OlonJS Studio and persist immediately to file.",
-      "inputSchema": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "slug": {
-            "type": "string",
-            "description": "Canonical page slug currently open in Studio."
-          },
-          "sectionId": {
-            "type": "string",
-            "description": "Concrete section instance id inside the current draft."
-          },
-          "scope": {
-            "type": "string",
-            "enum": [
-              "local",
-              "global"
-            ],
-            "default": "local"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "brandText": {
-                "type": "string",
-                "description": "ui:text"
-              },
-              "copyright": {
-                "type": "string",
-                "description": "ui:text"
-              },
-              "links": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "label": {
-                      "type": "string",
-                      "description": "ui:text"
-                    },
-                    "href": {
-                      "type": "string",
-                      "description": "ui:text"
-                    }
-                  },
-                  "additionalProperties": false,
-                  "required": [
-                    "label",
-                    "href"
-                  ]
-                },
-                "description": "ui:list"
-              },
-              "designSystemHref": {
-                "type": "string",
-                "description": "ui:text"
-              }
-            },
-            "additionalProperties": false,
-            "required": [
-              "brandText",
-              "copyright"
-            ]
-          },
-          "itemPath": {
-            "type": "array",
-            "description": "Optional root-to-leaf selection path for targeted field mutation.",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "fieldKey": {
-                  "type": "string"
-                },
-                "itemId": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "fieldKey"
-              ]
-            }
-          },
-          "value": {
-            "description": "Value written to the final field targeted by itemPath."
-          }
-        },
-        "required": [
-          "sectionId"
-        ],
-        "oneOf": [
-          {
-            "required": [
-              "data"
-            ]
           },
           {
             "required": [
-              "itemPath",
-              "value"
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "update-tiptap",
-      "sectionType": "tiptap",
-      "description": "Update a tiptap section in OlonJS Studio and persist immediately to file.",
-      "inputSchema": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "slug": {
-            "type": "string",
-            "description": "Canonical page slug currently open in Studio."
-          },
-          "sectionId": {
-            "type": "string",
-            "description": "Concrete section instance id inside the current draft."
-          },
-          "scope": {
-            "type": "string",
-            "enum": [
-              "local",
-              "global"
-            ],
-            "default": "local"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "anchorId": {
-                "type": "string",
-                "description": "ui:text"
-              },
-              "content": {
-                "type": "string",
-                "description": "ui:editorial-markdown",
-                "default": ""
-              }
-            },
-            "additionalProperties": false
-          },
-          "itemPath": {
-            "type": "array",
-            "description": "Optional root-to-leaf selection path for targeted field mutation.",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "fieldKey": {
-                  "type": "string"
-                },
-                "itemId": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "fieldKey"
-              ]
-            }
-          },
-          "value": {
-            "description": "Value written to the final field targeted by itemPath."
-          }
-        },
-        "required": [
-          "sectionId"
-        ],
-        "oneOf": [
-          {
-            "required": [
-              "data"
-            ]
-          },
-          {
-            "required": [
-              "itemPath",
+              "fieldKey",
               "value"
             ]
           }

@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "kind": "olonjs-page-mcp-manifest",
-  "generatedAt": "2026-04-04T17:22:27.973Z",
+  "generatedAt": "2026-04-07T15:38:41.870Z",
   "slug": "post",
   "title": "Post",
   "description": "Smoke test page for header + tiptap + footer flow.",
@@ -55,19 +55,8 @@
   ],
   "tools": [
     {
-      "name": "update-header",
-      "sectionType": "header",
-      "description": "Update a header section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-footer",
-      "sectionType": "footer",
-      "description": "Update a footer section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-tiptap",
-      "sectionType": "tiptap",
-      "description": "Update a tiptap section in OlonJS Studio and persist immediately to file."
+      "name": "update-section",
+      "description": "Update any section in OlonJS Studio and persist immediately to file. Use sectionType to select the matching schema from sectionSchemas."
     }
   ]
 }

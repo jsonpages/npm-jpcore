@@ -11,12 +11,15 @@ import { build } from 'vite';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import fs from 'fs/promises';
-import {
+import { webmcp } from '@olonjs/core';
+
+const {
   buildPageContract,
   buildPageManifest,
   buildPageManifestHref,
   buildSiteManifest,
-} from '../../../packages/core/src/lib/webmcp-contracts.mjs';
+  buildLlmsTxt,
+} = webmcp;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
@@ -24,7 +27,7 @@ const pagesDir = path.resolve(root, 'src/data/pages');
 const publicDir = path.resolve(root, 'public');
 const distDir = path.resolve(root, 'dist');
 
-async function writeJsonTargets(relativePath, value) {
+async function writeTargets(relativePath, content) {
   const targets = [
     path.resolve(publicDir, relativePath),
     path.resolve(distDir, relativePath),
@@ -32,8 +35,12 @@ async function writeJsonTargets(relativePath, value) {
 
   for (const targetPath of targets) {
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    await fs.writeFile(targetPath, `${JSON.stringify(value, null, 2)}\n`, 'utf-8');
+    await fs.writeFile(targetPath, content, 'utf-8');
   }
+}
+
+async function writeJsonTargets(relativePath, value) {
+  await writeTargets(relativePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
 function escapeHtmlAttribute(value) {
@@ -96,7 +103,9 @@ await build({
     },
   },
   ssr: {
-    noExternal: ['@olonjs/core'],
+    // SSG must be self-contained: the SSR artifact should not depend on
+    // runtime resolution of app/framework packages at bake time.
+    noExternal: true,
   },
 });
 console.log('[bake] SSR build done.');
@@ -124,6 +133,10 @@ const webMcpBuildState = getWebMcpBuildState();
 for (const { slug } of targets) {
   const pageConfig = webMcpBuildState.pages[slug];
   if (!pageConfig) continue;
+  
+  // Export the raw JSON data for the agentic web (so readResource works on SSG)
+  await writeJsonTargets(`pages/${slug}.json`, pageConfig);
+
   const contract = buildPageContract({
     slug,
     pageConfig,
@@ -140,12 +153,22 @@ for (const { slug } of targets) {
   await writeJsonTargets(buildPageManifestHref(slug).replace(/^\//, ''), pageManifest);
 }
 
+// Export the site config for the agentic web
+await writeJsonTargets('config/site.json', webMcpBuildState.siteConfig);
+
 const mcpManifest = buildSiteManifest({
   pages: webMcpBuildState.pages,
   schemas: webMcpBuildState.schemas,
   siteConfig: webMcpBuildState.siteConfig,
 });
 await writeJsonTargets('mcp-manifest.json', mcpManifest);
+
+const llmsTxtContent = buildLlmsTxt({
+  pages: webMcpBuildState.pages,
+  schemas: webMcpBuildState.schemas,
+  siteConfig: webMcpBuildState.siteConfig,
+});
+await writeTargets('llms.txt', `${llmsTxtContent}\n`);
 
 for (const { slug, out, depth } of targets) {
   console.log(`\n[bake] Rendering /${slug === 'home' ? '' : slug}...`);

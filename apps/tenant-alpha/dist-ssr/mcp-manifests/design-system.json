@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "kind": "olonjs-page-mcp-manifest",
-  "generatedAt": "2026-04-01T14:26:40.198Z",
+  "generatedAt": "2026-04-07T15:36:32.132Z",
   "slug": "design-system",
   "title": "Olon Design System — Design Language",
   "description": "Token reference, color system, typography, components and brand identity for the OlonJS design language.",
@@ -19,6 +19,12 @@
         "name": "Olon Design System — Design Language Data",
         "mimeType": "application/json",
         "description": "Structured content for the design-system page."
+      },
+      {
+        "uri": "olon://pages",
+        "name": "Site Map",
+        "mimeType": "application/json",
+        "description": "Structured content for the map of this site"
       }
     ]
   },
@@ -42,14 +48,8 @@
   ],
   "tools": [
     {
-      "name": "update-footer",
-      "sectionType": "footer",
-      "description": "Update a footer section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-design-system",
-      "sectionType": "design-system",
-      "description": "Update a design-system section in OlonJS Studio and persist immediately to file."
+      "name": "update-section",
+      "description": "Update any section in OlonJS Studio and persist immediately to file. Use sectionType to select the matching schema from sectionSchemas."
     }
   ]
 }

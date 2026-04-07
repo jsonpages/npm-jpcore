@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "kind": "olonjs-page-mcp-manifest",
-  "generatedAt": "2026-04-04T17:22:27.971Z",
+  "generatedAt": "2026-04-07T15:38:41.868Z",
   "slug": "platform/overview",
   "title": "OlonJS — Platform Overview",
   "description": "Overview of the OlonJS platform, architecture direction, and product surface.",
@@ -55,19 +55,8 @@
   ],
   "tools": [
     {
-      "name": "update-header",
-      "sectionType": "header",
-      "description": "Update a header section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-footer",
-      "sectionType": "footer",
-      "description": "Update a footer section in OlonJS Studio and persist immediately to file."
-    },
-    {
-      "name": "update-page-hero",
-      "sectionType": "page-hero",
-      "description": "Update a page-hero section in OlonJS Studio and persist immediately to file."
+      "name": "update-section",
+      "description": "Update any section in OlonJS Studio and persist immediately to file. Use sectionType to select the matching schema from sectionSchemas."
     }
   ]
 }
