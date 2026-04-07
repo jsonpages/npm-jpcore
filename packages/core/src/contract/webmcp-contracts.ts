@@ -401,8 +401,14 @@ export function buildPageContract({
           {
             name: buildToolName(),
             description:
-              'Update any section in OlonJS Studio and persist immediately to file. Use sectionType to select the matching schema from sectionSchemas.',
+              'Update a section field in the Studio draft. Does not persist — call save when all updates are complete. Use sectionType to select the matching schema from sectionSchemas.',
             inputSchema: buildMutationInputSchema(),
+          },
+          {
+            name: 'save',
+            description:
+              'Persist all pending draft changes using the active save mode (local file, hot save, or save2repo). Call once after all update-section calls are complete.',
+            inputSchema: { type: 'object', additionalProperties: false, properties: {} },
           },
         ]
       : [];

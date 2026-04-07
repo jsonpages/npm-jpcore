@@ -7,7 +7,9 @@
 export {
   applyValueAtSelectionPath,
   buildWebMcpToolName,
+  buildWebMcpSaveToolName,
   createWebMcpToolInputSchema,
+  createWebMcpSaveToolInputSchema,
   ensureWebMcpRuntime,
   parseWebMcpMutationArgs,
   registerWebMcpTool,

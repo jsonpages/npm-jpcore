@@ -57,6 +57,18 @@ export function buildWebMcpToolName(): string {
   return 'update-section';
 }
 
+export function buildWebMcpSaveToolName(): string {
+  return 'save';
+}
+
+export function createWebMcpSaveToolInputSchema(): Record<string, unknown> {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    properties: {},
+  };
+}
+
 export function parseWebMcpMutationArgs(rawArgs: unknown): WebMcpMutationArgs {
   if (!isRecord(rawArgs) || typeof rawArgs.sectionId !== 'string') {
     throw new Error('WebMCP mutation requires a sectionId.');

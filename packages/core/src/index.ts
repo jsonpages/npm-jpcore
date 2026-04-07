@@ -17,7 +17,9 @@ export * from './runtime';
 export {
   applyValueAtSelectionPath,
   buildWebMcpToolName,
+  buildWebMcpSaveToolName,
   createWebMcpToolInputSchema,
+  createWebMcpSaveToolInputSchema,
   ensureWebMcpRuntime,
   parseWebMcpMutationArgs,
   registerWebMcpTool,

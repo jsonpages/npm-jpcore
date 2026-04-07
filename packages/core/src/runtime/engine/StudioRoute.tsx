@@ -14,7 +14,9 @@ import { ThemeLoader } from '../theme/ThemeLoader';
 import { STUDIO_EVENTS } from '../../studio/events';
 import {
   buildWebMcpToolName,
+  buildWebMcpSaveToolName,
   createWebMcpToolInputSchema,
+  createWebMcpSaveToolInputSchema,
   ensureWebMcpRuntime,
   parseWebMcpMutationArgs,
   registerWebMcpTool,
@@ -210,10 +212,6 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
 
   const executeWebMcpMutation = useCallback(
     async (rawArgs: unknown) => {
-      if (!saveToFile) {
-        throw new Error('WebMCP requires saveToFile persistence in Studio mode.');
-      }
-
       const args = parseWebMcpMutationArgs(rawArgs);
       const normalizedSlug = typeof args.slug === 'string' ? normalizeSlugSegments(args.slug) : slug;
       if (normalizedSlug !== slug) {
@@ -229,8 +227,6 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
       }
 
       const scope = args.scope === 'global' ? 'global' : 'local';
-      let nextDraft = currentDraft;
-      let nextGlobalDraft = currentGlobalDraft;
       let sectionTypeToUse = args.sectionType;
 
       if (scope === 'global') {
@@ -260,7 +256,7 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
         const nextData = resolveWebMcpMutationData(currentData, args);
         const parsedData = schema.parse(nextData) as Record<string, unknown>;
         const nextSection = { ...targetSection, data: parsedData } as Section;
-        nextGlobalDraft = {
+        const nextGlobalDraft = {
           ...currentGlobalDraft,
           ...(targetSection.type === 'header' ? { header: nextSection } : { footer: nextSection }),
         };
@@ -287,7 +283,7 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
         const nextData = resolveWebMcpMutationData(currentData, args);
         const parsedData = schema.parse(nextData) as Record<string, unknown>;
 
-        nextDraft = {
+        const nextDraft = {
           ...currentDraft,
           sections: currentDraft.sections.map((section) =>
             section.id === args.sectionId ? ({ ...section, data: parsedData } as Section) : section
@@ -300,8 +296,6 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
       setSelected({ id: args.sectionId, type: sectionTypeToUse, scope });
       setExpandedItemPath(Array.isArray(args.itemPath) ? args.itemPath : null);
       setHasChanges(true);
-
-      await persistProjectState(nextDraft, nextGlobalDraft, () => setHasChanges(false));
 
       return {
         content: [
@@ -319,17 +313,44 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
         isError: false,
       };
     },
-    [saveToFile, slug, requestInlineFlush, schemas, persistProjectState]
+    [slug, requestInlineFlush, schemas]
+  );
+
+  const executeWebMcpSave = useCallback(
+    async () => {
+      await requestInlineFlush();
+      const currentDraft = draftRef.current;
+      const currentGlobalDraft = globalDraftRef.current;
+      if (!currentDraft) {
+        throw new Error('Studio draft is not ready yet.');
+      }
+
+      if (showHotSave && hotSave) {
+        await runHotSave(currentDraft, currentGlobalDraft, () => setHasChanges(false));
+      } else if (showLocalSave && saveToFile) {
+        await persistProjectState(currentDraft, currentGlobalDraft, () => setHasChanges(false));
+      } else if (showColdSave && coldSave) {
+        await coldSave(buildProjectState(currentDraft, currentGlobalDraft), slug);
+        setHasChanges(false);
+      } else {
+        throw new Error('No save mode is configured for this tenant.');
+      }
+
+      return {
+        content: [{ type: 'text', text: JSON.stringify({ ok: true, slug }) }],
+        isError: false,
+      };
+    },
+    [showHotSave, hotSave, showLocalSave, saveToFile, showColdSave, coldSave, requestInlineFlush, runHotSave, persistProjectState, buildProjectState, slug]
   );
 
   const handleWebMcpToolCall = useCallback(
     async (toolName: string, rawArgs: unknown) => {
-      if (toolName !== 'update-section') {
-        throw new Error(`Unknown WebMCP tool "${toolName}". Expected "update-section".`);
-      }
-      return executeWebMcpMutation(rawArgs);
+      if (toolName === buildWebMcpToolName()) return executeWebMcpMutation(rawArgs);
+      if (toolName === buildWebMcpSaveToolName()) return executeWebMcpSave();
+      throw new Error(`Unknown WebMCP tool "${toolName}".`);
     },
-    [executeWebMcpMutation]
+    [executeWebMcpMutation, executeWebMcpSave]
   );
 
   const handleStudioMessage = useCallback(
@@ -422,15 +443,23 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
     const currentDraft = draftRef.current;
     if (!currentDraft) return;
 
-    const unregister = registerWebMcpTool({
+    const unregisterUpdate = registerWebMcpTool({
       name: buildWebMcpToolName(),
-      description: 'Update any section in OlonJS Studio and persist immediately to file. Use "sectionType" in input args to ensure correct schema validation.',
+      description: 'Update a section field in the Studio draft. Does not persist — call save when all updates are complete. Use "sectionType" in input args to ensure correct schema validation.',
       inputSchema: createWebMcpToolInputSchema(),
       execute: (args) => handleWebMcpToolCall(buildWebMcpToolName(), args),
     });
 
+    const unregisterSave = registerWebMcpTool({
+      name: buildWebMcpSaveToolName(),
+      description: 'Persist all pending draft changes using the active save mode (local file, hot save, or save2repo). Call once after all update-section calls are complete.',
+      inputSchema: createWebMcpSaveToolInputSchema(),
+      execute: () => handleWebMcpToolCall(buildWebMcpSaveToolName(), {}),
+    });
+
     return () => {
-      unregister();
+      unregisterUpdate();
+      unregisterSave();
     };
   }, [webMcp?.enabled, slug, draft, globalDraft, handleWebMcpToolCall]);
 
