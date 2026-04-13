@@ -1,6 +1,5 @@
 import { z } from 'zod';
-import { BaseSectionSettingsSchema } from '@/lib/base-schemas';
-import { HeroSchema } from './schema';
+import { HeroSchema, HeroSettingsSchema } from './schema';
 
-export type HeroData = z.infer<typeof HeroSchema>;
-export type HeroSettings = z.infer<typeof BaseSectionSettingsSchema>;
+export type HeroData     = z.infer<typeof HeroSchema>;
+export type HeroSettings = z.infer<typeof HeroSettingsSchema>;

@@ -116,7 +116,7 @@ export function OlonArchitectureView({ data }: Props) {
       <div className="max-w-6xl mx-auto px-8">
         <p className="text-xs font-semibold tracking-[0.12em] uppercase text-[var(--local-muted)] mb-3"
            data-jp-field="label">{data.label}</p>
-        <h2 className="text-4xl font-bold tracking-[-0.03em] text-white mb-3"
+        <h2 className="text-4xl font-bold tracking-[-0.03em] text-foreground mb-3"
             data-jp-field="headline">{data.headline}</h2>
         <p className="text-base text-[var(--local-muted)] leading-relaxed max-w-2xl mb-3"
            data-jp-field="body">{data.body}</p>
@@ -130,20 +130,20 @@ export function OlonArchitectureView({ data }: Props) {
           </p>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border border-[var(--local-border)] rounded-2xl overflow-hidden"
-             data-jp-array="protocols">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border border-[var(--local-border)] rounded-2xl overflow-hidden">
           {data.protocols.map((p) => (
             <div key={p.id}
                  className="bg-[var(--local-card)] p-7 flex flex-col gap-3 border-r border-b border-[var(--local-border)] hover:bg-[var(--elevated)] transition-colors"
-                 data-jp-item-id={p.id}>
-              <div>{ICONS[p.icon]}</div>
+                 data-jp-item-id={p.id}
+                 data-jp-item-field="protocols">
+              <div data-jp-field="icon">{ICONS[p.icon]}</div>
               <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-[var(--local-p400)] font-mono"
                  data-jp-field="version">{p.acronym} · {p.version}</p>
-              <p className="font-bold text-white text-base" data-jp-field="name">{p.name}</p>
+              <p className="font-bold text-foreground text-base" data-jp-field="name">{p.name}</p>
               <p className="text-sm text-[var(--local-muted)] leading-relaxed flex-1"
                  data-jp-field="desc">{p.desc}</p>
               <a href={p.specHref} target="_blank" rel="noopener noreferrer"
-                 className="text-xs text-[var(--local-p400)] hover:text-white transition-colors mt-auto"
+                 className="text-xs text-[var(--local-p400)] hover:text-foreground transition-colors mt-auto"
                  data-jp-field="specHref">Read spec ↗</a>
             </div>
           ))}

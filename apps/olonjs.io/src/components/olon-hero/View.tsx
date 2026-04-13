@@ -1,12 +1,22 @@
 import type { OlonHeroData } from './types';
 import { Button } from '@/components/ui/button';
-import { DawnBackground } from './DawnBackground';
+import { Github, Terminal } from 'lucide-react';
+import { resolveAssetUrl, useConfig } from '@olonjs/core';
 
 interface Props {
   data: OlonHeroData;
 }
 
+const heroPlugImage = '/assets/images/plug-graded-square.jpg';
+
+function hasRenderableCta(cta: { label?: string; href?: string } | undefined): cta is { label: string; href: string } {
+  return Boolean(cta?.label?.trim() && cta?.href?.trim());
+}
+
 export function OlonHeroView({ data }: Props) {
+  const { tenantId = 'default' } = useConfig();
+  const imageUrl = data.image?.url ? resolveAssetUrl(data.image.url, tenantId) : heroPlugImage;
+
   return (
     <section
       style={{
@@ -16,12 +26,12 @@ export function OlonHeroView({ data }: Props) {
         '--local-primary': 'var(--primary)',
         '--local-p300':    'var(--primary-light)',
       } as React.CSSProperties}
-      className="relative min-h-[calc(100vh-80px)] flex items-center w-full bg-[var(--local-bg)] text-[var(--local-fg)] pt-14 pb-14 overflow-hidden"
+      className="relative min-h-screen bg-[var(--local-bg)] text-[var(--local-fg)] pt-36 pb-24 overflow-hidden"
       data-jp-section-id={data.id}
       data-jp-section-type="olon-hero"
     >
       {/* Dawn background — absolute, behind content */}
-      <DawnBackground />
+    
 
       {/* Content — relative, above background */}
       <div className="relative z-10 max-w-6xl mx-auto px-8 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
@@ -46,7 +56,7 @@ export function OlonHeroView({ data }: Props) {
 
           <div>
             <h1
-              className="text-5xl md:text-6xl font-bold tracking-[-0.03em] leading-[1.05] text-foreground"
+              className="text-6xl md:text-7xl font-bold tracking-[-0.03em] leading-[1.05] text-foreground"
               data-jp-field="headline"
             >
               {data.headline}
@@ -67,79 +77,55 @@ export function OlonHeroView({ data }: Props) {
           </p>
 
           <div className="flex flex-wrap gap-3 items-center">
-            <Button asChild size="lg" className="font-semibold">
-              <a href={data.cta.primary.href}>{data.cta.primary.label} →</a>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="font-semibold">
-              <a href={data.cta.secondary.href}>{data.cta.secondary.label}</a>
-            </Button>
-            <a
-              href={data.cta.ghost.href}
-              className="text-sm text-[var(--local-muted)] hover:text-[var(--local-fg)] transition-colors flex items-center gap-1.5"
-            >
-              {data.cta.ghost.label}
-            </a>
+            {hasRenderableCta(data.primaryCta) && (
+              <div data-jp-field="primaryCta">
+                <Button asChild size="lg" className="font-semibold">
+                  <a href={data.primaryCta.href}>
+                    {data.primaryCta.label} →
+                  </a>
+                </Button>
+              </div>
+            )}
+            {hasRenderableCta(data.secondaryCta) && (
+              <div data-jp-field="secondaryCta">
+                <Button asChild variant="outline" size="lg" className="font-semibold gap-2">
+                  <a href={data.secondaryCta.href}>
+                    <Github className="w-4 h-4" />
+                    {data.secondaryCta.label}
+                  </a>
+                </Button>
+              </div>
+            )}
+            {hasRenderableCta(data.ghostCta) && (
+              <div data-jp-field="ghostCta">
+                <a
+                  href={data.ghostCta.href}
+                  className="text-sm text-[var(--local-muted)] hover:text-[var(--local-fg)] transition-colors flex items-center gap-1.5"
+                >
+                  {data.ghostCta.label}
+                  <Terminal className="w-4 h-4" />
+                </a>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right: SVG illustration */}
-        <div className="hidden md:flex items-center justify-center">
-          <svg
-            viewBox="0 0 400 400"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-full max-w-md"
-          >
-            <defs>
-              <linearGradient id="hero-main" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%"   stopColor="#84ABFF"/>
-                <stop offset="60%"  stopColor="#1763FF"/>
-                <stop offset="100%" stopColor="#0F52E0"/>
-              </linearGradient>
-              <linearGradient id="hero-accent" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="#EEF3FF"/>
-                <stop offset="100%" stopColor="#84ABFF"/>
-              </linearGradient>
-              <linearGradient id="hero-glow" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"   stopColor="#1763FF" stopOpacity="0.3"/>
-                <stop offset="100%" stopColor="#1763FF" stopOpacity="0"/>
-              </linearGradient>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="8" result="blur"/>
-                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-              </filter>
-            </defs>
-            <circle cx="200" cy="200" r="160" fill="url(#hero-glow)" opacity="0.4"/>
-            <rect x="90" y="90" width="220" height="220" rx="28" fill="none" stroke="url(#hero-main)" strokeWidth="14"/>
-            {/* Left pins */}
-            <line x1="16"  y1="148" x2="90"  y2="148" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="16"  y1="200" x2="90"  y2="200" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="16"  y1="252" x2="90"  y2="252" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            {/* Right pins */}
-            <line x1="310" y1="148" x2="384" y2="148" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="310" y1="200" x2="384" y2="200" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="310" y1="252" x2="384" y2="252" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            {/* Top pins */}
-            <line x1="148" y1="16"  x2="148" y2="90"  stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="200" y1="16"  x2="200" y2="90"  stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="252" y1="16"  x2="252" y2="90"  stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            {/* Bottom pins */}
-            <line x1="148" y1="310" x2="148" y2="384" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="200" y1="310" x2="200" y2="384" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            <line x1="252" y1="310" x2="252" y2="384" stroke="url(#hero-main)" strokeWidth="10" strokeLinecap="round"/>
-            {/* Corner nodes */}
-            <circle cx="148" cy="148" r="13" fill="url(#hero-main)"/>
-            <circle cx="252" cy="148" r="13" fill="url(#hero-main)"/>
-            <circle cx="148" cy="252" r="13" fill="url(#hero-main)"/>
-            <circle cx="252" cy="252" r="13" fill="url(#hero-main)"/>
-            {/* Connection lines */}
-            <line x1="148" y1="148" x2="200" y2="200" stroke="#84ABFF" strokeWidth="2.5" opacity="0.35"/>
-            <line x1="252" y1="148" x2="200" y2="200" stroke="#84ABFF" strokeWidth="2.5" opacity="0.35"/>
-            <line x1="148" y1="252" x2="200" y2="200" stroke="#84ABFF" strokeWidth="2.5" opacity="0.35"/>
-            <line x1="252" y1="252" x2="200" y2="200" stroke="#84ABFF" strokeWidth="2.5" opacity="0.35"/>
-            {/* Center node */}
-            <circle cx="200" cy="200" r="18" fill="url(#hero-accent)" filter="url(#glow)"/>
-          </svg>
+        {/* Right: branded product photo */}
+        <div className="hidden md:flex items-center justify-center pointer-events-none">
+          <div className="relative w-full max-w-lg pointer-events-auto">
+            <div className="absolute inset-[-8%] bg-[radial-gradient(circle_at_50%_50%,rgba(52,109,255,0.22),rgba(12,17,22,0)_70%)] blur-2xl pointer-events-none" />
+            <div className="relative aspect-[1/1.03] overflow-hidden rounded-none border border-white/14 bg-[#0d1219] shadow-[0_22px_56px_rgba(4,8,20,0.42)] pointer-events-auto">
+              <img
+                src={imageUrl}
+                alt={data.image?.alt ?? "Olon interface port engraved into a dark stone surface"}
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ objectPosition: '50% 50%' }}
+                data-jp-field="image"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,11,21,0.02)_0%,rgba(7,11,21,0.14)_24%,rgba(7,11,21,0.44)_100%)] pointer-events-none" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_62%_44%,rgba(122,163,255,0.18),rgba(29,78,216,0.08)_24%,rgba(12,17,22,0)_54%)] mix-blend-screen pointer-events-none" />
+            </div>
+          </div>
         </div>
       </div>
     </section>

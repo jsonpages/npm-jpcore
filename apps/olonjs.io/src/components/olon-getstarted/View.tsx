@@ -28,22 +28,22 @@ export function OlonGetStartedView({ data }: Props) {
       <div className="max-w-6xl mx-auto px-8">
         <p className="text-xs font-semibold tracking-[0.12em] uppercase text-[var(--local-muted)] mb-3"
            data-jp-field="label">{data.label}</p>
-        <h2 className="text-4xl font-bold tracking-[-0.03em] text-white mb-3"
+        <h2 className="text-4xl font-bold tracking-[-0.03em] text-foreground mb-3"
             data-jp-field="headline">{data.headline}</h2>
         <p className="text-base text-[var(--local-muted)] leading-relaxed max-w-2xl mb-12"
            data-jp-field="body">{data.body}</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 border border-[var(--local-border)] rounded-2xl overflow-hidden"
-             data-jp-array="cards">
+        <div className="grid grid-cols-1 md:grid-cols-3 border border-[var(--local-border)] rounded-2xl overflow-hidden">
           {data.cards.map((card) => (
             <div key={card.id}
                  className="bg-[var(--local-card)] p-8 flex flex-col gap-4 border-r last:border-r-0 border-[var(--local-border)] hover:bg-[var(--elevated)] transition-colors"
-                 data-jp-item-id={card.id}>
+                 data-jp-item-id={card.id}
+                 data-jp-item-field="cards">
               <span className={`text-[11px] font-bold tracking-[0.08em] uppercase px-2.5 py-0.5 rounded-full w-fit ${BADGE_STYLES[card.badgeStyle]}`}
                     data-jp-field="badge">
                 {card.badge}
               </span>
-              <p className="font-bold text-white text-base" data-jp-field="title">{card.title}</p>
+              <p className="font-bold text-foreground text-base" data-jp-field="title">{card.title}</p>
               <p className="text-sm text-[var(--local-muted)] leading-relaxed flex-1"
                  data-jp-field="body">{card.body}</p>
               {card.code && (
@@ -53,7 +53,7 @@ export function OlonGetStartedView({ data }: Props) {
                 </code>
               )}
               {card.deployHref && card.deployLabel && (
-                <Button asChild variant="outline" size="sm" className="w-fit">
+                <Button asChild variant="outline" size="sm" className="w-fit" data-jp-field="deployLabel">
                   <a href={card.deployHref} target="_blank" rel="noopener noreferrer">
                     {card.deployLabel}
                   </a>

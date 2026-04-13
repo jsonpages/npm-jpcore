@@ -1,9 +1,8 @@
 {
   "main": [
-    { 
+    {
       "label": "Why",
       "href": "#Why"
-      
     },
     {
       "label": "Architecture",
@@ -17,7 +16,7 @@
       "label": "Get started",
       "href": "#Getstarted"
     },
-	{
+    {
       "label": "GitHub",
       "href": "https://github.com/olonjs/core"
     }

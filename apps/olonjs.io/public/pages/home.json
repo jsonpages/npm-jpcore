@@ -11,23 +11,25 @@
       "type": "olon-hero",
       "data": {
         "id": "hero-main",
-        "eyebrow": "CONTRACT LAYER · OPEN SOURCE",
+        "eyebrow": "CONTRACT LAYER · V1.5 · OPEN SOURCE",
         "headline": "Contract Layer",
         "subline": "for the agentic web.",
         "body": "AI agents are becoming operational actors in commerce, marketing, and support. They need more than content — they need a contract. OlonJS is the deterministic machine contract for websites: every site typed, structured, and addressable by design. No custom glue. No fragile integrations. Just a contract any agent can read and operate.",
-        "cta": {
-          "primary": {
-            "label": "Get started",
-            "href": "#getstarted"
-          },
-          "secondary": {
-            "label": "GitHub",
-            "href": "https://github.com/olonjs/core"
-          },
-          "ghost": {
-            "label": "Explore platform",
-            "href": "#architecture"
-          }
+        "primaryCta": {
+          "label": "Get started",
+          "href": "#getstarted"
+        },
+        "secondaryCta": {
+          "label": "GitHub",
+          "href": "https://github.com/olonjs/core"
+        },
+        "ghostCta": {
+          "label": "Explore platform",
+          "href": "#architecture"
+        },
+        "image": {
+          "url": "/assets/images/1775421583171-Screenshot_2026-04-05_at_20-08-49_OlonJS_MCP___LinkedIn_Cover.png",
+          "alt": "1775421583171-Screenshot_2026-04-05_at_20-08-49_OlonJS_MCP___LinkedIn_Cover.png"
         }
       }
     },
@@ -183,20 +185,20 @@
             "badgeStyle": "cli",
             "title": "Scaffold a tenant",
             "body": "The CLI scaffolds a fully compliant tenant from a canonical script. Same result on every machine, every run.",
-            "code": "npx @olonjs/cli new tenant {name}",
+            "code": "npx @olonjs/cli new tenant",
             "linkLabel": "View on npm",
             "linkHref": "https://www.npmjs.com/package/@olonjs/cli"
           },
           {
             "id": "card-deploy",
-            "badge": "Soon",
+            "badge": "Deploy",
             "badgeStyle": "deploy",
             "title": "Deploy a template",
             "body": "Clone a working OlonJS tenant and deploy it with one click. Explore the full capsule structure in a real project.",
             "deployLabel": "Deploy template →",
-            "deployHref": "#",
-            "linkLabel": "View on GitHub",
-            "linkHref": "#"
+            "deployHref": "https://github.com/olonjs/core",
+            "linkLabel": "View on npm",
+            "linkHref": "https://www.npmjs.com/package/@olonjs/core"
           }
         ],
         "anchorId": "Getstarted"

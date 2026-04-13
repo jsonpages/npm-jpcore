@@ -1,73 +1,121 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
+import type { CSSProperties } from 'react';
 import type { FeatureGridData, FeatureGridSettings } from './types';
 
-export const FeatureGrid: React.FC<{
+interface FeatureGridViewProps {
   data: FeatureGridData;
   settings?: FeatureGridSettings;
-}> = ({ data }) => {
+}
+
+export function FeatureGrid({ data, settings }: FeatureGridViewProps) {
+  const columns = settings?.columns ?? 3;
+  const cards = data.cards ?? [];
+  const tiers = data.tiers ?? [];
+
+  const colClass =
+    columns === 2 ? 'sm:grid-cols-2' :
+    columns === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' :
+    'sm:grid-cols-2 lg:grid-cols-3';
+
   return (
-    <section id="architecture" className="jp-feature-grid py-24">
-      <div className="max-w-[1040px] mx-auto px-8">
+    <section
+      id="features"
+      className="py-24 px-6 border-t border-border section-anchor"
+      style={{
+        '--local-bg': 'var(--background)',
+        '--local-text': 'var(--foreground)',
+        '--local-text-muted': 'var(--muted-foreground)',
+        '--local-border': 'var(--border)',
+      } as CSSProperties}
+    >
+      <div className="max-w-4xl mx-auto">
 
         {/* Section header */}
-        <header className="text-center mb-14">
+        <div className="max-w-xl mb-16">
           {data.label && (
-            <div className="inline-flex items-center gap-2 text-[10.5px] font-mono font-bold uppercase tracking-[.12em] text-muted-foreground/60 mb-5">
-              <span className="w-[18px] h-px bg-border" aria-hidden />
+            <p className="font-mono-olon text-xs font-medium tracking-label uppercase text-muted-foreground mb-5" data-jp-field="label">
               {data.label}
-            </div>
+            </p>
           )}
-          <h2
-            className="font-display font-bold tracking-[-0.03em] leading-[1.15] text-foreground mb-4"
-            style={{ fontSize: 'clamp(26px, 3.8vw, 40px)' }}
-            data-jp-field="sectionTitle"
-          >
+          <h2 className="font-display font-normal text-foreground leading-tight tracking-tight mb-5" data-jp-field="sectionTitle">
             {data.sectionTitle}
+            {data.sectionTitleItalic && (
+              <>
+                <br />
+                <em className="not-italic text-primary-light" data-jp-field="sectionTitleItalic">{data.sectionTitleItalic}</em>
+              </>
+            )}
           </h2>
           {data.sectionLead && (
-            <p
-              className="text-[15.5px] text-muted-foreground leading-[1.7] mx-auto"
-              style={{ maxWidth: '500px' }}
-              data-jp-field="sectionLead"
-            >
+            <p className="text-base text-muted-foreground leading-relaxed" data-jp-field="sectionLead">
               {data.sectionLead}
             </p>
           )}
-        </header>
-
-        {/* 3-col feature grid */}
-        <div
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 rounded-xl overflow-hidden border border-border"
-          style={{ gap: '1px', background: 'var(--border)' }}
-          data-jp-field="cards"
-        >
-          {data.cards.map((card, idx) => (
-            <div
-              key={card.id ?? idx}
-              className={cn(
-                'p-8 transition-colors hover:bg-muted/60',
-                idx % 2 === 0 ? 'bg-background' : 'bg-card'
-              )}
-              data-jp-item-id={card.id ?? `legacy-${idx}`}
-              data-jp-item-field="cards"
-            >
-              {card.emoji && (
-                <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/18 flex items-center justify-center text-[18px] mb-5">
-                  {card.emoji}
-                </div>
-              )}
-              <h3 className="text-[14px] font-semibold text-foreground mb-2">
-                {card.title}
-              </h3>
-              <p className="text-[13px] text-muted-foreground leading-[1.7]">
-                {card.description}
-              </p>
-            </div>
-          ))}
         </div>
 
+        {/* Feature grid */}
+        <div className={`grid grid-cols-1 ${colClass} gap-px bg-border`}>
+          {cards.map((card) => {
+            return (
+              <div
+                key={card.id ?? card.title}
+                data-jp-item-id={card.id ?? card.title}
+                data-jp-item-field="cards"
+                className="bg-background p-7 flex flex-col gap-4 group hover:bg-card transition-colors duration-200"
+              >
+                {card.icon && (
+                  <img
+                    src={card.icon.url}
+                    alt={card.icon.alt ?? ''}
+                    aria-hidden={card.icon.alt ? undefined : true}
+                    data-jp-field="icon"
+                    className="w-10 h-10 shrink-0"
+                  />
+                )}
+                <div>
+                  <h3 className="text-sm font-medium text-foreground mb-2 leading-snug" data-jp-field="title">
+                    {card.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed" data-jp-field="description">
+                    {card.description}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Proof strip */}
+        {(data.proofStatement || tiers.length > 0) && (
+          <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-6 px-7 py-5 rounded-lg border border-border bg-card">
+            {data.proofStatement && (
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground mb-0.5">
+                  <span data-jp-field="proofStatement">{data.proofStatement}</span>
+                </p>
+                {data.proofSub && (
+                  <p className="text-[12px] text-muted-foreground" data-jp-field="proofSub">
+                    {data.proofSub}
+                  </p>
+                )}
+              </div>
+            )}
+            {tiers.length > 0 && (
+              <div className="flex items-center gap-4 shrink-0">
+                {tiers.map((tier) => (
+                  <div
+                    key={tier.id ?? tier.label}
+                    data-jp-item-id={tier.id ?? tier.label}
+                    data-jp-item-field="tiers"
+                    className="text-center"
+                  >
+                    <div className="text-xs font-medium text-foreground" data-jp-field="label">{tier.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
-};
+}

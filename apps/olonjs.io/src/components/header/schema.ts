@@ -9,6 +9,9 @@ export const HeaderSchema = z.object({
   logoHighlight: z.string().optional().describe('ui:text'),
   logoIconText: z.string().optional().describe('ui:text'),
   badge: z.string().optional().describe('ui:text'),
+  signinHref: z.string().optional().describe('ui:text'),
+  ctaHref: z.string().optional().describe('ui:text'),
+  ctaLabel: z.string().optional().describe('ui:text'),
   links: z.array(z.object({
     label: z.string().describe('ui:text'),
     href: z.string().describe('ui:text'),

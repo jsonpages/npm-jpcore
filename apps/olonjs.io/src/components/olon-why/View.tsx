@@ -61,21 +61,21 @@ export function OlonWhyView({ data }: Props) {
       <div className="max-w-6xl mx-auto px-8">
         <p className="text-xs font-semibold tracking-[0.12em] uppercase text-[var(--local-muted)] mb-3"
            data-jp-field="label">{data.label}</p>
-        <h2 className="text-4xl font-bold tracking-[-0.03em] text-white leading-tight"
+        <h2 className="text-4xl font-bold tracking-[-0.03em] text-foreground leading-tight"
             data-jp-field="headline">{data.headline}</h2>
         <p className="text-3xl font-semibold tracking-[-0.03em] text-[var(--local-p300)] leading-tight mb-4"
            data-jp-field="subline">{data.subline}</p>
         <p className="text-base text-[var(--local-muted)] leading-relaxed max-w-2xl mb-12"
            data-jp-field="body">{data.body}</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 border border-[var(--local-border)] rounded-2xl overflow-hidden"
-             data-jp-array="pillars">
+        <div className="grid grid-cols-1 md:grid-cols-3 border border-[var(--local-border)] rounded-2xl overflow-hidden">
           {data.pillars.map((pillar) => (
             <div key={pillar.id}
                  className="bg-[var(--local-card)] p-8 flex flex-col gap-4 border-r last:border-r-0 border-[var(--local-border)]"
-                 data-jp-item-id={pillar.id}>
-              <div>{ICONS[pillar.icon]}</div>
-              <div className="font-bold text-white" data-jp-field="title">{pillar.title}</div>
+                 data-jp-item-id={pillar.id}
+                 data-jp-item-field="pillars">
+              <div data-jp-field="icon">{ICONS[pillar.icon]}</div>
+              <div className="font-bold text-foreground" data-jp-field="title">{pillar.title}</div>
               <div className="text-sm text-[var(--local-muted)] leading-relaxed" data-jp-field="body">{pillar.body}</div>
             </div>
           ))}
