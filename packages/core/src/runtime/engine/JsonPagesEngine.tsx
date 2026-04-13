@@ -10,6 +10,7 @@ import { ensureWebMcpRuntime } from '../../webmcp';
 import { DefaultNotFound } from '../../lib/DefaultNotFound';
 import { ConfigProvider } from '../config/ConfigContext';
 import { themeManager } from '../theme/theme-manager';
+import { normalizeBasePath } from '../url';
 import { EngineErrorBoundary } from './EngineErrorBoundary';
 import { PreviewRoute } from './PreviewRoute';
 import { StudioRoute } from './StudioRoute';
@@ -30,6 +31,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
   const {
     registry = {},
     schemas = {},
+    basePath = '/',
     pages: pageRegistry = {},
     siteConfig,
     themeConfig,
@@ -74,6 +76,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
   );
 
   const [isReady, setIsReady] = useState(false);
+  const routerBasePath = normalizeBasePath(basePath);
 
   useEffect(() => {
     try {
@@ -121,7 +124,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
           overlayDisabledSectionTypes: config.overlayDisabledSectionTypes,
         }}
       >
-        <BrowserRouter>
+        <BrowserRouter basename={routerBasePath}>
           <Routes>
             <Route
               path="/"

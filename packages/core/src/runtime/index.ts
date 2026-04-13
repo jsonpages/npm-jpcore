@@ -17,3 +17,4 @@ export * from './assets';
 export * from './config';
 export * from './rendering';
 export * from './theme';
+export * from './url';

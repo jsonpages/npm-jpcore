@@ -65,6 +65,7 @@ export interface WebMcpConfig {
 
 export interface JsonPagesConfig {
   tenantId: string;
+  basePath?: string;
   registry: Record<string, React.ComponentType<unknown>>;
   schemas: Record<string, { parse: (v: unknown) => unknown; shape?: Record<string, unknown> }>;
   pages: Record<string, PageConfig>;

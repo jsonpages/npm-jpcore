@@ -3,6 +3,7 @@
  * No dependency on src/components (e.g. IconResolver); safe for NPM package.
  */
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 export const DefaultNotFound: React.FC = () => (
   <div
@@ -19,11 +20,11 @@ export const DefaultNotFound: React.FC = () => (
   >
     <h1 className="text-6xl font-bold text-[var(--local-text)] mb-4">404</h1>
     <p className="text-xl text-[var(--local-text-muted)] mb-8">Page not found</p>
-    <a
-      href="/"
+    <Link
+      to="/"
       className="inline-flex items-center gap-2 px-6 py-3 rounded-[var(--local-radius-md)] bg-[var(--local-primary)] text-[var(--local-bg)] font-semibold text-sm hover:opacity-90 transition-opacity"
     >
       Back to Home
-    </a>
+    </Link>
   </div>
 );

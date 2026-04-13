@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { JsonPagesEngine } from '@olonjs/core';
 import type { JsonPagesConfig, LibraryImageEntry, ProjectState } from '@olonjs/core';
+import { normalizeBasePath, withBasePath } from '@olonjs/core';
 import { ComponentRegistry } from '@/lib/ComponentRegistry';
 import { SECTION_SCHEMAS } from '@/lib/schemas';
 import { addSectionConfig } from '@/lib/addSectionConfig';
@@ -30,6 +31,7 @@ const CLOUD_API_URL =
 const CLOUD_API_KEY =
   import.meta.env.VITE_OLONJS_API_KEY ?? import.meta.env.VITE_JSONPAGES_API_KEY;
 const SAVE2REPO_ENABLED = import.meta.env.VITE_SAVE2REPO === 'true';
+const APP_BASE_PATH = normalizeBasePath(import.meta.env.BASE_URL || '/');
 
 const themeConfig = themeData as unknown as ThemeConfig;
 const menuConfig = menuData as unknown as MenuConfig;
@@ -298,13 +300,13 @@ function normalizeSlugForCache(slug: string): string {
 }
 
 function buildPublishedPageHref(slug: string): string {
-  return `/pages/${normalizeSlugForCache(slug)}.json`;
+  return withBasePath(`/pages/${normalizeSlugForCache(slug)}.json`, APP_BASE_PATH);
 }
 
 async function loadPublishedStaticContent(
   knownSlugs: string[]
 ): Promise<{ pages: Record<string, PageConfig>; siteConfig: SiteConfig }> {
-  const siteResponse = await fetch('/config/site.json', { cache: 'no-store' });
+  const siteResponse = await fetch(withBasePath('/config/site.json', APP_BASE_PATH), { cache: 'no-store' });
   if (!siteResponse.ok) {
     throw new Error(`Static site config unavailable: ${siteResponse.status}`);
   }
@@ -784,6 +786,7 @@ function App() {
 
   const config: JsonPagesConfig = {
     tenantId: TENANT_ID,
+    basePath: APP_BASE_PATH,
     registry: ComponentRegistry as JsonPagesConfig['registry'],
     schemas: SECTION_SCHEMAS as unknown as JsonPagesConfig['schemas'],
     pages,
@@ -852,7 +855,7 @@ function App() {
       showColdSave: isSave2RepoMode,
     },
     assets: {
-      assetsBaseUrl: '/assets',
+      assetsBaseUrl: withBasePath('/assets', APP_BASE_PATH),
       assetsManifest,
       async onAssetUpload(file: File): Promise<string> {
         if (!file.type.startsWith('image/')) throw new Error('Invalid file type.');
