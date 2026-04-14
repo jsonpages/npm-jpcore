@@ -1,4 +1,4 @@
-# OlonJS — The Contract Layer for the Agentic Web
+# OlonJS — Websites for Humans and AI Agents
 
 
 <p align="center">
