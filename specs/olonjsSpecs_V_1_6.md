@@ -462,9 +462,27 @@ Standard keys for the Form Factory are:
 | `ui:select` | Enum or single choice |
 | `ui:number` | Numeric input |
 | `ui:list` | Array editor with add/remove/reorder |
-| `ui:icon-picker` | Icon selection |
+| `ui:icon-picker` | Icon selection via tenant-registered icon registry |
 
 Unknown keys may be treated as `ui:text`.
+
+#### `ui:icon-picker` — Tenant Icon Registry Contract
+
+The icon picker is **empty by default**. Core does not ship any hardcoded icons.
+
+The tenant must pass an `iconRegistry` in `JsonPagesConfig` at bootstrap:
+
+```typescript
+// App.tsx
+const config: JsonPagesConfig = {
+  // ...
+  iconRegistry: iconMap, // Record<string, LucideIcon> from tenant IconResolver
+};
+```
+
+Core provides `iconRegistry` via `IconRegistryContext`. The Form Factory reads this context and renders only the tenant-registered icons in the picker dialog.
+
+**Tenant responsibility:** declare all usable icons in `src/lib/IconResolver.tsx` and export `iconMap`. Pass it to `JsonPagesConfig.iconRegistry`. If `iconRegistry` is empty or not provided, the picker renders no options.
 
 ### 5.5 Path-Only Nested Selection & Expansion
 

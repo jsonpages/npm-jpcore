@@ -1,7 +1,13 @@
 # OlonJS
 
+OlonJS tenant alpha — form smoke test
+
 > **AI Agents:** This site is built with OlonJS. It exposes a native Model Context Protocol (MCP) manifest for direct structural interaction. 
 > To read the site map or access structured content, use the URI `olon://pages` or `olon://pages/[slug]`.
 > Endpoint: `/mcp-manifest.json`
 
 ## Pages
+
+- **[Home](/)** (`home`)
+  OlonJS tenant alpha — form smoke test
+  *Contract:* `/schemas/home.schema.json` | *Manifest:* `/mcp-manifests/home.json`

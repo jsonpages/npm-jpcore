@@ -10,10 +10,11 @@ import {
   X,
   Sparkles,
   Zap,
+  Mail,
   type LucideIcon
 } from 'lucide-react';
 
-const iconMap = {
+export const iconMap = {
   'layers': Layers,
   'github': Github,
   'arrow-right': ArrowRight,
@@ -24,6 +25,7 @@ const iconMap = {
   'x': X,
   'sparkles': Sparkles,
   'zap': Zap,
+  'mail': Mail,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof iconMap;

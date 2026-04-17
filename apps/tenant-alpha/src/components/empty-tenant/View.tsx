@@ -8,7 +8,6 @@ export function EmptyTenantView({ data }: EmptyTenantViewProps) {
   const title = data?.title?.trim() || 'Your tenant is empty.';
   const description = data?.description?.trim() || 'Create your first page to start building your site.';
 
-
   return (
     <main className="min-h-screen flex items-center justify-center bg-background text-foreground px-6">
       <section className="w-full max-w-xl rounded-xl border border-border bg-card p-8 shadow-sm">

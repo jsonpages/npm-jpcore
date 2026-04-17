@@ -37,3 +37,13 @@ export const CtaSchema = z.object({
   href: z.string().describe('ui:text'),
   variant: z.enum(['primary', 'secondary', 'accent']).default('primary').describe('ui:select'),
 });
+
+/**
+ * Mixin for any section capsule that includes a contact form.
+ * Merge into the section data schema to expose recipientEmail
+ * as an editable field in the Studio inspector.
+ * The View must set data-olon-recipient={data.recipientEmail} on the <form>.
+ */
+export const WithFormRecipient = z.object({
+  recipientEmail: z.string().optional().describe('ui:text'),
+});

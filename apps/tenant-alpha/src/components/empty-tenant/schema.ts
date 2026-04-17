@@ -4,7 +4,6 @@ import { BaseSectionData } from '@/lib/base-schemas';
 export const EmptyTenantSchema = BaseSectionData.extend({
   title: z.string().optional().describe('ui:text'),
   description: z.string().optional().describe('ui:textarea'),
-
 });
 
 export const EmptyTenantSettingsSchema = z.object({});

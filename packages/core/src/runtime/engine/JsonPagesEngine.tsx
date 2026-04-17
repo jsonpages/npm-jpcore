@@ -11,6 +11,7 @@ import { DefaultNotFound } from '../../lib/DefaultNotFound';
 import { ConfigProvider } from '../config/ConfigContext';
 import { themeManager } from '../theme/theme-manager';
 import { normalizeBasePath } from '../url';
+import { IconRegistryContext } from '../../studio/admin/IconRegistryContext';
 import { EngineErrorBoundary } from './EngineErrorBoundary';
 import { PreviewRoute } from './PreviewRoute';
 import { StudioRoute } from './StudioRoute';
@@ -115,6 +116,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
 
   return (
     <EngineErrorBoundary>
+      <IconRegistryContext.Provider value={config.iconRegistry ?? {}}>
       <ConfigProvider
         config={{
           registry,
@@ -217,6 +219,7 @@ export function JsonPagesEngine({ config }: JsonPagesEngineProps) {
           </Routes>
         </BrowserRouter>
       </ConfigProvider>
+      </IconRegistryContext.Provider>
     </EngineErrorBoundary>
   );
 }

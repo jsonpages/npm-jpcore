@@ -20,33 +20,10 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import {
-  Layers,
-  Github,
-  ArrowRight,
-  Box,
-  Terminal,
-  ChevronRight,
-  Menu,
-  X,
-  Sparkles,
-  Zap,
   ImageIcon,
   type LucideIcon,
 } from 'lucide-react';
-
-/** Lucide icon names and components for the icon picker (most useful 10). Keep in sync with tenant IconResolver if used. */
-const ICON_PICKER_OPTIONS: { name: string; Icon: LucideIcon }[] = [
-  { name: 'layers', Icon: Layers },
-  { name: 'github', Icon: Github },
-  { name: 'arrow-right', Icon: ArrowRight },
-  { name: 'box', Icon: Box },
-  { name: 'terminal', Icon: Terminal },
-  { name: 'chevron-right', Icon: ChevronRight },
-  { name: 'menu', Icon: Menu },
-  { name: 'x', Icon: X },
-  { name: 'sparkles', Icon: Sparkles },
-  { name: 'zap', Icon: Zap },
-];
+import { useIconRegistry } from './IconRegistryContext';
 import { BaseWidgetProps } from '../../lib/shared-types';
 import { cn } from '../../lib/utils';
 import { ImagePreviewField } from './image-picker';
@@ -149,7 +126,10 @@ export const InputWidgets = {
 
   'ui:icon-picker': ({ label, value, onChange }: BaseWidgetProps<string>) => {
     const [open, setOpen] = useState(false);
-    const selected = ICON_PICKER_OPTIONS.find((o) => o.name === (value || ''));
+    const tenantIcons = useIconRegistry();
+    const options: { name: string; Icon: LucideIcon }[] =
+      Object.entries(tenantIcons).map(([name, Icon]) => ({ name, Icon }));
+    const selected = options.find((o) => o.name === (value || ''));
 
     return (
       <div className="grid w-full gap-1.5 mb-4">
@@ -183,7 +163,7 @@ export const InputWidgets = {
               </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-5 gap-2 py-2">
-              {ICON_PICKER_OPTIONS.map(({ name, Icon }) => (
+              {options.map(({ name, Icon }) => (
                 <button
                   key={name}
                   type="button"

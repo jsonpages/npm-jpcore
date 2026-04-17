@@ -2,6 +2,7 @@
  * Engine contract: Core must not import from src/components or src/data.
  */
 import type React from 'react';
+import type { LucideIcon } from 'lucide-react';
 import type { MenuConfig, PageConfig, ProjectState, SiteConfig, ThemeConfig } from './kernel';
 
 export interface SelectionPathSegment {
@@ -80,4 +81,5 @@ export interface JsonPagesConfig {
   assets?: AssetsConfig;
   overlayDisabledSectionTypes?: string[];
   webmcp?: WebMcpConfig;
+  iconRegistry?: Record<string, LucideIcon>;
 }

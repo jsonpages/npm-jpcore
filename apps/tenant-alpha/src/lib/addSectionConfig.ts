@@ -1,9 +1,10 @@
 import type { AddSectionConfig } from '@olonjs/core';
 
-const addableSectionTypes = ['empty-tenant'] as const;
+const addableSectionTypes = ['empty-tenant', 'form-demo'] as const;
 
 const sectionTypeLabels: Record<string, string> = {
   'empty-tenant': 'Empty Tenant',
+  'form-demo': 'Form Demo',
 };
 
 function getDefaultSectionData(type: string): Record<string, unknown> {
@@ -12,9 +13,17 @@ function getDefaultSectionData(type: string): Record<string, unknown> {
       return {
         title: 'Your tenant is empty.',
         description: 'Create your first page to start building your site.',
-        ctaLabel: 'Open Studio',
       };
-    default:                  return {};
+    case 'form-demo':
+      return {
+        title: 'Contattaci',
+        description: 'Compila il modulo e ti risponderemo al più presto.',
+        recipientEmail: '',
+        submitLabel: 'Invia',
+        successMessage: 'Richiesta inviata con successo.',
+      };
+    default:
+      return {};
   }
 }
 

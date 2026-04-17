@@ -1619,60 +1619,6 @@ cat << 'END_OF_FILE_CONTENT' > "index.html"
 
 
 END_OF_FILE_CONTENT
-echo "Creating package.json..."
-cat << 'END_OF_FILE_CONTENT' > "package.json"
-{
-  "name": "tenant-alpha",
-  "version": "1.0.104",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "dev:clean": "vite --force",
-    "verify:webmcp": "node scripts/webmcp-feature-check.mjs",
-    "prebuild": "node scripts/sync-pages-to-public.mjs && node scripts/generate-llms-txt.mjs",
-    "build": "tsc && vite build",
-    "dist": "bash ./src2Code.sh --template alpha src .cursor vercel.json index.html tsconfig.json tsconfig.node.json vite.config.ts scripts ../../specs package.json public/assets/images/plug-graded-square.jpg",
-    "preview": "vite preview",
-    "bake:email": "tsx scripts/bake-email.tsx",
-    "bakemail": "npm run bake:email --",
-    "dist:dna": "npm run dist"
-  },
-  "dependencies": {
-    "@tiptap/extension-image": "^2.11.5",
-    "@tiptap/extension-link": "^2.11.5",
-    "@tiptap/react": "^2.11.5",
-    "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.117",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.474.0",
-    "motion": "^12.23.24",
-    "react": "^19.0.0",
-    "react-markdown": "^9.0.1",
-    "react-dom": "^19.0.0",
-    "react-router-dom": "^6.30.3",
-    "rehype-sanitize": "^6.0.0",
-    "remark-gfm": "^4.0.1",
-    "tailwind-merge": "^3.0.1",
-    "tiptap-markdown": "^0.8.10",
-    "zod": "^3.24.1"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/react": "^19.0.8",
-    "@types/react-dom": "^19.0.3",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.7.3",
-    "vite": "^6.0.11",
-    "@react-email/components": "^0.0.41",
-    "@react-email/render": "^1.0.5",
-    "tsx": "^4.20.5"
-  }
-}
-
-END_OF_FILE_CONTENT
-# SKIP: public/assets/images/plug-graded-square.jpg is binary and cannot be embedded as text.
 mkdir -p "scripts"
 echo "Creating scripts/bake-email.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "scripts/bake-email.tsx"
@@ -2572,6 +2518,8 @@ import { DopaDrawer } from '@/components/save-drawer/DopaDrawer';
 import { EmptyTenantView } from '@/components/empty-tenant';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { useOlonForms } from '@/lib/useOlonForms';
+import { OlonFormsContext } from '@/lib/OlonFormsContext';
 
 import tenantCss from './index.css?inline';
 
@@ -2966,6 +2914,7 @@ function setTenantPreviewReady(ready: boolean): void {
 }
 
 function App() {
+  const { states: formStates } = useOlonForms();
   const isCloudMode = Boolean(CLOUD_API_URL && CLOUD_API_KEY);
   const isSave2RepoMode = isCloudMode && SAVE2REPO_ENABLED;
   const isHotSaveMode = isCloudMode && !isSave2RepoMode;
@@ -3575,6 +3524,7 @@ function App() {
 
   return (
     <ThemeProvider>
+      <OlonFormsContext.Provider value={formStates}>
       <>
       {isCloudMode && showTopProgress ? (
         <>
@@ -3696,6 +3646,7 @@ function App() {
         onRetry={retryCloudSave}
       />
       </>
+      </OlonFormsContext.Provider>
     </ThemeProvider>
   );
 }
@@ -3780,7 +3731,6 @@ export function EmptyTenantView({ data }: EmptyTenantViewProps) {
   const title = data?.title?.trim() || 'Your tenant is empty.';
   const description = data?.description?.trim() || 'Create your first page to start building your site.';
 
-
   return (
     <main className="min-h-screen flex items-center justify-center bg-background text-foreground px-6">
       <section className="w-full max-w-xl rounded-xl border border-border bg-card p-8 shadow-sm">
@@ -3807,7 +3757,6 @@ import { BaseSectionData } from '@/lib/base-schemas';
 export const EmptyTenantSchema = BaseSectionData.extend({
   title: z.string().optional().describe('ui:text'),
   description: z.string().optional().describe('ui:textarea'),
-
 });
 
 export const EmptyTenantSettingsSchema = z.object({});
@@ -3820,6 +3769,137 @@ import { EmptyTenantSchema, EmptyTenantSettingsSchema } from './schema';
 
 export type EmptyTenantData = z.infer<typeof EmptyTenantSchema>;
 export type EmptyTenantSettings = z.infer<typeof EmptyTenantSettingsSchema>;
+
+END_OF_FILE_CONTENT
+mkdir -p "src/components/form-demo"
+echo "Creating src/components/form-demo/View.tsx..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/form-demo/View.tsx"
+import { useFormState } from '@/lib/OlonFormsContext';
+import type { FormDemoData } from './types';
+
+type FormDemoViewProps = {
+  data: FormDemoData;
+};
+
+export function FormDemoView({ data }: FormDemoViewProps) {
+  const formId = data.anchorId?.trim() || 'form-demo';
+  const { status, message } = useFormState(formId);
+
+  return (
+    <main className="min-h-screen flex items-center justify-center bg-background text-foreground px-6">
+      <section className="w-full max-w-xl rounded-xl border border-border bg-card p-8 shadow-sm space-y-6">
+        {data.title && (
+          <div>
+            <h1
+              data-jp-field="title"
+              className="text-2xl font-semibold tracking-tight"
+            >
+              {data.title}
+            </h1>
+            {data.description && (
+              <p
+                data-jp-field="description"
+                className="mt-3 text-sm text-muted-foreground"
+              >
+                {data.description}
+              </p>
+            )}
+          </div>
+        )}
+
+        <form
+          id={formId}
+          data-olon-recipient={data.recipientEmail ?? ''}
+          className="space-y-4"
+        >
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Nome
+            </label>
+            <input
+              name="name"
+              type="text"
+              required
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Email
+            </label>
+            <input
+              name="email"
+              type="email"
+              required
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Messaggio
+            </label>
+            <textarea
+              name="message"
+              required
+              rows={4}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          {status === 'error' && (
+            <p className="text-xs text-destructive">{message}</p>
+          )}
+          {status === 'success' && (
+            <p className="text-xs text-green-600">
+              {data.successMessage || message}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={status === 'submitting'}
+            className="w-full rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
+          >
+            {status === 'submitting' ? 'Invio...' : (data.submitLabel || 'Invia')}
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/form-demo/index.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/form-demo/index.ts"
+export * from './View';
+export * from './schema';
+export * from './types';
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/form-demo/schema.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/form-demo/schema.ts"
+import { z } from 'zod';
+import { BaseSectionData, WithFormRecipient } from '@/lib/base-schemas';
+
+export const FormDemoSchema = BaseSectionData.merge(WithFormRecipient).extend({
+  title: z.string().optional().describe('ui:text'),
+  description: z.string().optional().describe('ui:textarea'),
+  submitLabel: z.string().default('Invia').describe('ui:text'),
+  successMessage: z.string().default('Richiesta inviata con successo.').describe('ui:text'),
+});
+
+export const FormDemoSettingsSchema = z.object({});
+
+END_OF_FILE_CONTENT
+echo "Creating src/components/form-demo/types.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/components/form-demo/types.ts"
+import { z } from 'zod';
+import { FormDemoSchema, FormDemoSettingsSchema } from './schema';
+
+export type FormDemoData = z.infer<typeof FormDemoSchema>;
+export type FormDemoSettings = z.infer<typeof FormDemoSettingsSchema>;
 
 END_OF_FILE_CONTENT
 mkdir -p "src/components/save-drawer"
@@ -7734,6 +7814,33 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/config/theme.json"
 }
 END_OF_FILE_CONTENT
 mkdir -p "src/data/pages"
+echo "Creating src/data/pages/home.json..."
+cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
+{
+  "id": "home-page",
+  "slug": "home",
+  "global-header": false,
+  "meta": {
+    "title": "Home",
+    "description": "OlonJS tenant alpha — form smoke test"
+  },
+  "sections": [
+    {
+      "id": "form-demo-1",
+      "type": "form-demo",
+      "data": {
+        "anchorId": "form-demo",
+        "title": "Contattaci",
+        "description": "Compila il modulo e ti risponderemo al più presto.",
+        "recipientEmail": "test@olonjs.io",
+        "submitLabel": "Invia",
+        "successMessage": "Richiesta inviata con successo."
+      }
+    }
+  ]
+}
+
+END_OF_FILE_CONTENT
 mkdir -p "src/emails"
 echo "Creating src/emails/LeadNotificationEmail.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/emails/LeadNotificationEmail.tsx"
@@ -9185,11 +9292,13 @@ cat << 'END_OF_FILE_CONTENT' > "src/lib/ComponentRegistry.tsx"
 import type { SectionType } from '@/types';
 import type { SectionComponentPropsMap } from '@/types';
 import { EmptyTenantView } from '@/components/empty-tenant';
+import { FormDemoView } from '@/components/form-demo';
 
 export const ComponentRegistry: {
   [K in SectionType]: React.FC<SectionComponentPropsMap[K]>;
 } = {
   'empty-tenant': EmptyTenantView as React.FC<SectionComponentPropsMap['empty-tenant']>,
+  'form-demo': FormDemoView as React.FC<SectionComponentPropsMap['form-demo']>,
 };
 
 END_OF_FILE_CONTENT
@@ -9251,14 +9360,45 @@ export const Icon: React.FC<IconProps> = ({ name, size = 20, className }) => {
 
 
 END_OF_FILE_CONTENT
+echo "Creating src/lib/OlonFormsContext.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/lib/OlonFormsContext.ts"
+import { createContext, useContext } from 'react';
+
+export type FormStatus = 'idle' | 'submitting' | 'success' | 'error';
+
+export interface FormState {
+  status: FormStatus;
+  message: string;
+}
+
+const DEFAULT_FORM_STATE: FormState = { status: 'idle', message: '' };
+
+/**
+ * Context holding the submission state of every olon-managed form,
+ * keyed by the form's id attribute (or anchorId).
+ * Provided by App.tsx via useOlonForms().
+ */
+export const OlonFormsContext = createContext<Record<string, FormState>>({});
+
+/**
+ * Read the submission state for a specific form.
+ * @param formId - must match the id attribute on the <form> element.
+ */
+export function useFormState(formId: string): FormState {
+  const states = useContext(OlonFormsContext);
+  return states[formId] ?? DEFAULT_FORM_STATE;
+}
+
+END_OF_FILE_CONTENT
 echo "Creating src/lib/addSectionConfig.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/addSectionConfig.ts"
 import type { AddSectionConfig } from '@olonjs/core';
 
-const addableSectionTypes = ['empty-tenant'] as const;
+const addableSectionTypes = ['empty-tenant', 'form-demo'] as const;
 
 const sectionTypeLabels: Record<string, string> = {
   'empty-tenant': 'Empty Tenant',
+  'form-demo': 'Form Demo',
 };
 
 function getDefaultSectionData(type: string): Record<string, unknown> {
@@ -9267,9 +9407,17 @@ function getDefaultSectionData(type: string): Record<string, unknown> {
       return {
         title: 'Your tenant is empty.',
         description: 'Create your first page to start building your site.',
-        ctaLabel: 'Open Studio',
       };
-    default:                  return {};
+    case 'form-demo':
+      return {
+        title: 'Contattaci',
+        description: 'Compila il modulo e ti risponderemo al più presto.',
+        recipientEmail: '',
+        submitLabel: 'Invia',
+        successMessage: 'Richiesta inviata con successo.',
+      };
+    default:
+      return {};
   }
 }
 
@@ -9320,6 +9468,16 @@ export const CtaSchema = z.object({
   label: z.string().describe('ui:text'),
   href: z.string().describe('ui:text'),
   variant: z.enum(['primary', 'secondary', 'accent']).default('primary').describe('ui:select'),
+});
+
+/**
+ * Mixin for any section capsule that includes a contact form.
+ * Merge into the section data schema to expose recipientEmail
+ * as an editable field in the Studio inspector.
+ * The View must set data-olon-recipient={data.recipientEmail} on the <form>.
+ */
+export const WithFormRecipient = z.object({
+  recipientEmail: z.string().optional().describe('ui:text'),
 });
 
 END_OF_FILE_CONTENT
@@ -9572,9 +9730,11 @@ END_OF_FILE_CONTENT
 echo "Creating src/lib/schemas.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/schemas.ts"
 import { EmptyTenantSchema } from '@/components/empty-tenant';
+import { FormDemoSchema } from '@/components/form-demo';
 
 export const SECTION_SCHEMAS = {
   'empty-tenant': EmptyTenantSchema,
+  'form-demo': FormDemoSchema,
 } as const;
 
 export type SectionType = keyof typeof SECTION_SCHEMAS;
@@ -9677,6 +9837,137 @@ export function useFormSubmit({ source, tenantId }: UseFormSubmitOptions) {
   return { submit, status, message, reset };
 }
 END_OF_FILE_CONTENT
+echo "Creating src/lib/useOlonForms.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/lib/useOlonForms.ts"
+import { useCallback, useEffect, useState } from 'react';
+import type { FormState } from './OlonFormsContext';
+
+const API_BASE =
+  (import.meta.env.VITE_OLONJS_CLOUD_URL as string | undefined) ??
+  (import.meta.env.VITE_JSONPAGES_CLOUD_URL as string | undefined);
+
+const API_KEY =
+  (import.meta.env.VITE_OLONJS_API_KEY as string | undefined) ??
+  (import.meta.env.VITE_JSONPAGES_API_KEY as string | undefined);
+
+interface UseOlonFormsOptions {
+  /** Override the submit endpoint. Defaults to VITE_OLONJS_CLOUD_URL/forms/submit */
+  endpoint?: string;
+}
+
+/**
+ * Mount once in App.tsx. Scans the DOM for all <form data-olon-recipient="...">
+ * elements and attaches submit handlers. Returns per-form states to be provided
+ * via OlonFormsContext.Provider.
+ *
+ * Views consume state via useFormState(formId) — no direct coupling to this hook.
+ */
+export function useOlonForms(options?: UseOlonFormsOptions): { states: Record<string, FormState> } {
+  const [states, setStates] = useState<Record<string, FormState>>({});
+
+  const setFormState = useCallback((formId: string, state: FormState) => {
+    setStates((prev) => ({ ...prev, [formId]: state }));
+  }, []);
+
+  useEffect(() => {
+    const resolvedBase = options?.endpoint
+      ? options.endpoint.replace(/\/$/, '')
+      : API_BASE
+        ? API_BASE.replace(/\/$/, '')
+        : null;
+
+    if (!resolvedBase || !API_KEY) {
+      console.warn('[useOlonForms] Missing API endpoint or key — forms will not submit.');
+      return;
+    }
+
+    const endpoint = resolvedBase.endsWith('/forms/submit')
+      ? resolvedBase
+      : `${resolvedBase}/forms/submit`;
+
+    const forms = Array.from(
+      document.querySelectorAll<HTMLFormElement>('form[data-olon-recipient]')
+    );
+
+    const controllers: AbortController[] = [];
+
+    async function handleSubmit(form: HTMLFormElement, event: SubmitEvent) {
+      event.preventDefault();
+
+      const formId = form.id || form.dataset.olonRecipient || 'olon-form';
+      const recipientEmail = form.dataset.olonRecipient ?? '';
+
+      setFormState(formId, { status: 'submitting', message: 'Invio in corso...' });
+
+      const raw: Record<string, string> = {};
+      new FormData(form).forEach((value, key) => {
+        raw[key] = String(value).trim();
+      });
+
+      const payload = {
+        ...raw,
+        recipientEmail,
+        page: window.location.pathname,
+        source: 'olon-form',
+        submittedAt: new Date().toISOString(),
+      };
+
+      const controller = new AbortController();
+      controllers.push(controller);
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${API_KEY}`,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': `form-${formId}-${Date.now()}`,
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+
+        const body = (await response.json().catch(() => ({}))) as {
+          error?: string;
+          code?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(body.error ?? body.code ?? `Submit failed (${response.status})`);
+        }
+
+        setFormState(formId, {
+          status: 'success',
+          message: 'Richiesta inviata con successo.',
+        });
+        form.reset();
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') return;
+        const message =
+          error instanceof Error ? error.message : 'Invio non riuscito. Riprova.';
+        setFormState(formId, { status: 'error', message });
+      }
+    }
+
+    type Listener = { form: HTMLFormElement; handler: (e: Event) => void };
+    const listeners: Listener[] = [];
+
+    forms.forEach((form) => {
+      const handler = (e: Event) => void handleSubmit(form, e as SubmitEvent);
+      form.addEventListener('submit', handler);
+      listeners.push({ form, handler });
+    });
+
+    return () => {
+      controllers.forEach((c) => c.abort());
+      listeners.forEach(({ form, handler }) => form.removeEventListener('submit', handler));
+    };
+  }, [options?.endpoint, setFormState]);
+
+  return { states };
+}
+
+END_OF_FILE_CONTENT
 echo "Creating src/lib/utils.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/lib/utils.ts"
 import { clsx, type ClassValue } from 'clsx';
@@ -9741,17 +10032,21 @@ mkdir -p "src/types"
 echo "Creating src/types.ts..."
 cat << 'END_OF_FILE_CONTENT' > "src/types.ts"
 import type { EmptyTenantData, EmptyTenantSettings } from '@/components/empty-tenant';
+import type { FormDemoData, FormDemoSettings } from '@/components/form-demo';
 
 export type SectionComponentPropsMap = {
   'empty-tenant': { data: EmptyTenantData; settings?: EmptyTenantSettings };
+  'form-demo': { data: FormDemoData; settings?: FormDemoSettings };
 };
 
 declare module '@olonjs/core' {
   export interface SectionDataRegistry {
     'empty-tenant': EmptyTenantData;
+    'form-demo': FormDemoData;
   }
   export interface SectionSettingsRegistry {
     'empty-tenant': EmptyTenantSettings;
+    'form-demo': FormDemoSettings;
   }
 }
 

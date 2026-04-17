@@ -23,6 +23,9 @@ import { DopaDrawer } from '@/components/save-drawer/DopaDrawer';
 import { EmptyTenantView } from '@/components/empty-tenant';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { useOlonForms } from '@/lib/useOlonForms';
+import { OlonFormsContext } from '@/lib/OlonFormsContext';
+import { iconMap } from '@/lib/IconResolver';
 
 import tenantCss from './index.css?inline';
 
@@ -417,6 +420,7 @@ function setTenantPreviewReady(ready: boolean): void {
 }
 
 function App() {
+  const { states: formStates } = useOlonForms();
   const isCloudMode = Boolean(CLOUD_API_URL && CLOUD_API_KEY);
   const isSave2RepoMode = isCloudMode && SAVE2REPO_ENABLED;
   const isHotSaveMode = isCloudMode && !isSave2RepoMode;
@@ -864,6 +868,7 @@ function App() {
     themeConfig,
     menuConfig,
     refDocuments,
+    iconRegistry: iconMap,
     themeCss: { tenant: resolvedTenantCss },
     addSection: addSectionConfig,
     webmcp: {
@@ -1026,6 +1031,7 @@ function App() {
 
   return (
     <ThemeProvider>
+      <OlonFormsContext.Provider value={formStates}>
       <>
       {isCloudMode && showTopProgress ? (
         <>
@@ -1147,6 +1153,7 @@ function App() {
         onRetry={retryCloudSave}
       />
       </>
+      </OlonFormsContext.Provider>
     </ThemeProvider>
   );
 }
