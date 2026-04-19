@@ -1,5 +1,5 @@
 import { Icon } from '@/lib/IconResolver';
-import { useFormState } from '@/lib/OlonFormsContext';
+import { useFormState } from '@olonjs/core';
 import type { FormDemoData } from './types';
 
 type FormDemoViewProps = {

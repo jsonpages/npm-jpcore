@@ -1,4 +1,4 @@
-import type { DeployStep } from '@/types/deploy';
+import type { DeployStep } from '../types/deploy';
 
 export const DEPLOY_STEPS: readonly DeployStep[] = [
   {

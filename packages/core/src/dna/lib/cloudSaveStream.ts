@@ -1,4 +1,4 @@
-import type { StepId } from '@/types/deploy';
+import type { StepId } from '../types/deploy';
 
 interface SaveStreamStepEvent {
   id: StepId;

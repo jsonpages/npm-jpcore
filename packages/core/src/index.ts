@@ -14,6 +14,7 @@ export * from './kernel';
 export * from './studio/events';
 export * from './lib/utils';
 export * from './runtime';
+export * from './dna';
 export {
   applyValueAtSelectionPath,
   buildWebMcpToolName,
