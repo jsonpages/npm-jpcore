@@ -1598,6 +1598,37 @@ If user says "use dark theme" or "change my theme":
 5. Inform the user the setting has been changed and whether a reload is needed
 
 END_OF_FILE_CONTENT
+echo "Creating components.json..."
+cat << 'END_OF_FILE_CONTENT' > "components.json"
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "radix-nova",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/index.css",
+    "baseColor": "zinc",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "rtl": false,
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  },
+  "menuColor": "default",
+  "menuAccent": "bold",
+  "registries": {}
+}
+
+
+
+END_OF_FILE_CONTENT
 echo "Creating index.html..."
 cat << 'END_OF_FILE_CONTENT' > "index.html"
 <!DOCTYPE html>
@@ -1617,6 +1648,59 @@ cat << 'END_OF_FILE_CONTENT' > "index.html"
   </body>
 </html>
 
+
+END_OF_FILE_CONTENT
+echo "Creating package.json..."
+cat << 'END_OF_FILE_CONTENT' > "package.json"
+{
+  "name": "tenant-alpha",
+  "version": "1.0.104",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:clean": "vite --force",
+    "verify:webmcp": "node scripts/webmcp-feature-check.mjs",
+    "prebuild": "node scripts/sync-pages-to-public.mjs && node scripts/generate-llms-txt.mjs",
+    "build": "tsc && vite build",
+    "dist": "bash ./src2Code.sh --template alpha src .cursor vercel.json components.json index.html tsconfig.json package.json tsconfig.node.json vite.config.ts scripts ",
+    "preview": "vite preview",
+    "bake:email": "tsx scripts/bake-email.tsx",
+    "bakemail": "npm run bake:email --",
+    "dist:dna": "npm run dist"
+  },
+  "dependencies": {
+    "@tiptap/extension-image": "^2.11.5",
+    "@tiptap/extension-link": "^2.11.5",
+    "@tiptap/react": "^2.11.5",
+    "@tiptap/starter-kit": "^2.11.5",
+    "@olonjs/core": "^1.0.117",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.474.0",
+    "motion": "^12.23.24",
+    "react": "^19.0.0",
+    "react-markdown": "^9.0.1",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^6.30.3",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.0.1",
+    "tiptap-markdown": "^0.8.10",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11",
+    "@react-email/components": "^0.0.41",
+    "@react-email/render": "^1.0.5",
+    "tsx": "^4.20.5"
+  }
+}
 
 END_OF_FILE_CONTENT
 mkdir -p "scripts"
@@ -2520,6 +2604,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { useOlonForms } from '@/lib/useOlonForms';
 import { OlonFormsContext } from '@/lib/OlonFormsContext';
+import { iconMap } from '@/lib/IconResolver';
 
 import tenantCss from './index.css?inline';
 
@@ -3362,6 +3447,7 @@ function App() {
     themeConfig,
     menuConfig,
     refDocuments,
+    iconRegistry: iconMap,
     themeCss: { tenant: resolvedTenantCss },
     addSection: addSectionConfig,
     webmcp: {
@@ -3774,12 +3860,63 @@ END_OF_FILE_CONTENT
 mkdir -p "src/components/form-demo"
 echo "Creating src/components/form-demo/View.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/components/form-demo/View.tsx"
+import { Icon } from '@/lib/IconResolver';
 import { useFormState } from '@/lib/OlonFormsContext';
 import type { FormDemoData } from './types';
 
 type FormDemoViewProps = {
   data: FormDemoData;
 };
+
+const missingEnv =
+  !import.meta.env.VITE_JSONPAGES_CLOUD_URL &&
+  !import.meta.env.VITE_OLONJS_CLOUD_URL;
+
+function SetupGuide({ recipientEmail }: { recipientEmail?: string }) {
+  const steps = [
+    {
+      done: !!recipientEmail,
+      label: 'recipientEmail nel JSON della sezione',
+      code: '"recipientEmail": "tu@esempio.it"',
+    },
+    {
+      done: !missingEnv,
+      label: 'VITE_JSONPAGES_CLOUD_URL nel file .env',
+      code: 'VITE_JSONPAGES_CLOUD_URL=https://cloud.olonjs.io',
+    },
+    {
+      done: !!import.meta.env.VITE_JSONPAGES_API_KEY || !!import.meta.env.VITE_OLONJS_API_KEY,
+      label: 'VITE_JSONPAGES_API_KEY nel file .env',
+      code: 'VITE_JSONPAGES_API_KEY=sk-...',
+    },
+  ];
+
+  const allDone = steps.every((s) => s.done);
+  if (allDone) return null;
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-3 text-sm">
+      <p className="font-medium text-foreground">Quasi pronto — completa questi passaggi</p>
+      <ol className="space-y-2">
+        {steps.map((step, i) => (
+          <li key={i} className="flex items-start gap-2">
+            <span className={step.done ? 'text-green-500' : 'text-muted-foreground'}>
+              {step.done ? '✓' : `${i + 1}.`}
+            </span>
+            <span className={step.done ? 'text-muted-foreground line-through' : 'text-foreground'}>
+              {step.label}
+              {!step.done && (
+                <code className="block mt-0.5 text-xs bg-background rounded px-1.5 py-0.5 font-mono text-muted-foreground border border-border">
+                  {step.code}
+                </code>
+              )}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
 export function FormDemoView({ data }: FormDemoViewProps) {
   const formId = data.anchorId?.trim() || 'form-demo';
@@ -3788,6 +3925,11 @@ export function FormDemoView({ data }: FormDemoViewProps) {
   return (
     <main className="min-h-screen flex items-center justify-center bg-background text-foreground px-6">
       <section className="w-full max-w-xl rounded-xl border border-border bg-card p-8 shadow-sm space-y-6">
+        {data.icon && (
+          <div data-jp-field="icon" className="mb-2">
+            <Icon name={data.icon} size={24} />
+          </div>
+        )}
         {data.title && (
           <div>
             <h1
@@ -3806,6 +3948,8 @@ export function FormDemoView({ data }: FormDemoViewProps) {
             )}
           </div>
         )}
+
+        <SetupGuide recipientEmail={data.recipientEmail} />
 
         <form
           id={formId}
@@ -3884,6 +4028,7 @@ import { z } from 'zod';
 import { BaseSectionData, WithFormRecipient } from '@/lib/base-schemas';
 
 export const FormDemoSchema = BaseSectionData.merge(WithFormRecipient).extend({
+  icon: z.string().optional().describe('ui:icon-picker'),
   title: z.string().optional().describe('ui:text'),
   description: z.string().optional().describe('ui:textarea'),
   submitLabel: z.string().default('Invia').describe('ui:text'),
@@ -7819,7 +7964,6 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
 {
   "id": "home-page",
   "slug": "home",
-  "global-header": false,
   "meta": {
     "title": "Home",
     "description": "OlonJS tenant alpha — form smoke test"
@@ -7834,12 +7978,13 @@ cat << 'END_OF_FILE_CONTENT' > "src/data/pages/home.json"
         "description": "Compila il modulo e ti risponderemo al più presto.",
         "recipientEmail": "test@olonjs.io",
         "submitLabel": "Invia",
-        "successMessage": "Richiesta inviata con successo."
+        "successMessage": "Richiesta inviata con successo.",
+        "icon": "mail"
       }
     }
-  ]
+  ],
+  "global-header": false
 }
-
 END_OF_FILE_CONTENT
 mkdir -p "src/emails"
 echo "Creating src/emails/LeadNotificationEmail.tsx..."
@@ -9316,10 +9461,11 @@ import {
   X,
   Sparkles,
   Zap,
+  Mail,
   type LucideIcon
 } from 'lucide-react';
 
-const iconMap = {
+export const iconMap = {
   'layers': Layers,
   'github': Github,
   'arrow-right': ArrowRight,
@@ -9330,6 +9476,7 @@ const iconMap = {
   'x': X,
   'sparkles': Sparkles,
   'zap': Zap,
+  'mail': Mail,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof iconMap;

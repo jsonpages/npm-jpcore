@@ -28,8 +28,8 @@
           "href": "#architecture"
         },
         "image": {
-          "url": "assets/images/1775421583171-Screenshot_2026-04-05_at_20-08-49_OlonJS_MCP___LinkedIn_Cover.png",
-          "alt": "1775421583171-Screenshot_2026-04-05_at_20-08-49_OlonJS_MCP___LinkedIn_Cover.png"
+          "url": "/assets/images/1776332627579-plug-graded-square.jpg",
+          "alt": "plug-graded-square.jpg"
         }
       }
     },
@@ -196,9 +196,9 @@
             "title": "Deploy a template",
             "body": "Clone a working OlonJS tenant and deploy it with one click. Explore the full capsule structure in a real project.",
             "deployLabel": "Deploy template →",
-            "deployHref": "https://github.com/olonjs/core",
+            "deployHref": "https://github.com/new?owner=olonjs&template_name=template-cadence&template_owner=olonjs",
             "linkLabel": "View on npm",
-            "linkHref": "https://www.npmjs.com/package/@olonjs/core"
+            "linkHref": "https://github.com/olonjs/template-cadence"
           }
         ],
         "anchorId": "Getstarted"

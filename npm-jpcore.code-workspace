@@ -17,6 +17,9 @@
 		},
 		{
 			"path": "../temp/santa13"
+		},
+		{
+			"path": "../temp/santa13test"
 		}
 	]
 }
