@@ -4,9 +4,6 @@
 			"path": "."
 		},
 		{
-			"path": "C:/Users/gseri/Desktop/GEMINI/AISTUDIO/Dev/JPS/olon-js"
-		},
-		{
 			"path": "../temp/llms"
 		},
 		{
@@ -16,13 +13,13 @@
 			"path": "../jsonpages-platform"
 		},
 		{
-			"path": "../temp/santa13"
-		},
-		{
-			"path": "../temp/santa13test"
-		},
-		{
 			"path": "C:/Users/gseri/Desktop/GEMINI/AISTUDIO/Dev/JPS/olon-agent"
+		},
+		{
+			"path": "../temp/cult"
+		},
+		{
+			"path": "../temp/YDEMO/santamamma26"
 		}
 	]
 }

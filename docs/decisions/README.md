@@ -1,0 +1,53 @@
+# Architecture Decision Records
+
+This folder captures the *why* behind significant technical decisions in `npm-jpcore` (the OlonJS monorepo). Code shows *what* was built; ADRs explain *why it was built this way* and *what alternatives were considered*.
+
+ADRs are the highest-signal documentation we can leave for future humans and agents working on this codebase.
+
+## When to write an ADR
+
+Write one when:
+
+- Designing or changing a public API of `@olonjs/core` (contracts, manifests, config shape).
+- Choosing between competing architectural approaches with meaningful trade-offs.
+- Introducing a tenant-facing convention that downstream repos must follow.
+- Adding or deprecating a framework, library, or major dependency.
+- Making any decision that would be expensive to reverse.
+
+Do **not** write one for trivial refactors, cosmetic changes, or prototypes.
+
+## Conventions
+
+- Filename: `ADR-NNNN-kebab-case-title.md` (4-digit zero-padded, sequential, never renumbered).
+- Store in this folder. No subfolders.
+- One decision per ADR. If a change bundles several decisions, split them.
+- Status lifecycle: `Proposed` → `Accepted` → (`Superseded by ADR-NNNN` | `Deprecated`). Qualifiers are allowed when useful (e.g. `Proposed — pending implementation and verification`).
+- **Never delete** an old ADR. When a decision changes, add a new ADR that supersedes it and update the old one's `Status` line only.
+- Write in English. Present tense for the decision, past tense for context.
+
+## Template
+
+Copy [`TEMPLATE.md`](./TEMPLATE.md) when starting a new ADR. The minimum sections are:
+
+1. **Status** — one of the values above, plus a date.
+2. **Context** — what forces are at play, what constraints, what problem.
+3. **Decision** — the chosen approach, stated as a commitment.
+4. **Alternatives Considered** — what else we looked at and why we rejected it.
+5. **Consequences** — what becomes easier, harder, or required as a result.
+
+Optional: `Follow-ups`, `Open Points`, `Compliance mapping`, `Risk mitigation`, `References`.
+
+## Index
+
+| #    | Title                                                                           | Status                                                | Date       |
+| ---- | ------------------------------------------------------------------------------- | ----------------------------------------------------- | ---------- |
+| 0001 | [Remove `SiteConfig.pages`](./ADR-0001-remove-siteconfig-pages.md)              | Proposed — pending implementation and verification    | 2026-04-20 |
+| 0002 | [Declarative form submission schemas in OlonJS core](./ADR-0002-form-submission-schemas.md) | Accepted                                              | 2026-04-21 |
+
+## For agents
+
+When you are about to make an architectural decision in this repo:
+
+1. Read the index above. If a relevant ADR exists, honor it (or explicitly supersede it with a new one — never silently contradict).
+2. If none exists and the decision qualifies, draft a new ADR **before** writing implementation code. The ADR is the first test of whether the design holds up.
+3. Do not move an ADR from `Proposed` to `Accepted` without explicit user confirmation.

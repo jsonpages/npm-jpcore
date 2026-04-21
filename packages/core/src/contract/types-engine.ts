@@ -69,6 +69,28 @@ export interface JsonPagesConfig {
   basePath?: string;
   registry: Record<string, React.ComponentType<unknown>>;
   schemas: Record<string, { parse: (v: unknown) => unknown; shape?: Record<string, unknown> }>;
+  /**
+   * Optional registry of Zod submission schemas for sections that can be filled
+   * by external agents (e.g. MCP-connected AI clients).
+   *
+   * Keyed by the same section-type strings used in `schemas`. Each value is a
+   * Zod schema describing the section's *submission payload* (what the user
+   * fills in) — distinct from `schemas` entries, which describe the section's
+   * *UI configuration* (how the tenant author configures the section).
+   *
+   * When a section type appears on a page AND has an entry here, its JSON
+   * Schema representation is emitted on the page contract as
+   * `sectionSubmissionSchemas` (see `OlonJsPageContract`).
+   *
+   * The shape mirrors `schemas` (duck-typed on `{ parse, shape? }`) so core
+   * does not force `zod` on consumers at the type level. In practice tenants
+   * pass `z.object(...)` instances; the JSON Schema serializer casts to
+   * `z.ZodTypeAny` at its own boundary.
+   *
+   * See `docs/decisions/ADR-0002-form-submission-schemas.md` for rationale,
+   * tenant convention, and the full emission contract.
+   */
+  submissionSchemas?: Record<string, { parse: (v: unknown) => unknown; shape?: Record<string, unknown> }>;
   pages: Record<string, PageConfig>;
   siteConfig: SiteConfig;
   themeConfig: ThemeConfig;

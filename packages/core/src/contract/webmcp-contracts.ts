@@ -29,6 +29,20 @@ export interface OlonJsPageContract {
   sectionTypes: string[];
   sectionInstances: WebMcpSectionInstance[];
   sectionSchemas: Record<string, Record<string, unknown>>;
+  /**
+   * Optional JSON Schema representations of submission payloads for form-capable
+   * sections present on this page. Keyed by section type.
+   *
+   * Emitted only for section types that (a) actually appear on this page AND
+   * (b) have an entry in `JsonPagesConfig.submissionSchemas`. Absent (not `{}`)
+   * when no section on the page qualifies, to keep the contract tight.
+   *
+   * MCP agents consuming this contract can discover form shapes directly from
+   * reading the page, without requiring a separate tool call.
+   *
+   * See `docs/decisions/ADR-0002-form-submission-schemas.md` (emission contract).
+   */
+  sectionSubmissionSchemas?: Record<string, Record<string, unknown>>;
   tools: WebMcpToolContract[];
 }
 
@@ -77,12 +91,14 @@ export interface BuildPageContractInput {
   slug: string;
   pageConfig: PageConfig;
   schemas: JsonPagesConfig['schemas'];
+  submissionSchemas?: JsonPagesConfig['submissionSchemas'];
   siteConfig: SiteConfig;
 }
 
 export interface BuildSiteManifestInput {
   pages: Record<string, PageConfig>;
   schemas: JsonPagesConfig['schemas'];
+  submissionSchemas?: JsonPagesConfig['submissionSchemas'];
   siteConfig: SiteConfig;
 }
 
@@ -372,6 +388,7 @@ export function buildPageContract({
   slug,
   pageConfig,
   schemas,
+  submissionSchemas,
   siteConfig,
 }: BuildPageContractInput): OlonJsPageContract {
   const title = typeof pageConfig.meta?.title === 'string' ? pageConfig.meta.title : slug;
@@ -384,6 +401,15 @@ export function buildPageContract({
       .filter((sectionType) => schemas?.[sectionType] != null)
       .map((sectionType) => {
         const schema = schemas[sectionType] as z.ZodTypeAny;
+        return [sectionType, zodToJsonSchema(schema)];
+      })
+  ) as Record<string, Record<string, unknown>>;
+
+  const submissionSchemasEmitted = Object.fromEntries(
+    sectionTypes
+      .filter((sectionType) => submissionSchemas?.[sectionType] != null)
+      .map((sectionType) => {
+        const schema = submissionSchemas![sectionType] as z.ZodTypeAny;
         return [sectionType, zodToJsonSchema(schema)];
       })
   ) as Record<string, Record<string, unknown>>;
@@ -413,7 +439,7 @@ export function buildPageContract({
         ]
       : [];
 
-  return {
+  const contract: OlonJsPageContract = {
     version: '1.0.0',
     kind: 'olonjs-page-contract',
     slug,
@@ -426,6 +452,12 @@ export function buildPageContract({
     sectionSchemas,
     tools,
   };
+
+  if (Object.keys(submissionSchemasEmitted).length > 0) {
+    contract.sectionSubmissionSchemas = submissionSchemasEmitted;
+  }
+
+  return contract;
 }
 
 export function buildPageManifest(input: BuildPageContractInput): OlonJsPageManifest {
@@ -472,6 +504,7 @@ export function buildPageManifest(input: BuildPageContractInput): OlonJsPageMani
 export function buildSiteManifest({
   pages,
   schemas,
+  submissionSchemas,
   siteConfig,
 }: BuildSiteManifestInput): OlonJsSiteManifestIndex {
   const pageEntries = Object.entries(pages ?? {}).sort(([a], [b]) => a.localeCompare(b));
@@ -480,7 +513,7 @@ export function buildSiteManifest({
     kind: 'olonjs-mcp-manifest-index',
     generatedAt: new Date().toISOString(),
     pages: pageEntries.map(([slug, pageConfig]) => {
-      const pageManifest = buildPageManifest({ slug, pageConfig, schemas, siteConfig });
+      const pageManifest = buildPageManifest({ slug, pageConfig, schemas, submissionSchemas, siteConfig });
       return {
         slug,
         title: pageManifest.title,

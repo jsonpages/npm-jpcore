@@ -100,7 +100,6 @@ export const StudioRoute: React.FC<StudioRouteProps> = ({
     try {
       const base = JSON.parse(JSON.stringify(siteConfig ?? {})) as SiteConfig;
       if (!base.identity) base.identity = { title: 'Site' };
-      if (!base.pages) base.pages = [];
       return base;
     } catch {
       return siteConfig;

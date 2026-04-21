@@ -72,16 +72,10 @@ export interface SiteIdentity {
   logoUrl?: string;
 }
 
-export interface SitePageEntry {
-  slug: string;
-  label: string;
-}
-
 export interface SiteConfig {
   identity: SiteIdentity;
   header?: Section;
   footer: Section;
-  pages: SitePageEntry[];
 }
 
 export interface ThemeTokenMap {
