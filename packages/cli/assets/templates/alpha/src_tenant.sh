@@ -1674,7 +1674,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "@tiptap/extension-link": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.121",
+    "@olonjs/core": "^1.0.122",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
@@ -7994,6 +7994,7 @@ END_OF_FILE_CONTENT
 mkdir -p "src/emails"
 echo "Creating src/emails/LeadNotificationEmail.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/emails/LeadNotificationEmail.tsx"
+import React from "react";
 import {
   Body,
   Button,
@@ -8155,6 +8156,7 @@ export default LeadNotificationEmail;
 END_OF_FILE_CONTENT
 echo "Creating src/emails/LeadSenderConfirmationEmail.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/emails/LeadSenderConfirmationEmail.tsx"
+import React from "react";
 import {
   Body,
   Container,
