@@ -1,128 +1,478 @@
-
-### Beat 1 — Il comando (0:00 → 0:06, 6s)
-
-**Cosa si vede:** hard cut dal segmento 3. Terminal pulito, nero, font monospace grande. Tre comandi si digitano (o appaiono, accelerati) in sequenza:
-
-```
-$ npx @olonjs/cli new tenant demo
-$ cd demo
-$ npm install && npm run dev
-```
-
-Il cursore lampeggia. Si vede chiaramente **`@olonjs/cli`** nel primo comando — il nome del package, che è il fulcro.
-
-**Voice:** *"Everything you've seen starts here. Three commands."*
-
-**Ruolo:** ancoraggio visivo. Il reviewer fino a questo punto ha visto dashboard, MCP calls, Gmail, JSON files, spec. Ora torna al terminal nudo — è il "ecco il ground truth". 6 secondi: abbastanza per leggere i tre comandi, non così tanto da diventare noia. Il cambio di contesto (tutto su nero) è intenzionale — stacca nettamente dal segmento 3.
-
----
-
-### Beat 2 — Il tenant scaffoldato (0:06 → 0:11, 5s)
-
-**Cosa si vede:** il comando gira (accelerato 5-8x in editing), il CLI output scorre brevemente con le righe dei file creati. Poi stacco su file tree in editor (Cursor, VS Code, qualunque) che mostra la struttura scaffoldata:
-
-```
-demo/
-├── src/
-│   ├── App.tsx
-│   ├── data/
-│   │   ├── config/
-│   │   │   ├── site.json
-│   │   │   ├── theme.json
-│   │   │   └── menu.json
-│   │   └── pages/
-│   │       └── home.json
-│   └── index.css
-├── package.json
-└── tsconfig.json
-```
-
-Poi flash 1-2 secondi sul browser che apre `localhost:5174` — tenant vuoto renderizzato, stilizzato minimale ma presente.
-
-**Voice:** *"A tenant that speaks OlonJS v1.6 from scratch. Empty, but conformant."*
-
-**Ruolo:** far vedere **cosa produce** il CLI. Non un hello-world, ma **un tenant strutturato con i file del contratto** (`theme.json`, `menu.json`, `site.json`, `pages/*.json`). Il reviewer tecnico nota che ci sono già i file del contratto OlonJS — non è un boilerplate React generico. *"Empty but conformant"* è la frase tecnica precisa: è vuoto di contenuti, ma pienamente conforme al protocollo v1.6.
-
----
-
-### Beat 3 — Il reveal B2B (0:11 → 0:17, 6s)
-
-**Cosa si vede:** stacco su un frame simbolico — potrebbero essere tre logo affiancati (o tre testi mono-spaced) di builder AI riconoscibili, senza marchiarli ufficialmente: `Bolt`, `Replit`, `Lovable`, `v0`. Oppure, più asciutto: una riga di codice che mostra il CLI integrato programmaticamente, tipo `execSync('npx @olonjs/cli new tenant ' + userBrand)` all'interno di un loop di pipeline. Scegliere quello che rende più chiaro il pattern integrazione.
-
-Alternativa meno diretta e più elegante: un diagramma minimalista di tre box — `AI site builder` → `@olonjs/cli` → `Conformant tenant` — con una freccia pulita.
-
-**Voice:** *"The same primitive our agent uses is the one any AI site builder can plug in. One npm package. MIT license. The contract is the product."*
-
-**Ruolo:** **il reveal strategico del video intero.** Qui chiudi il posizionamento B2B che hai tenuto sottilmente per tutto il video. *"The same primitive our agent uses"* fa vedere che olon-agent (segmento 3) non è speciale — usa lo stesso strumento pubblico. *"One npm package. MIT license."* sono i due fatti che chiudono qualunque obiezione su lock-in o visibilità tecnica. *"The contract is the product"* è il claim strategico definitivo: il prodotto vero non è il tool di scaffolding, è la spec che rende il tool possibile.
-
-6 secondi perché c'è molto da dire, ma le frasi sono corte e devono "cadere" una alla volta con micro-pause — non lette veloci.
-
----
-
-### Beat 4 — Respiro finale (0:17 → 0:20, 3s)
-
-**Cosa si vede:** il frame del Beat 3 resta fermo 2 secondi, poi stacco graduale (hard cut, non fade) verso il frame iniziale dell'outro.
-
-**Voice:** silenzio. Musica lo-fi continua.
-
-**Ruolo:** **il silenzio vende più delle parole qui.** Dopo *"the contract is the product"*, qualunque parola aggiuntiva indebolisce il claim. 3 secondi di silenzio mentre il messaggio "atterra" nella testa del reviewer. Questa è la punteggiatura finale.
-
----
-
-## Riepilogo tabellare — Segmento 4
-
-| Beat | Tempo | Cosa vede | Voice (Claire) |
-|---|---|---|---|
-| 1 | 0:00–0:06 | Terminal con `npx @olonjs/cli new tenant demo` + due comandi successivi | *"Everything you've seen starts here. Three commands."* |
-| 2 | 0:06–0:11 | File tree scaffoldato + flash tenant vuoto renderizzato | *"A tenant that speaks OlonJS v1.6 from scratch. Empty, but conformant."* |
-| 3 | 0:11–0:17 | Logo/testi builder AI, o diagramma integrazione | *"The same primitive our agent uses is the one any AI site builder can plug in. One npm package. MIT license. The contract is the product."* |
-| 4 | 0:17–0:20 | Frame fermo, silenzio | — |
-
----
-
-# Outro · 10 secondi
-
-**Messaggio strategico:** chiusura identitaria. Nessun claim nuovo, nessun pitch. Solo firma e call-to-action sottile.
-
----
-
-### Beat 1 — Brand mark (0:00 → 0:04, 4s)
-
-**Cosa si vede:** schermo quasi nero o neutro. Logo OlonJS al centro (testuale, tipografico — il wordmark). Sotto, una riga sola: `olon.js.org`. Niente altro. La musica lo-fi sale leggermente (+3dB) per marcare la chiusura.
-
-**Voice:** silenzio. Solo musica.
-
-**Ruolo:** dare identità al video. Il reviewer esce con il nome nella testa, non con un claim. I founder video di maggior successo YC finiscono quasi sempre in silenzio con logo + link — è la firma.
-
----
-
-### Beat 2 — Riga di contesto (0:04 → 0:08, 4s)
-
-**Cosa si vede:** sotto il logo appare una seconda riga, in font più piccolo e colore attenuato:
-
-```
-OlonJS — the contract layer for the agentic web
-```
-
-### Beat 3 — Respiro di chiusura (0:08 → 0:10, 2s)
-
-**Cosa si vede:** schermo tenuto fermo per 2 secondi. La musica lo-fi sfuma gradualmente.
-
-**Voice:** silenzio.
-
-**Ruolo:** non tagliare bruscamente. Un video che finisce di colpo sembra mal montato. 2 secondi di silenzio + fade musicale danno chiusura professionale.
-
----
-
-## Riepilogo tabellare — Outro
-
-| Beat | Tempo | Cosa vede | Voice |
-|---|---|---|---|
-| 1 | 0:00–0:04 | Logo OlonJS + `olon.js.org` | Silenzio, musica |
-| 2 | 0:04–0:08 | `OlonJS — the contract layer for the agentic web` | Silenzio |
-| 3 | 0:08–0:10 | Frame fermo, fade musica | Silenzio |
-
----
-
----
-
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://olon.js.org/schemas/v1/design.schema.json",
+  "title": "OlonDesign System Schema",
+  "description": "Open schema for defining a brand design system. Compatible with tokens.studio and style-dictionary formats.",
+  "type": "object",
+  "required": [
+    "name",
+    "tokens"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Brand or project name",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the design system",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "tokens": {
+      "type": "object",
+      "required": [
+        "colors"
+      ],
+      "properties": {
+        "colors": {
+          "type": "object",
+          "description": "Semantic color tokens. Keys are role-based (background, foreground, primary…), values are CSS color strings.",
+          "required": [
+            "background",
+            "foreground",
+            "primary"
+          ],
+          "properties": {
+            "background": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "foreground": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "card": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "card-foreground": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "elevated": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "overlay": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "popover": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "popover-foreground": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "muted": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "muted-foreground": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "placeholder": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "primary": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "primary-foreground": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "primary-light": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "primary-dark": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "accent": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "accent-foreground": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "secondary": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "secondary-foreground": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "border": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "border-strong": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "input": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "ring": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "destructive": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "destructive-foreground": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "destructive-border": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "destructive-ring": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "success": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "success-foreground": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "success-border": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "success-indicator": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "warning": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "warning-foreground": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "warning-border": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "info": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "info-foreground": {
+              "$ref": "#/definitions/cssColor"
+            },
+            "info-border": {
+              "$ref": "#/definitions/cssColor"
+            }
+          },
+          "patternProperties": {
+            "^primary-(\\d{2,3})$": {
+              "$ref": "#/definitions/cssColor"
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/cssColor"
+          }
+        },
+        "modes": {
+          "type": "object",
+          "description": "Named color mode overrides (e.g. light, high-contrast). Each mode overrides a subset of color tokens.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "colors": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/definitions/cssColor"
+                }
+              }
+            }
+          }
+        },
+        "typography": {
+          "type": "object",
+          "description": "Typography system: font stacks, scale, tracking, leading.",
+          "properties": {
+            "fontFamily": {
+              "type": "object",
+              "properties": {
+                "primary": {
+                  "type": "string"
+                },
+                "mono": {
+                  "type": "string"
+                },
+                "display": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "wordmark": {
+              "type": "object",
+              "properties": {
+                "fontFamily": {
+                  "type": "string"
+                },
+                "weight": {
+                  "type": "string",
+                  "pattern": "^\\d+$"
+                },
+                "width": {
+                  "type": "string"
+                }
+              }
+            },
+            "scale": {
+              "type": "object",
+              "description": "Named font size tokens. Values must be CSS length strings.",
+              "additionalProperties": {
+                "$ref": "#/definitions/cssLength"
+              }
+            },
+            "tracking": {
+              "type": "object",
+              "description": "Letter-spacing tokens. Values must be CSS em values.",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "leading": {
+              "type": "object",
+              "description": "Line-height tokens. Values are unitless ratios or CSS lengths.",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "borderRadius": {
+          "type": "object",
+          "description": "Named border-radius tokens.",
+          "properties": {
+            "sm": {
+              "$ref": "#/definitions/cssLength"
+            },
+            "md": {
+              "$ref": "#/definitions/cssLength"
+            },
+            "lg": {
+              "$ref": "#/definitions/cssLength"
+            },
+            "xl": {
+              "$ref": "#/definitions/cssLength"
+            },
+            "full": {
+              "type": "string",
+              "const": "9999px"
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/cssLength"
+          }
+        },
+        "spacing": {
+          "type": "object",
+          "description": "Layout spacing tokens (container widths, section padding, header heights…).",
+          "additionalProperties": {
+            "$ref": "#/definitions/cssLength"
+          }
+        },
+        "zIndex": {
+          "type": "object",
+          "description": "Named z-index layers. Values must be numeric strings.",
+          "properties": {
+            "base": {
+              "$ref": "#/definitions/zIndexValue"
+            },
+            "elevated": {
+              "$ref": "#/definitions/zIndexValue"
+            },
+            "dropdown": {
+              "$ref": "#/definitions/zIndexValue"
+            },
+            "sticky": {
+              "$ref": "#/definitions/zIndexValue"
+            },
+            "overlay": {
+              "$ref": "#/definitions/zIndexValue"
+            },
+            "modal": {
+              "$ref": "#/definitions/zIndexValue"
+            },
+            "toast": {
+              "$ref": "#/definitions/zIndexValue"
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/zIndexValue"
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "cssColor": {
+      "type": "string",
+      "description": "A CSS color value: hex (#RRGGBB or #RGB), rgb(), hsl(), oklch(), or named color.",
+      "pattern": "^(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgb\\(|rgba\\(|hsl\\(|oklch\\(|[a-z]+).*$"
+    },
+    "cssLength": {
+      "type": "string",
+      "description": "A CSS length value: px, rem, em, %, vw, vh.",
+      "pattern": "^\\d+(\\.\\d+)?(px|rem|em|%|vw|vh)$"
+    },
+    "zIndexValue": {
+      "type": "string",
+      "description": "A numeric string representing a z-index value.",
+      "pattern": "^-?\\d+$"
+    }
+  },
+  "examples": [
+    {
+      "name": "Olon",
+      "version": "1.0.0",
+      "tokens": {
+        "colors": {
+          "background": "hsl(215 28% 7%)",
+          "card": "hsl(218 44% 9%)",
+          "elevated": "#141B24",
+          "overlay": "#1C2433",
+          "popover": "hsl(218 44% 9%)",
+          "popover-foreground": "hsl(214 33% 84%)",
+          "foreground": "hsl(214 33% 84%)",
+          "card-foreground": "hsl(214 33% 84%)",
+          "muted-foreground": "hsl(215 23% 57%)",
+          "placeholder": "#4A5C78",
+          "primary": "hsl(222 100% 54%)",
+          "primary-foreground": "hsl(0 0% 100%)",
+          "primary-light": "#84ABFF",
+          "primary-dark": "#0F52E0",
+          "primary-50": "#EEF3FF",
+          "primary-100": "#D6E4FF",
+          "primary-200": "#ADC8FF",
+          "primary-300": "#84ABFF",
+          "primary-400": "#5B8EFF",
+          "primary-500": "#1763FF",
+          "primary-600": "#0F52E0",
+          "primary-700": "#0940B8",
+          "primary-800": "#063090",
+          "primary-900": "#031E68",
+          "accent": "hsl(216 28% 15%)",
+          "accent-foreground": "hsl(214 33% 84%)",
+          "secondary": "hsl(217 30% 11%)",
+          "secondary-foreground": "hsl(214 33% 84%)",
+          "muted": "hsl(217 30% 11%)",
+          "border": "hsl(216 27% 21%)",
+          "border-strong": "#2F3D55",
+          "input": "hsl(216 27% 21%)",
+          "ring": "hsl(222 100% 54%)",
+          "destructive": "hsl(0 40% 46%)",
+          "destructive-foreground": "hsl(210 58% 93%)",
+          "destructive-border": "#7F2626",
+          "destructive-ring": "#E06060",
+          "success": "hsl(152 83% 26%)",
+          "success-foreground": "hsl(210 58% 93%)",
+          "success-border": "#1DB87A",
+          "success-indicator": "#1DB87A",
+          "warning": "hsl(46 100% 21%)",
+          "warning-foreground": "hsl(210 58% 93%)",
+          "warning-border": "#C49A00",
+          "info": "hsl(214 100% 40%)",
+          "info-foreground": "hsl(210 58% 93%)",
+          "info-border": "#4D9FE0"
+        },
+        "modes": {
+          "light": {
+            "colors": {
+              "background": "hsl(0 0% 96%)",
+              "card": "hsl(0 0% 100%)",
+              "elevated": "#F4F3EF",
+              "overlay": "#E5E3DC",
+              "popover": "hsl(0 0% 100%)",
+              "popover-foreground": "hsl(0 0% 3%)",
+              "foreground": "hsl(0 0% 3%)",
+              "card-foreground": "hsl(0 0% 3%)",
+              "muted-foreground": "hsl(0 0% 42%)",
+              "placeholder": "#B4B2AD",
+              "primary": "hsl(222 100% 54%)",
+              "primary-foreground": "hsl(0 0% 100%)",
+              "primary-light": "#5B8EFF",
+              "primary-dark": "#0F52E0",
+              "primary-50": "#EEF3FF",
+              "primary-100": "#D6E4FF",
+              "primary-200": "#ADC8FF",
+              "primary-300": "#84ABFF",
+              "primary-400": "#5B8EFF",
+              "primary-500": "#1763FF",
+              "primary-600": "#0F52E0",
+              "primary-700": "#0940B8",
+              "primary-800": "#063090",
+              "primary-900": "#031E68",
+              "accent": "hsl(222 100% 92%)",
+              "accent-foreground": "hsl(222 100% 54%)",
+              "secondary": "hsl(0 0% 92%)",
+              "secondary-foreground": "hsl(0 0% 3%)",
+              "muted": "hsl(0 0% 92%)",
+              "border": "hsl(0 0% 84%)",
+              "border-strong": "#B4B2AD",
+              "input": "hsl(0 0% 84%)",
+              "ring": "hsl(222 100% 54%)",
+              "destructive": "hsl(0 72% 51%)",
+              "destructive-foreground": "hsl(0 0% 100%)",
+              "destructive-border": "#FECACA",
+              "destructive-ring": "#EF4444",
+              "success": "hsl(160 84% 39%)",
+              "success-foreground": "hsl(0 0% 100%)",
+              "success-border": "#D4F0E2",
+              "success-indicator": "#0A7C4E",
+              "warning": "hsl(38 92% 50%)",
+              "warning-foreground": "hsl(0 0% 3%)",
+              "warning-border": "#F5EAD4",
+              "info": "hsl(222 100% 54%)",
+              "info-foreground": "hsl(0 0% 100%)",
+              "info-border": "#D4E5F5"
+            }
+          }
+        },
+        "typography": {
+          "fontFamily": {
+            "primary": "\"Instrument Sans\", Helvetica, Arial, sans-serif",
+            "mono": "\"JetBrains Mono\", \"Fira Code\", monospace"
+          },
+          "wordmark": {
+            "fontFamily": "\"Instrument Sans\", Helvetica, Arial, sans-serif",
+            "weight": "700"
+          },
+          "scale": {
+            "xs": "0.75rem",
+            "sm": "0.875rem",
+            "base": "1rem",
+            "lg": "1.125rem",
+            "xl": "1.25rem",
+            "2xl": "1.5rem",
+            "3xl": "1.875rem",
+            "4xl": "2.25rem",
+            "5xl": "3rem"
+          },
+          "tracking": {
+            "tight": "-0.02em",
+            "normal": "0em",
+            "wide": "0.04em",
+            "widest": "0.14em"
+          },
+          "leading": {
+            "tight": "1.2",
+            "normal": "1.5",
+            "relaxed": "1.7"
+          }
+        },
+        "borderRadius": {
+          "xl": "1rem",
+          "lg": "0.75rem",
+          "md": "0.5rem",
+          "sm": "0.25rem",
+          "full": "9999px"
+        },
+        "spacing": {
+          "container-max": "72rem",
+          "section-y": "4rem",
+          "header-h": "4rem"
+        },
+        "zIndex": {
+          "base": "0",
+          "elevated": "10",
+          "dropdown": "20",
+          "sticky": "40",
+          "overlay": "50",
+          "modal": "60",
+          "toast": "100"
+        }
+      }
+    }
+  ]
+}
