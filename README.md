@@ -25,7 +25,7 @@
 
 **OlonJS** is an open-source JavaScript infrastructure designed to bridge the gap between human-centric websites and AI agents. It introduces a **deterministic machine contract** for web content: every page is natively available as a typed JSON endpoint (`/{slug}.json`), making websites reliably readable and operable by AI agents while preserving a high-end human UI.
 
-[olonjsSpecs_V_1_5](./specs/olonjsSpecs_V_1_5.md)
+[olonjsSpecs_V_1_6](./specs/olonjsSpecs_V_1_6.md)
 
 
 This repository contains the OlonJS stack:
