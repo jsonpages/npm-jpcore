@@ -1,7 +1,7 @@
 
-# OlonJS Architecture Specifications v1.6 Final
+# OlonJS Architecture Specifications v1.6 
 
-**Status:** Final  
+**Status:** Mandatory Standard  
 **Version:** 1.6.0 (Complete Draft - Core-Agnostic Theme Transport, Shell/Menu Contract Clarification, Full v1.5 Consolidation)  
 **Target:** Senior Architects / AI Agents / Enterprise Governance
 
@@ -122,6 +122,10 @@ Example:
 
 - no menu -> omit the field
 - has menu -> use `$ref`
+
+Resolved Editing Surface Rule: Component Zod schemas (e.g., HeaderSchema) describe the resolved data surface presented to the Inspector, not the raw authored JSON. If a field like data.menu is authored as a
+$ref in site.json, the corresponding Zod schema MUST describe the resolved shape (e.g., z.array(MenuItemSchema)). The engine handles resolving the $ref for the Form Factory and routing the edits back to the
+referenced document (e.g., menu.json).
 
 ### 2.5 Deterministic Projection
 

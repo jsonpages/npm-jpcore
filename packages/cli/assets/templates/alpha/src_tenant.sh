@@ -1674,7 +1674,7 @@ cat << 'END_OF_FILE_CONTENT' > "package.json"
     "@tiptap/extension-link": "^2.11.5",
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
-    "@olonjs/core": "^1.0.122",
+    "@olonjs/core": "^1.0.123",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
@@ -9880,6 +9880,17 @@ export function useOlonForms(options?: UseOlonFormsOptions): { states: Record<st
 }
 
 END_OF_FILE_CONTENT
+echo "Creating src/lib/utils.ts..."
+cat << 'END_OF_FILE_CONTENT' > "src/lib/utils.ts"
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+END_OF_FILE_CONTENT
+# SKIP: src/lib/utils.ts:Zone.Identifier is binary and cannot be embedded as text.
 echo "Creating src/main.tsx..."
 cat << 'END_OF_FILE_CONTENT' > "src/main.tsx"
 import '@/types'; // TBP: load type augmentation from capsule-driven types
